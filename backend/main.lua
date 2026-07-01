@@ -19,6 +19,7 @@ local fixes            = require("fixes")
 local settings_manager = require("settings.manager")
 local auto_update      = require("auto_update")
 local cache_tools     = require("cache_tools")
+local lua_tools       = require("lua_tools")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -665,6 +666,64 @@ end
 
 function ScanSteamLibraries()
     local ok, res = pcall(cache_tools.scan_steam_libraries)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Lua script tools (ported from steamtools.py) ─────────────────────────────
+
+function GetSteamToolsIds(contentScriptQuery, showDisabled)
+    local ok, res = pcall(lua_tools.get_steamtools_ids, showDisabled)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ToggleLuaScript(appid, contentScriptQuery, enable)
+    if type(appid) == "table" then
+        enable = appid.enable
+        appid = appid.appid
+    end
+    local ok, res = pcall(lua_tools.toggle_lua_script, tonumber(appid), enable)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ValidateLuaSyntax(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(lua_tools.validate_lua_syntax, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function CleanLuaContent(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(lua_tools.clean_lua_content, tonumber(appid))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ExtractLuaKeys(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(lua_tools.extract_lua_keys, tonumber(appid))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function AuditLuaContent(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(lua_tools.audit_lua_content, tonumber(appid))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DetectDepotConflicts()
+    local ok, res = pcall(lua_tools.detect_depot_conflicts)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function BatchHealthScan()
+    local ok, res = pcall(lua_tools.batch_health_scan)
     if not ok then return json_err(res) end
     return json_ok(res)
 end

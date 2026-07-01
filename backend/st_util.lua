@@ -21,6 +21,10 @@ local M = {}
 M.ARRAY_MT = cjson.array_mt
 M.null     = cjson.null
 
+-- Pin encoding: empty plain tables -> {} (object), matching Python json.dumps of
+-- an empty dict. Empty *arrays* still encode as [] via array_mt (see M.A).
+pcall(cjson.encode_empty_table_as_object, true)
+
 --- Force a Lua table to encode as a JSON array.
 function M.A(t)
     return setmetatable(t or {}, M.ARRAY_MT)
@@ -119,6 +123,30 @@ function M.steam_is_running()
         return tostring(out):lower():find("steam.exe") ~= nil
     end
     return false
+end
+
+--- Trim trailing whitespace only (Python str.rstrip()).
+function M.rtrim(s)
+    return (tostring(s or ""):gsub("%s+$", ""))
+end
+
+--- Split text into lines, matching Python file.readlines() line counting:
+--- a trailing newline does NOT yield an extra empty final line.
+function M.split_lines(content)
+    content = tostring(content or "")
+    local lines = {}
+    local start = 1
+    while true do
+        local nl = content:find("\n", start, true)
+        if nl then
+            table.insert(lines, content:sub(start, nl - 1))
+            start = nl + 1
+        else
+            if start <= #content then table.insert(lines, content:sub(start)) end
+            break
+        end
+    end
+    return lines
 end
 
 return M
