@@ -40,6 +40,7 @@ local batch           = require("batch")
 local achievements    = require("achievements")
 local backup          = require("backup")
 local key_vault       = require("key_vault")
+local tokeer          = require("tokeer")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1268,6 +1269,35 @@ function ImportKeyProfile(activate, blob, contentScriptQuery, nameOverride)
         blob = t.blob; nameOverride = t.nameOverride; activate = t.activate
     end
     local ok, res = pcall(key_vault.import_profile, blob, nameOverride, activate)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Tokeer / Denuvo launch options (tokeer_launcher.py) ──────────────────────
+
+function ListTokeerGames()
+    local ok, res = pcall(tokeer.list_tokeer_games)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function CheckTokeerStatus(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(tokeer.check_tokeer_status, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ConfigureTokeerLaunch(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(tokeer.configure_tokeer_launch, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function RemoveTokeerLaunch(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(tokeer.remove_tokeer_launch, appid, accountId32)
     if not ok then return json_err(res) end
     return json_ok(res)
 end

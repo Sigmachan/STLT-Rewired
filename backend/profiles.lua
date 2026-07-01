@@ -205,13 +205,13 @@ function M.activate_profile(appid, slug, apply_launch_options, account_id32)
         if st.steam_is_running() then
             lo_skipped_reason = "Steam is running - launch options will be overwritten on exit, skipped"
         else
-            local ok_tk, tk = pcall(require, "tokeer_launcher")
-            if ok_tk and type(tk) == "table" and type(tk._set_launch_options) == "function" then
+            local ok_tk, tk = pcall(require, "tokeer")
+            if ok_tk and type(tk) == "table" and type(tk.set_launch_options) == "function" then
                 local ok = pcall(function()
                     local lc_path = localconfig_path(account_id32)
                     if lc_path ~= "" and fs.is_file(lc_path) then
                         local lc_text = m_utils.read_file(lc_path) or ""
-                        local new_text, action = tk._set_launch_options(lc_text, appid, profile.launchOptions)
+                        local new_text, action = tk.set_launch_options(lc_text, appid, profile.launchOptions)
                         if action ~= "no_file" and action ~= "no_apps_section" then
                             m_utils.write_file(lc_path .. ".bak-" .. st.stamp(), lc_text)
                             m_utils.write_file(lc_path, new_text)
