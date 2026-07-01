@@ -44,6 +44,7 @@ local tokeer          = require("tokeer")
 local sync            = require("sync")
 local account         = require("account")
 local sentinel        = require("sentinel")
+local st              = require("st_util")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -918,7 +919,7 @@ function SaveProfile(accountId32, appid, contentScriptQuery, description, name)
     return json_ok(res)
 end
 
-function ActivateProfile(accountId32, applyLaunchOptions, appid, contentScriptQuery, slug)
+function ActivateProfile(accountId32, appid, applyLaunchOptions, contentScriptQuery, slug)
     if type(accountId32) == "table" then
         local t = accountId32
         appid = t.appid; slug = t.slug
@@ -1028,7 +1029,7 @@ function SyncDepotcache(appid, contentScriptQuery)
     return json_ok(res)
 end
 
-function RepairDepotCache(appid, contentScriptQuery)
+function RepairDepotCache(appid, contentScriptQuery, dry_run, fix_lua, orphan_age_days, remove_orphans)
     -- Deferred: full repair pipeline (orphan cleanup + lua fix + dry-run) not yet ported.
     -- Use CheckManifestStaleness + SyncDepotcache in the meantime.
     return json_ok({ success = false, error = "RepairDepotCache not yet ported (use SyncDepotcache/CheckManifestStaleness)" })
@@ -1216,14 +1217,14 @@ function ListBackups()
     return json_ok(res)
 end
 
-function RestoreBackup(filename, contentScriptQuery)
+function RestoreBackup(contentScriptQuery, filename)
     if type(filename) == "table" then filename = filename.filename end
     local ok, res = pcall(backup.restore_backup, filename)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
 
-function DeleteBackup(filename, contentScriptQuery)
+function DeleteBackup(contentScriptQuery, filename)
     if type(filename) == "table" then filename = filename.filename end
     local ok, res = pcall(backup.delete_backup, filename)
     if not ok then return json_err(res) end
@@ -1452,6 +1453,85 @@ end
 
 function StartSentinelServiceNow()
     return json_ok(sentinel.start_service_now())
+end
+
+-- ── Frontend log passthrough ────────────────────────────────────────────────
+
+function LogFrontend(message)
+    if type(message) == "table" then message = message.message end
+    pcall(logger.log, "[frontend] " .. tostring(message or ""))
+    return json_ok({ success = true })
+end
+
+-- ── Windows platform: compat tools / Linux preflight are not applicable ──────
+-- STLT's frontend gates these behind a platform check; we report "windows" so
+-- the Linux Proton / SLSsteam paths stay hidden, and give honest errors if hit.
+
+function GetCompatToolStatus()
+    return json_ok({ success = true, platform = "windows" })
+end
+
+function FixCompatToolsForActivated(contentScriptQuery, force, tool)
+    return json_ok({ success = false, platform = "windows",
+        error = "Proton compat tools are Linux-only; Windows uses native Steam." })
+end
+
+function GetLinuxHealthReport(appid, contentScriptQuery)
+    return json_ok({ success = false, platform = "windows",
+        error = "Linux-only preflight. On Windows use the Quick Dashboard / Health panels." })
+end
+
+-- ── First-run setup assistant: SLSsteam setup is Linux-only ──────────────────
+-- On Windows there is nothing to auto-configure, so setup is always "ready".
+
+function GetSetupState()
+    return json_ok({ success = true, ready = true, platform = "windows", seen = true,
+        canAutoFix = st.A({}), mustDoYourself = st.null,
+        message = "Windows: no SLSsteam setup required." })
+end
+
+function RunSetup()
+    return json_ok({ success = true, ready = true, platform = "windows",
+        applied = st.A({}), message = "Nothing to set up on Windows." })
+end
+
+function MarkSetupSeen()
+    return json_ok({ success = true })
+end
+
+function SelfHeal()
+    return json_ok({ success = true, healed = false, platform = "windows",
+        note = "No SLSsteam/Linux state to self-heal on Windows." })
+end
+
+-- ── Live activation flow (Windows: hand steam://install to the OS) ───────────
+
+function AutoFinalizeActivation(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    appid = tonumber(appid)
+    if not appid then return json_err("Invalid appid") end
+    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
+    return json_ok({ success = ok == true, appid = appid, started = ok == true,
+        message = ok and ("Handed steam://install/" .. appid .. " to Steam.")
+                     or "Failed to launch steam://install." })
+end
+
+function StartDownloadNoRestart(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    appid = tonumber(appid)
+    if not appid then return json_err("Invalid appid") end
+    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
+    return json_ok({ success = ok == true, appid = appid,
+        message = ok and ("Triggered download for " .. appid .. " on the running Steam.")
+                     or "Failed to trigger steam://install." })
+end
+
+function SmartRestartSteam(clearBeta, contentScriptQuery)
+    local ok, success = pcall(auto_update.restart_steam)
+    if ok and success then
+        return json_ok({ success = true, message = "Steam restarted." })
+    end
+    return json_ok({ success = false, error = "Failed to restart Steam." })
 end
 
 -- ── Return lifecycle table ────────────────────────────────────────────────────
