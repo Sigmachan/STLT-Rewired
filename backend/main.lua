@@ -43,6 +43,7 @@ local key_vault       = require("key_vault")
 local tokeer          = require("tokeer")
 local sync            = require("sync")
 local account         = require("account")
+local sentinel        = require("sentinel")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1399,6 +1400,58 @@ function ListUserdataBackups()
     local ok, res = pcall(account.list_game_data_backups)
     if not ok then return json_err(res) end
     return json_ok(res)
+end
+
+-- ── Sentinel (sentinel.py) - config functional; daemon/service unavailable ───
+
+function GetSentinelStatus()
+    local ok, res = pcall(sentinel.get_status)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SetSentinelConfig(config_json, contentScriptQuery)
+    local ok, res = pcall(sentinel.set_config, config_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function IgnoreGameNotifications(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(sentinel.ignore_game, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function UnignoreGameNotifications(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(sentinel.unignore_game, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function StartSentinel()
+    return json_ok(sentinel.start())
+end
+
+function StopSentinel()
+    return json_ok(sentinel.stop())
+end
+
+function GetSentinelService()
+    return json_ok(sentinel.get_service())
+end
+
+function InstallSentinelService()
+    return json_ok(sentinel.install_service())
+end
+
+function UninstallSentinelService()
+    return json_ok(sentinel.uninstall_service())
+end
+
+function StartSentinelServiceNow()
+    return json_ok(sentinel.start_service_now())
 end
 
 -- ── Return lifecycle table ────────────────────────────────────────────────────
