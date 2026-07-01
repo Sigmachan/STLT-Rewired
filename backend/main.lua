@@ -37,6 +37,7 @@ local health          = require("health")
 local diagnostics     = require("diagnostics")
 local workshop        = require("workshop")
 local batch           = require("batch")
+local achievements    = require("achievements")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1147,6 +1148,49 @@ end
 
 function ResumeBatch()
     local ok, res = pcall(batch.resume_batch)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Achievements (achievement_watch.py / steamtools.py) ──────────────────────
+
+function GetAchievementInfo(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(achievements.get_achievement_info, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SeedAchievementFiles(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(achievements.seed_achievement_files, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetActiveAccounts()
+    local ok, res = pcall(achievements.get_active_accounts)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetAchievementProgress(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(achievements.get_achievement_progress, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListAchievementWatchlist(accountId32, contentScriptQuery)
+    if type(accountId32) == "table" then accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(achievements.list_watchlist, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetRecentAchievementUnlocks(accountId32, contentScriptQuery, limit)
+    if type(accountId32) == "table" then limit = accountId32.limit; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(achievements.get_recent_unlocks, accountId32, limit)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
