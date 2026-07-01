@@ -35,6 +35,7 @@ local manifests       = require("manifests")
 local cloud_fix       = require("cloud_fix")
 local health          = require("health")
 local diagnostics     = require("diagnostics")
+local workshop        = require("workshop")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1057,6 +1058,38 @@ end
 function ExportDiagnosticReport(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     local ok, res = pcall(diagnostics.export_diagnostic_report, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Workshop (workshop_manager.py) ───────────────────────────────────────────
+
+function ListWorkshopSubscribed(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then
+        appid = accountId32.appid; accountId32 = accountId32.accountId32
+    end
+    local ok, res = pcall(workshop.list_subscribed, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListLocalWorkshopItems(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(workshop.list_local_items, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DownloadWorkshopItem(appid, contentScriptQuery, workshopId)
+    if type(appid) == "table" then workshopId = appid.workshopId; appid = appid.appid end
+    local ok, res = pcall(workshop.download_item, appid, workshopId)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DeleteWorkshopItem(appid, contentScriptQuery, workshopId)
+    if type(appid) == "table" then workshopId = appid.workshopId; appid = appid.appid end
+    local ok, res = pcall(workshop.delete_item, appid, workshopId)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
