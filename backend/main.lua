@@ -441,20 +441,26 @@ function UninstallFix(appid)
     return json_ok(res)
 end
 
-function UnFixGame(appid, installPath, fixDate)
+function UnFixGame(appid, contentScriptQuery, fixDate, installPath)
     if type(appid) == "table" then
         installPath = appid.installPath; fixDate = appid.fixDate; appid = appid.appid
     end
-    -- Stub - unfix logic not yet ported
-    return json_ok({ success = false, error = "Not yet implemented" })
+    local ok, res = pcall(fixes.unfix_game, appid, installPath, fixDate)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 function GetUnfixStatus(appid)
-    return json_ok({ success = true, state = { status = "done" } })
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(fixes.get_unfix_status, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 function GetInstalledFixes()
-    return json_ok({ success = true, fixes = {} })
+    local ok, res = pcall(fixes.get_installed_fixes)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 function GetInstalledLuaScripts()
