@@ -38,6 +38,7 @@ local diagnostics     = require("diagnostics")
 local workshop        = require("workshop")
 local batch           = require("batch")
 local achievements    = require("achievements")
+local backup          = require("backup")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1191,6 +1192,35 @@ end
 function GetRecentAchievementUnlocks(accountId32, contentScriptQuery, limit)
     if type(accountId32) == "table" then limit = accountId32.limit; accountId32 = accountId32.accountId32 end
     local ok, res = pcall(achievements.get_recent_unlocks, accountId32, limit)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Backup / restore (steamtools.py) ─────────────────────────────────────────
+
+function CreateBackup(contentScriptQuery, label)
+    if type(contentScriptQuery) == "table" then label = contentScriptQuery.label end
+    local ok, res = pcall(backup.create_backup, label)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListBackups()
+    local ok, res = pcall(backup.list_backups)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function RestoreBackup(filename, contentScriptQuery)
+    if type(filename) == "table" then filename = filename.filename end
+    local ok, res = pcall(backup.restore_backup, filename)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DeleteBackup(filename, contentScriptQuery)
+    if type(filename) == "table" then filename = filename.filename end
+    local ok, res = pcall(backup.delete_backup, filename)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
