@@ -20,6 +20,8 @@ local settings_manager = require("settings.manager")
 local auto_update      = require("auto_update")
 local cache_tools     = require("cache_tools")
 local lua_tools       = require("lua_tools")
+local custom_apis     = require("custom_apis")
+local source_chain    = require("source_chain")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -724,6 +726,32 @@ end
 
 function BatchHealthScan()
     local ok, res = pcall(lua_tools.batch_health_scan)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Custom APIs & source chain (custom_apis.py / source_chain.py) ─────────────
+
+function GetCustomApis()
+    local ok, res = pcall(custom_apis.get_custom_apis)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SaveCustomApis(apis_json, contentScriptQuery)
+    local ok, res = pcall(custom_apis.save_custom_apis, apis_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetSourceChain()
+    local ok, res = pcall(source_chain.get_source_chain_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SaveSourceChain(chain_json, contentScriptQuery)
+    local ok, res = pcall(source_chain.save_source_chain_json, chain_json)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
