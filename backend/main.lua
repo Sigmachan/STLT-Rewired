@@ -30,6 +30,7 @@ local mods            = require("mods")
 local profiles        = require("profiles")
 local steam_version   = require("steam_version")
 local acf_lock        = require("acf_lock")
+local crack_migrator  = require("crack_migrator")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -959,6 +960,34 @@ end
 function GetGameUpdateLockStatus(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     local ok, res = pcall(acf_lock.get_game_update_lock_status, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Crack migrator (crack_migrator.py) ───────────────────────────────────────
+
+function ScanCrackedGames()
+    local ok, res = pcall(crack_migrator.scan_all_games)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function MigrateGame(appid, contentScriptQuery, dryRun)
+    if type(appid) == "table" then dryRun = appid.dryRun; appid = appid.appid end
+    local ok, res = pcall(crack_migrator.migrate_game, appid, dryRun)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function UndoMigration(appid, backupDir, contentScriptQuery)
+    if type(appid) == "table" then backupDir = appid.backupDir; appid = appid.appid end
+    local ok, res = pcall(crack_migrator.undo_migration, appid, backupDir)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListMigrations()
+    local ok, res = pcall(crack_migrator.list_migrations)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
