@@ -36,6 +36,7 @@ local cloud_fix       = require("cloud_fix")
 local health          = require("health")
 local diagnostics     = require("diagnostics")
 local workshop        = require("workshop")
+local batch           = require("batch")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1090,6 +1091,62 @@ end
 function DeleteWorkshopItem(appid, contentScriptQuery, workshopId)
     if type(appid) == "table" then workshopId = appid.workshopId; appid = appid.appid end
     local ok, res = pcall(workshop.delete_item, appid, workshopId)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Batch download pipeline (batch.py) ───────────────────────────────────────
+
+local function decode_id_array(v)
+    if type(v) == "table" then return v end
+    if type(v) == "string" and v ~= "" then
+        local ok, parsed = pcall(cjson.decode, v)
+        if ok and type(parsed) == "table" then return parsed end
+    end
+    return {}
+end
+
+function StartBatchDownload(appids_json, contentScriptQuery, delay, force, max_retries, parallel, priority_json, skip_installed)
+    local appids = decode_id_array(appids_json)
+    local prio = decode_id_array(priority_json)
+    local ok, res = pcall(batch.start_batch, appids, parallel, max_retries, delay, prio, skip_installed, force)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetBatchStatus()
+    local ok, res = pcall(batch.get_batch_status)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function CancelBatch()
+    local ok, res = pcall(batch.cancel_batch)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function PauseBatch()
+    local ok, res = pcall(batch.pause_batch)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function UnpauseBatch()
+    local ok, res = pcall(batch.unpause_batch)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SkipBatchItem(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(batch.skip_batch_item, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ResumeBatch()
+    local ok, res = pcall(batch.resume_batch)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
