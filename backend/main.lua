@@ -27,6 +27,7 @@ local config_transfer = require("config_transfer")
 local dlc             = require("dlc")
 local events          = require("events")
 local mods            = require("mods")
+local profiles        = require("profiles")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -878,6 +879,49 @@ end
 function UninstallMod(contentScriptQuery, mod_id)
     if type(contentScriptQuery) == "table" then mod_id = contentScriptQuery.mod_id end
     local ok, res = pcall(mods.uninstall_mod, mod_id)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Profiles (profiles.py) ───────────────────────────────────────────────────
+
+function ListProfilesFor(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(profiles.list_profiles_for, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SaveProfile(accountId32, appid, contentScriptQuery, description, name)
+    if type(accountId32) == "table" then
+        local t = accountId32
+        appid = t.appid; name = t.name; description = t.description; accountId32 = t.accountId32
+    end
+    local ok, res = pcall(profiles.save_profile, appid, name, description, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ActivateProfile(accountId32, applyLaunchOptions, appid, contentScriptQuery, slug)
+    if type(accountId32) == "table" then
+        local t = accountId32
+        appid = t.appid; slug = t.slug
+        applyLaunchOptions = t.applyLaunchOptions; accountId32 = t.accountId32
+    end
+    local ok, res = pcall(profiles.activate_profile, appid, slug, applyLaunchOptions, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DeleteProfile(appid, contentScriptQuery, slug)
+    if type(appid) == "table" then slug = appid.slug; appid = appid.appid end
+    local ok, res = pcall(profiles.delete_profile, appid, slug)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListAllProfiles()
+    local ok, res = pcall(profiles.list_all_profiles)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
