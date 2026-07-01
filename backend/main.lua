@@ -18,6 +18,7 @@ local downloads        = require("downloads")
 local fixes            = require("fixes")
 local settings_manager = require("settings.manager")
 local auto_update      = require("auto_update")
+local cache_tools     = require("cache_tools")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -628,6 +629,44 @@ end
 
 function GetAvailableThemes()
     return json_ok({ success = true, themes = {} })
+end
+
+-- ── Cache & disk tools (ported from steamtools.py) ───────────────────────────
+
+function GetCacheInfo()
+    local ok, res = pcall(cache_tools.get_cache_info)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function CleanSteamCache(categories)
+    local ok, res = pcall(cache_tools.clean_cache, categories)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetSteamFolderStats()
+    local ok, res = pcall(cache_tools.get_steam_folder_stats)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetSteamProcessInfo()
+    local ok, res = pcall(cache_tools.get_steam_process_info)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetQuickDashboard()
+    local ok, res = pcall(cache_tools.get_quick_dashboard)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ScanSteamLibraries()
+    local ok, res = pcall(cache_tools.scan_steam_libraries)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 -- ── Return lifecycle table ────────────────────────────────────────────────────

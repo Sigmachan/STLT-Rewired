@@ -80,3 +80,6 @@ logs/
 
 # Tools / Scripts
 /tools/
+
+# local dev tooling (not shipped)
+.dev/
