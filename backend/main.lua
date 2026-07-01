@@ -1534,22 +1534,6 @@ function SmartRestartSteam(clearBeta, contentScriptQuery)
     return json_ok({ success = false, error = "Failed to restart Steam." })
 end
 
--- ── Frontend delivery ───────────────────────────────────────────────────────
--- The client module (.millennium/Dist/index.js) fetches this and evals it in
--- SharedJSContext, so the rich UI (public/luatools.js) loads without editing
--- Steam's own steamui/index.html (STLT's Python-era hack, which our safety rules
--- forbid). Returns the raw JS string (NOT json-wrapped) so the loader can eval it.
-
-function GetFrontendScript()
-    local p = fs.join(paths.get_plugin_dir(), "public", "luatools.js")
-    local src = m_utils.read_file(p)
-    if not src or src == "" then
-        return "console.error('[LuaTools] GetFrontendScript: public/luatools.js not found at " ..
-            tostring(p):gsub("\\", "\\\\") .. "');"
-    end
-    return src
-end
-
 -- ── Return lifecycle table ────────────────────────────────────────────────────
 
 return {
