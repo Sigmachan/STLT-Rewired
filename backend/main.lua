@@ -24,6 +24,7 @@ local custom_apis     = require("custom_apis")
 local source_chain    = require("source_chain")
 local history         = require("history")
 local config_transfer = require("config_transfer")
+local dlc             = require("dlc")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -786,6 +787,25 @@ end
 
 function ImportConfig(config_json, contentScriptQuery)
     local ok, res = pcall(config_transfer.import_config, config_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── DLC config & overview (steamtools.py) ────────────────────────────────────
+
+function GenerateDlcConfig(appid, contentScriptQuery, format)
+    if type(appid) == "table" then
+        format = appid.format
+        appid = appid.appid
+    end
+    local ok, res = pcall(dlc.generate_dlc_config, appid, format)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetDlcOverview(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(dlc.get_dlc_overview, appid)
     if not ok then return json_err(res) end
     return json_ok(res)
 end

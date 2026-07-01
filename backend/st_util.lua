@@ -149,4 +149,35 @@ function M.split_lines(content)
     return lines
 end
 
+--- Read <appid>.lua (or .lua.disabled) from stplug-in. Returns (content, path)
+--- or (nil, errmsg). Shared by feature modules.
+function M.read_lua_file(appid)
+    local stplug = M.stplug_dir()
+    if stplug == "" then return nil, "Steam path not found" end
+    for _, ext in ipairs({ ".lua", ".lua.disabled" }) do
+        local p = fs.join(stplug, tostring(appid) .. ext)
+        if fs.is_file(p) then
+            local content = m_utils.read_file(p)
+            if content then return content, p end
+            return nil, "read failed"
+        end
+    end
+    return nil, "Lua file not found"
+end
+
+--- Depot IDs carrying a decryption key: addappid(id, N, "hex"). Returns a sorted
+--- array of id strings.
+function M.get_depot_ids_from_lua(content)
+    local seen, out = {}, {}
+    for line in (tostring(content) .. "\n"):gmatch("([^\n]*)\n") do
+        local did = line:match('addappid%s*%(%s*(%d+)%s*,%s*%d+%s*,%s*"%x+"')
+        if did and not seen[did] then
+            seen[did] = true
+            table.insert(out, did)
+        end
+    end
+    table.sort(out, function(a, b) return tonumber(a) < tonumber(b) end)
+    return out
+end
+
 return M
