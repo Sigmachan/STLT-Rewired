@@ -25,6 +25,8 @@ local source_chain    = require("source_chain")
 local history         = require("history")
 local config_transfer = require("config_transfer")
 local dlc             = require("dlc")
+local events          = require("events")
+local mods            = require("mods")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -806,6 +808,70 @@ end
 function GetDlcOverview(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     local ok, res = pcall(dlc.get_dlc_overview, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Hooks (events.py) ────────────────────────────────────────────────────────
+
+function GetHooksConfig()
+    local ok, res = pcall(events.get_hooks_config)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SaveHooksConfig(config_json, contentScriptQuery)
+    if type(config_json) == "table" and config_json.config_json ~= nil then config_json = config_json.config_json end
+    local ok, res = pcall(events.save_hooks_config_json, config_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Mods (mod_system.py) ─────────────────────────────────────────────────────
+
+function GetModList()
+    local ok, res = pcall(mods.get_mod_list)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetModFile(contentScriptQuery, filename, mod_id)
+    if type(contentScriptQuery) == "table" then
+        filename = contentScriptQuery.filename
+        mod_id = contentScriptQuery.mod_id
+    end
+    -- returns raw file content (matches Python), not JSON-wrapped
+    local ok, res = pcall(mods.get_mod_file, mod_id, filename)
+    if not ok then return "" end
+    return res
+end
+
+function ToggleMod(contentScriptQuery, enabled, mod_id)
+    if type(contentScriptQuery) == "table" then
+        enabled = contentScriptQuery.enabled
+        mod_id = contentScriptQuery.mod_id
+    end
+    local ok, res = pcall(mods.toggle_mod, mod_id, enabled)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetModLoaderInfo()
+    local ok, res = pcall(mods.get_mod_loader_info)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function InstallModFromUrl(contentScriptQuery, url)
+    if type(contentScriptQuery) == "table" then url = contentScriptQuery.url end
+    local ok, res = pcall(mods.install_mod_from_url, url)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function UninstallMod(contentScriptQuery, mod_id)
+    if type(contentScriptQuery) == "table" then mod_id = contentScriptQuery.mod_id end
+    local ok, res = pcall(mods.uninstall_mod, mod_id)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
