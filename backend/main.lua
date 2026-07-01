@@ -39,6 +39,7 @@ local workshop        = require("workshop")
 local batch           = require("batch")
 local achievements    = require("achievements")
 local backup          = require("backup")
+local key_vault       = require("key_vault")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1221,6 +1222,52 @@ end
 function DeleteBackup(filename, contentScriptQuery)
     if type(filename) == "table" then filename = filename.filename end
     local ok, res = pcall(backup.delete_backup, filename)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Key vault (key_vault.py) ─────────────────────────────────────────────────
+
+function ListKeyProfiles()
+    local ok, res = pcall(key_vault.list_profiles)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SaveKeyProfile(contentScriptQuery, name)
+    if type(contentScriptQuery) == "table" then name = contentScriptQuery.name end
+    local ok, res = pcall(key_vault.save_profile, name)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function LoadKeyProfile(contentScriptQuery, name)
+    if type(contentScriptQuery) == "table" then name = contentScriptQuery.name end
+    local ok, res = pcall(key_vault.load_profile, name)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function DeleteKeyProfile(contentScriptQuery, name)
+    if type(contentScriptQuery) == "table" then name = contentScriptQuery.name end
+    local ok, res = pcall(key_vault.delete_profile, name)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ExportKeyProfile(contentScriptQuery, name)
+    if type(contentScriptQuery) == "table" then name = contentScriptQuery.name end
+    local ok, res = pcall(key_vault.export_profile, name)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ImportKeyProfile(activate, blob, contentScriptQuery, nameOverride)
+    if type(activate) == "table" then
+        local t = activate
+        blob = t.blob; nameOverride = t.nameOverride; activate = t.activate
+    end
+    local ok, res = pcall(key_vault.import_profile, blob, nameOverride, activate)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
