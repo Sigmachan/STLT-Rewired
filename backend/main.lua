@@ -41,6 +41,7 @@ local achievements    = require("achievements")
 local backup          = require("backup")
 local key_vault       = require("key_vault")
 local tokeer          = require("tokeer")
+local sync            = require("sync")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1298,6 +1299,46 @@ end
 function RemoveTokeerLaunch(accountId32, appid, contentScriptQuery)
     if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
     local ok, res = pcall(tokeer.remove_tokeer_launch, appid, accountId32)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Sync (sync_engine.py) ────────────────────────────────────────────────────
+
+function GetSyncConfig()
+    local ok, res = pcall(sync.get_sync_config)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SetSyncConfig(contentScriptQuery, updates)
+    if type(contentScriptQuery) == "table" then updates = contentScriptQuery.updates or contentScriptQuery end
+    local ok, res = pcall(sync.set_sync_config, updates)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SyncPush()
+    local ok, res = pcall(sync.sync_push)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SyncPull(contentScriptQuery, dryRun)
+    if type(contentScriptQuery) == "table" then dryRun = contentScriptQuery.dryRun end
+    local ok, res = pcall(sync.sync_pull, dryRun)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SyncStatus()
+    local ok, res = pcall(sync.sync_status)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SyncTestConnection()
+    local ok, res = pcall(sync.sync_test_connection)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
