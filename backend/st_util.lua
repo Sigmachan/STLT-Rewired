@@ -258,4 +258,45 @@ function M.b64decode(data)
     end))
 end
 
+-- SteamID64 base + decimal string-subtraction (SteamID64 > 2^53, so exact
+-- integer math needs strings, not LuaJIT doubles).
+M.STEAMID64_BASE = "76561197960265728"
+function M.sub_decimal(a, b)
+    a, b = tostring(a), tostring(b)
+    local n = math.max(#a, #b)
+    a = string.rep("0", n - #a) .. a
+    b = string.rep("0", n - #b) .. b
+    local out, borrow = {}, 0
+    for i = n, 1, -1 do
+        local d = (a:byte(i) - 48) - (b:byte(i) - 48) - borrow
+        if d < 0 then d = d + 10; borrow = 1 else borrow = 0 end
+        out[i] = string.char(48 + d)
+    end
+    return tonumber((table.concat(out):gsub("^0+", ""))) or 0
+end
+
+-- Parse loginusers.vdf -> accounts [{accountId32, steamId64, username, personaName, mostRecent}].
+function M.get_active_account_ids()
+    local base = steam_utils.detect_steam_install_path()
+    if not base or base == "" then return {} end
+    local vdf = fs.join(base, "config", "loginusers.vdf")
+    if not fs.is_file(vdf) then return {} end
+    local raw = m_utils.read_file(vdf) or ""
+    local accounts = {}
+    for sid, body in raw:gmatch('"(%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d+)"%s*{(.-)}') do
+        table.insert(accounts, {
+            accountId32 = M.sub_decimal(sid, M.STEAMID64_BASE),
+            steamId64 = sid,
+            username = body:match('"AccountName"%s*"([^"]+)"') or "",
+            personaName = body:match('"PersonaName"%s*"([^"]+)"') or "",
+            mostRecent = body:match('"MostRecent"%s*"([01])"') == "1",
+        })
+    end
+    table.sort(accounts, function(a, b)
+        if a.mostRecent ~= b.mostRecent then return a.mostRecent end
+        return a.username < b.username
+    end)
+    return accounts
+end
+
 return M

@@ -42,6 +42,7 @@ local backup          = require("backup")
 local key_vault       = require("key_vault")
 local tokeer          = require("tokeer")
 local sync            = require("sync")
+local account         = require("account")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1339,6 +1340,63 @@ end
 
 function SyncTestConnection()
     local ok, res = pcall(sync.sync_test_connection)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Account switch / transfer (account_switch.py / account_transfer.py) ──────
+
+function ExtractLoginTokens()
+    local ok, res = pcall(account.extract_login_tokens)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SwitchToAccount(accountName, contentScriptQuery)
+    if type(accountName) == "table" then accountName = accountName.accountName end
+    local ok, res = pcall(account.switch_to_account, accountName)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListUserdataAccounts()
+    local ok, res = pcall(account.list_accounts)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function InspectGameUserdata(accountId32, appid, contentScriptQuery)
+    if type(accountId32) == "table" then appid = accountId32.appid; accountId32 = accountId32.accountId32 end
+    local ok, res = pcall(account.inspect_game_data, accountId32, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function TransferGameUserdata(a1, a2, a3, a4, a5, a6)
+    local from, to, appid, overwrite, backup
+    if type(a1) == "table" then
+        from = a1.fromAccountId32; to = a1.toAccountId32; appid = a1.appid
+        overwrite = a1.overwrite; backup = a1.backup
+    else
+        -- positional alphabetical: appid, backup, contentScriptQuery, fromAccountId32, overwrite, toAccountId32
+        appid = a1; backup = a2; from = a4; overwrite = a5; to = a6
+    end
+    local ok, res = pcall(account.transfer_game_data, from, to, appid, overwrite, backup)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function RestoreGameUserdataBackup(accountId32, appid, backupPath, contentScriptQuery)
+    if type(accountId32) == "table" then
+        appid = accountId32.appid; backupPath = accountId32.backupPath; accountId32 = accountId32.accountId32
+    end
+    local ok, res = pcall(account.restore_transfer_backup, accountId32, appid, backupPath)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListUserdataBackups()
+    local ok, res = pcall(account.list_game_data_backups)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
