@@ -180,4 +180,17 @@ function M.get_depot_ids_from_lua(content)
     return out
 end
 
+--- Resolve a depot's public manifest gid from steamcmd depots data.
+function M.get_manifest_id(depots_data, depot_id)
+    if type(depots_data) ~= "table" then return nil end
+    local d = depots_data[depot_id]
+    if type(d) ~= "table" then return nil end
+    local m = d.manifests
+    if type(m) ~= "table" then return nil end
+    local pub = m.public
+    if type(pub) == "table" then return tostring(pub.gid or "") end
+    if type(pub) == "string" and M.trim(pub) ~= "" then return M.trim(pub) end
+    return nil
+end
+
 return M

@@ -31,6 +31,7 @@ local profiles        = require("profiles")
 local steam_version   = require("steam_version")
 local acf_lock        = require("acf_lock")
 local crack_migrator  = require("crack_migrator")
+local manifests       = require("manifests")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -990,6 +991,35 @@ function ListMigrations()
     local ok, res = pcall(crack_migrator.list_migrations)
     if not ok then return json_err(res) end
     return json_ok(res)
+end
+
+-- ── Manifests & depot (steamtools.py) ────────────────────────────────────────
+
+function UpdateManifests(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(manifests.update_manifests, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function CheckManifestStaleness(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(manifests.check_manifest_staleness, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SyncDepotcache(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(manifests.sync_depotcache, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function RepairDepotCache(appid, contentScriptQuery)
+    -- Deferred: full repair pipeline (orphan cleanup + lua fix + dry-run) not yet ported.
+    -- Use CheckManifestStaleness + SyncDepotcache in the meantime.
+    return json_ok({ success = false, error = "RepairDepotCache not yet ported (use SyncDepotcache/CheckManifestStaleness)" })
 end
 
 -- ── Return lifecycle table ────────────────────────────────────────────────────

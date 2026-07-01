@@ -1,0 +1,253 @@
+-- manifests.lua — depot manifest updater / staleness check / depotcache sync.
+--
+-- Faithful Lua port of steamtools.py update_manifests / check_manifest_staleness /
+-- sync_depotcache. Manifest bytes are fetched from the GitHub mirror, then the
+-- Morrenus and ManifestHub APIs (when a key is configured in settings). Steamcmd
+-- (api.steamcmd.net) provides the authoritative public manifest gids.
+
+local cjson       = require("json")
+local m_utils     = require("utils")
+local fs          = require("fs")
+local http_client = require("http_client")
+local logger      = require("plugin_logger")
+local st          = require("st_util")
+
+local M = {}
+
+local USER_AGENT = "STLT-Rewired/1.0"
+local MH_BACKUP_URL = "https://raw.githubusercontent.com/qwe213312/k25FCdfEOoEJ42S6/main"
+local MORRENUS_MANIFEST_URL = "https://hubcapmanifest.com/api/v1/generate/manifest"
+local MANIFESTHUB_API_URL = "https://api.manifesthub1.filegear-sg.me/manifest"
+
+-- steamcmd app info, cached per process (single-threaded; no lock needed).
+local APP_INFO_CACHE = {}
+local function fetch_app_info(appid)
+    if APP_INFO_CACHE[appid] ~= nil then return APP_INFO_CACHE[appid] end
+    local ok, resp = pcall(http_client.get, "https://api.steamcmd.net/v1/info/" .. tostring(appid), { timeout = 10 })
+    if ok and resp and resp.status == 200 and resp.body then
+        local ok2, parsed = pcall(cjson.decode, resp.body)
+        if ok2 and type(parsed) == "table" and type(parsed.data) == "table" then
+            local root = parsed.data[tostring(appid)]
+            if type(root) == "table" then
+                local out = { depots = type(root.depots) == "table" and root.depots or {} }
+                APP_INFO_CACHE[appid] = out
+                return out
+            end
+        end
+    end
+    APP_INFO_CACHE[appid] = { depots = {} }
+    return APP_INFO_CACHE[appid]
+end
+
+-- Best-effort API-key lookup from settings.manager (skipped if unsupported).
+local function get_key(fn_name)
+    local ok, sm = pcall(require, "settings.manager")
+    if ok and type(sm) == "table" and type(sm[fn_name]) == "function" then
+        local ok2, k = pcall(sm[fn_name])
+        if ok2 and type(k) == "string" then return k end
+    end
+    return ""
+end
+
+local function try_fetch(url)
+    local ok, resp = pcall(http_client.get, url, { timeout = 30, headers = { ["User-Agent"] = USER_AGENT } })
+    if ok and resp and resp.status == 200 and resp.body and #resp.body > 0 then
+        return resp.body
+    end
+    return nil
+end
+
+-- Extract (depot, second-addappid-arg) pairs. NOTE: mirrors the Python quirk of
+-- treating addappid's 2nd argument as the "local manifest" for staleness/sync.
+local function addappid_pairs(content)
+    local out = {}
+    for depot, num in tostring(content):gmatch("addappid%s*%(%s*(%d+)%s*,%s*(%d+)%s*,") do
+        out[#out + 1] = { depot, num }
+    end
+    return out
+end
+
+function M.update_manifests(appid)
+    appid = tonumber(appid)
+    if not appid then return { success = false, error = "Invalid appid" } end
+    local content, err = st.read_lua_file(appid)
+    if content == nil then return { success = false, error = err } end
+    local depot_ids = st.get_depot_ids_from_lua(content)
+    if #depot_ids == 0 then return { success = false, error = "No depot IDs in lua" } end
+
+    local info = fetch_app_info(appid)
+    local depots_data = info.depots or {}
+    if not next(depots_data) then return { success = false, error = "No depot info from steamcmd" } end
+
+    local base = st.steam_path()
+    local dc = fs.join(base, "depotcache")
+    pcall(fs.create_directories, dc)
+
+    local mo_key = get_key("get_morrenus_api_key")
+    local mh_key = get_key("get_manifesthub_api_key")
+
+    local dl, sk, fl = {}, {}, {}
+    for _, did in ipairs(depot_ids) do
+        local mid = st.get_manifest_id(depots_data, did)
+        if not mid or mid == "" then
+            table.insert(fl, { depotId = did, reason = "No public manifest" })
+        else
+            local dest = fs.join(dc, did .. "_" .. mid .. ".manifest")
+            if fs.is_file(dest) and (fs.file_size(dest) or 0) > 0 then
+                table.insert(sk, { depotId = did, manifestId = mid })
+            else
+                local data = try_fetch(MH_BACKUP_URL .. "/" .. did .. "_" .. mid .. ".manifest")
+                if not data and mo_key ~= "" then
+                    data = try_fetch(MORRENUS_MANIFEST_URL .. "?depot_id=" .. did .. "&manifest_id=" .. mid .. "&api_key=" .. mo_key)
+                end
+                if not data and mh_key ~= "" then
+                    data = try_fetch(MANIFESTHUB_API_URL .. "?apikey=" .. mh_key .. "&depotid=" .. did .. "&manifestid=" .. mid)
+                end
+                if data then
+                    local f = io.open(dest, "wb")
+                    if f then f:write(data); f:close() end
+                    table.insert(dl, { depotId = did, manifestId = mid, sizeBytes = #data })
+                else
+                    table.insert(fl, { depotId = did, manifestId = mid,
+                        reason = "All sources failed (GitHub / Morrenus / ManifestHub)" })
+                end
+            end
+        end
+    end
+
+    return {
+        success = true, appid = appid,
+        downloaded = st.A(dl), skipped = st.A(sk), failed = st.A(fl),
+        summary = { total = #depot_ids, downloaded = #dl, skipped = #sk, failed = #fl },
+    }
+end
+
+function M.check_manifest_staleness(appid)
+    appid = tonumber(appid) or 0
+    local stplug = st.stplug_dir()
+    if stplug == "" or not fs.is_directory(stplug) then
+        return { success = false, error = "stplug-in not found" }
+    end
+
+    local targets = {}
+    if appid ~= 0 then
+        targets = { appid }
+    else
+        for _, e in ipairs(fs.list(stplug) or {}) do
+            local aid = (e.name or ""):match("^(%d+)%.lua$")
+            if aid then table.insert(targets, tonumber(aid)) end
+        end
+    end
+
+    local results = {}
+    for i = 1, math.min(#targets, 50) do
+        local aid = targets[i]
+        local content = st.read_lua_file(aid)
+        if content then
+            local local_depots = addappid_pairs(content)
+            if #local_depots > 0 then
+                local info = fetch_app_info(aid)
+                local remote_depots = info.depots or {}
+                local app_stale = false
+                local depot_checks = {}
+                for _, pair in ipairs(local_depots) do
+                    local depot_id, local_manifest = pair[1], pair[2]
+                    local remote_gid = st.get_manifest_id(remote_depots, depot_id) or ""
+                    local is_stale = remote_gid ~= "" and tostring(remote_gid) ~= tostring(local_manifest)
+                    if is_stale then app_stale = true end
+                    table.insert(depot_checks, {
+                        depot_id = depot_id, ["local"] = local_manifest,
+                        remote = remote_gid ~= "" and remote_gid or "?", stale = is_stale,
+                    })
+                end
+                local stale_count = 0
+                for _, d in ipairs(depot_checks) do if d.stale then stale_count = stale_count + 1 end end
+                table.insert(results, {
+                    appid = aid, stale = app_stale, depots = st.A(depot_checks),
+                    total_depots = #depot_checks, stale_count = stale_count,
+                })
+                m_utils.sleep(250)
+            end
+        end
+    end
+
+    local total_stale = 0
+    for _, r in ipairs(results) do if r.stale then total_stale = total_stale + 1 end end
+    return { success = true, results = st.A(results), total_checked = #results, total_stale = total_stale }
+end
+
+function M.sync_depotcache(appid)
+    appid = tonumber(appid) or 0
+    local base = st.steam_path()
+    if base == "" then return { success = false, error = "Steam path not found" } end
+    local stplug = st.stplug_dir()
+
+    local targets = {}
+    if appid ~= 0 then
+        targets = { appid }
+    elseif fs.is_directory(stplug) then
+        for _, e in ipairs(fs.list(stplug) or {}) do
+            local aid = (e.name or ""):match("^(%d+)%.lua$")
+            if aid then table.insert(targets, tonumber(aid)) end
+        end
+    end
+
+    local cache_dirs = { fs.join(base, "depotcache"), fs.join(base, "config", "depotcache") }
+    for _, d in ipairs(cache_dirs) do pcall(fs.create_directories, d) end
+
+    local existing = {}
+    for _, cd in ipairs(cache_dirs) do
+        if fs.is_directory(cd) then
+            for _, e in ipairs(fs.list(cd) or {}) do
+                if (e.name or ""):match("%.manifest$") then existing[e.name] = true end
+            end
+        end
+    end
+
+    local missing, present = {}, {}
+    for _, aid in ipairs(targets) do
+        local content = st.read_lua_file(aid)
+        if content then
+            for _, pair in ipairs(addappid_pairs(content)) do
+                local fname = pair[1] .. "_" .. pair[2] .. ".manifest"
+                local rec = { appid = aid, depot = pair[1], manifest = pair[2] }
+                if existing[fname] then table.insert(present, rec) else table.insert(missing, rec) end
+            end
+        end
+    end
+
+    local fetched, failed = 0, 0
+    local mh_key = get_key("get_manifesthub_api_key")
+    if mh_key ~= "" and #missing > 0 then
+        for i = 1, math.min(#missing, 100) do
+            local item = missing[i]
+            local url = MANIFESTHUB_API_URL .. "?apikey=" .. mh_key ..
+                "&depotid=" .. item.depot .. "&manifestid=" .. item.manifest
+            local ok, resp = pcall(http_client.get, url, { timeout = 30, headers = { ["User-Agent"] = "Mozilla/5.0" } })
+            if ok and resp and resp.status == 200 and resp.body and #resp.body > 50 then
+                local fname = item.depot .. "_" .. item.manifest .. ".manifest"
+                for _, cd in ipairs(cache_dirs) do
+                    local f = io.open(fs.join(cd, fname), "wb")
+                    if f then f:write(resp.body); f:close() end
+                end
+                fetched = fetched + 1
+            else
+                failed = failed + 1
+            end
+            m_utils.sleep(500)
+        end
+    end
+
+    return {
+        success = true,
+        total_depots = #present + #missing,
+        present = #present,
+        missing_before = #missing,
+        fetched = fetched,
+        failed = failed,
+        still_missing = #missing - fetched,
+        manifesthub_available = mh_key ~= "",
+    }
+end
+
+return M
