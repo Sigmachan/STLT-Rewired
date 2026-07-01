@@ -22,6 +22,8 @@ local cache_tools     = require("cache_tools")
 local lua_tools       = require("lua_tools")
 local custom_apis     = require("custom_apis")
 local source_chain    = require("source_chain")
+local history         = require("history")
+local config_transfer = require("config_transfer")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -752,6 +754,38 @@ end
 
 function SaveSourceChain(chain_json, contentScriptQuery)
     local ok, res = pcall(source_chain.save_source_chain_json, chain_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Download history & config transfer (history.py / config_transfer.py) ──────
+
+function GetDownloadHistory(appid, contentScriptQuery, limit, source, status)
+    local ok, res = pcall(history.get_download_history_json, appid, limit, status, source)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetDownloadStats()
+    local ok, res = pcall(history.get_download_stats_json)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function PruneHistory(contentScriptQuery, days)
+    local ok, res = pcall(history.prune_history_json, days)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ExportConfig()
+    local ok, res = pcall(config_transfer.export_config)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ImportConfig(config_json, contentScriptQuery)
+    local ok, res = pcall(config_transfer.import_config, config_json)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
