@@ -28,6 +28,8 @@ local dlc             = require("dlc")
 local events          = require("events")
 local mods            = require("mods")
 local profiles        = require("profiles")
+local steam_version   = require("steam_version")
+local acf_lock        = require("acf_lock")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -922,6 +924,41 @@ end
 
 function ListAllProfiles()
     local ok, res = pcall(profiles.list_all_profiles)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Steam version & per-game update lock (steam_version.py / acf_writer.py) ───
+
+function GetSteamVersionInfo()
+    local ok, res = pcall(steam_version.get_steam_version_info)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SetSteamUpdateBlock(contentScriptQuery, enabled)
+    if type(contentScriptQuery) == "table" then enabled = contentScriptQuery.enabled end
+    local ok, res = pcall(steam_version.set_steam_update_block, enabled)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ListSteamCfgBackups()
+    local ok, res = pcall(steam_version.list_steam_cfg_backups)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function SetGameUpdatesDisabled(appid, contentScriptQuery, disabled)
+    if type(appid) == "table" then disabled = appid.disabled; appid = appid.appid end
+    local ok, res = pcall(acf_lock.set_game_update_lock, appid, disabled)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetGameUpdateLockStatus(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(acf_lock.get_game_update_lock_status, appid)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
