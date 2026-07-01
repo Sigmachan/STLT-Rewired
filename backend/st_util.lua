@@ -10,6 +10,7 @@ local m_utils     = require("utils")
 local fs          = require("fs")
 local paths       = require("paths")
 local steam_utils = require("steam_utils")
+local http_client = require("http_client")
 
 local M = {}
 
@@ -191,6 +192,53 @@ function M.get_manifest_id(depots_data, depot_id)
     if type(pub) == "table" then return tostring(pub.gid or "") end
     if type(pub) == "string" and M.trim(pub) ~= "" then return M.trim(pub) end
     return nil
+end
+
+-- steamcmd app info (name / depots / workshop / dlc list), cached per process.
+local APP_INFO_CACHE = {}
+function M.fetch_app_info(appid)
+    if APP_INFO_CACHE[appid] ~= nil then return APP_INFO_CACHE[appid] end
+    local out = { depots = {}, name = "", workshop_depot = 0, dlc_list = "" }
+    local ok, resp = pcall(http_client.get, "https://api.steamcmd.net/v1/info/" .. tostring(appid), { timeout = 10 })
+    if ok and resp and resp.status == 200 and resp.body then
+        local ok2, parsed = pcall(cjson.decode, resp.body)
+        if ok2 and type(parsed) == "table" and type(parsed.data) == "table" then
+            local root = parsed.data[tostring(appid)]
+            if type(root) == "table" then
+                local depots = type(root.depots) == "table" and root.depots or {}
+                local common = type(root.common) == "table" and root.common or {}
+                local extended = type(root.extended) == "table" and root.extended or {}
+                out = {
+                    depots = depots, name = common.name or "",
+                    workshop_depot = depots.workshopdepot or 0, dlc_list = extended.listofdlc or "",
+                }
+            end
+        end
+    end
+    APP_INFO_CACHE[appid] = out
+    return out
+end
+
+-- Manifest present in either depotcache location, non-empty. Returns path or nil.
+function M.find_manifest_file(base, depot_id, manifest_id)
+    local fname = depot_id .. "_" .. manifest_id .. ".manifest"
+    for _, subdir in ipairs({ "depotcache", fs.join("config", "depotcache") }) do
+        local fp = fs.join(base, subdir, fname)
+        if fs.is_file(fp) then
+            local sz = fs.file_size(fp)
+            if sz and sz > 0 then return fp end
+        end
+    end
+    return nil
+end
+
+-- Steam manifest magic bytes 0x27 0x44 0x56 0x01 (cheap 4-byte read via io).
+function M.verify_manifest_magic(path)
+    local f = io.open(path, "rb")
+    if not f then return false end
+    local magic = f:read(4)
+    f:close()
+    return magic == "\39\68\86\1"
 end
 
 return M

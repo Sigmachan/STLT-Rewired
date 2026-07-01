@@ -34,6 +34,7 @@ local crack_migrator  = require("crack_migrator")
 local manifests       = require("manifests")
 local cloud_fix       = require("cloud_fix")
 local health          = require("health")
+local diagnostics     = require("diagnostics")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1040,6 +1041,22 @@ end
 
 function GetMillenniumHealth()
     local ok, res = pcall(health.get_millennium_health)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- ── Diagnostics: per-app report (steamtools.py) ──────────────────────────────
+
+function DiagnoseApp(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(diagnostics.diagnose_app, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ExportDiagnosticReport(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(diagnostics.export_diagnostic_report, appid)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
