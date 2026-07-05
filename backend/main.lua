@@ -659,10 +659,6 @@ function GetTranslations(language)
     })
 end
 
-function GetAvailableThemes()
-    return json_ok({ success = true, themes = {} })
-end
-
 -- ── Cache & disk tools (ported from steamtools.py) ───────────────────────────
 
 function GetCacheInfo()
