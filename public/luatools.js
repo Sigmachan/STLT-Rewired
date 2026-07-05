@@ -6354,7 +6354,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             if (groupKey === 'general') {
                 if (optionKey === 'language') return 'settings.language.label';
                 if (optionKey === 'useSteamLanguage') return 'settings.useSteamLanguage.label';
-                if (optionKey === 'donateKeys') return 'settings.donateKeys.label';
                 if (optionKey === 'theme') return 'settings.theme.label';
             }
             return null;
@@ -6364,7 +6363,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             if (groupKey === 'general') {
                 if (optionKey === 'language') return 'settings.language.description';
                 if (optionKey === 'useSteamLanguage') return 'settings.useSteamLanguage.description';
-                if (optionKey === 'donateKeys') return 'settings.donateKeys.description';
                 if (optionKey === 'theme') return 'settings.theme.description';
             }
             return null;
@@ -6553,10 +6551,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
                         let yesLabel = option.metadata && option.metadata.yesLabel ? String(option.metadata.yesLabel) : 'Yes';
                         let noLabel = option.metadata && option.metadata.noLabel ? String(option.metadata.noLabel) : 'No';
-                        if (group.key === 'general' && option.key === 'donateKeys') {
-                            yesLabel = t('settings.donateKeys.yes', yesLabel);
-                            noLabel = t('settings.donateKeys.no', noLabel);
-                        }
 
                         const yesBtn = document.createElement('a');
                         yesBtn.className = 'btnv6_blue_hoverfade btn_small';

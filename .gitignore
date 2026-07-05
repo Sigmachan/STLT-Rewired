@@ -86,3 +86,6 @@ logs/
 
 # oh-my-claudecode tooling scratch
 .omc/
+
+# local personal secrets (Ryuu session, hubcap key) — never commit
+backend/data/secrets.local.json

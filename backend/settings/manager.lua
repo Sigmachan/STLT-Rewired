@@ -8,8 +8,22 @@ local options = require("settings.options")
 
 local SCHEMA_VERSION = 1
 local SETTINGS_FILE = paths.backend_path("data/settings.json")
+-- Personal, machine-local secrets (Ryuu session cookie, hubcap/Morrenus key). Gitignored and kept
+-- out of settings.json so they survive plugin updates without being re-entered. When present these
+-- override the settings-stored values.
+local SECRETS_FILE = paths.backend_path("data/secrets.local.json")
 
 local _SETTINGS_CACHE = nil
+
+local function _read_local_secret(key)
+    if not fs.exists(SECRETS_FILE) then return nil end
+    local ok, data = pcall(utils.read_json, SECRETS_FILE)
+    if ok and type(data) == "table" then
+        local v = data[key]
+        if type(v) == "string" and v ~= "" then return v end
+    end
+    return nil
+end
 
 -- Simple placeholder since we can't easily read registry in Millennium Lua securely
 local function _detect_steam_language()
@@ -199,9 +213,19 @@ function manager.get_current_language()
 end
 
 function manager.get_morrenus_api_key()
+    local secret = _read_local_secret("morrenusApiKey")
+    if secret then return secret end
     local values = manager._get_values_locked()
     local general = values.general or {}
     return tostring(general.morrenusApiKey or "")
+end
+
+function manager.get_ryuu_session()
+    local secret = _read_local_secret("ryuuSession")
+    if secret then return secret end
+    local values = manager._get_values_locked()
+    local general = values.general or {}
+    return tostring(general.ryuuSession or "")
 end
 
 function manager.get_available_locales()

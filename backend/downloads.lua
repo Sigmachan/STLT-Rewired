@@ -13,6 +13,18 @@ local cjson = require("json")
 local downloads = {}
 local DOWNLOAD_STATE = {}
 
+-- Ryuu Premium is authenticated by a session cookie kept in data/secrets.local.json. Returns the
+-- Cookie value for a Ryuu request (matched by api name or the Ryuu host), or nil for other sources.
+local RYUU_HOST = "167.235.229.108"
+local function _ryuu_cookie(url, apiName)
+    local is_ryuu = (apiName ~= nil and string.lower(tostring(apiName)) == "ryuu")
+        or (url ~= nil and string.find(tostring(url), RYUU_HOST, 1, true) ~= nil)
+    if not is_ryuu then return nil end
+    local ok, sess = pcall(settings_manager.get_ryuu_session)
+    if ok and type(sess) == "string" and sess ~= "" then return sess end
+    return nil
+end
+
 local function _set_download_state(appid, update)
     if type(appid) == "string" then appid = tonumber(appid) end
     if not DOWNLOAD_STATE[appid] then DOWNLOAD_STATE[appid] = {} end
@@ -119,18 +131,22 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     _set_download_state(appid, { status = "done", success = true, api = api_name })
 end
 
-local function _launch_async_download(appid, url, dest_path, extract_dir)
+local function _launch_async_download(appid, url, dest_path, extract_dir, cookie)
     local is_windows = m_utils.getenv("OS") == "Windows_NT"
     local dest_root = utils.ensure_temp_download_dir()
     local state_file = fs.join(dest_root, tostring(appid) .. "_state.json")
-    
+
     m_utils.write_file(state_file, '{"status": "downloading"}')
     if not fs.exists(extract_dir) then fs.create_directories(extract_dir) end
-    
+
+    -- Authenticated Ryuu Premium requires the session cookie on the download request.
+    local cookie_arg = ""
+    if cookie and cookie ~= "" then cookie_arg = ' -H "Cookie: ' .. cookie .. '"' end
+
     if is_windows then
         local cmd = string.format(
-            'cmd.exe /C start "LuaTools Downloader" cmd.exe /C "color 0B && echo LuaTools is downloading the requested files... && echo Please keep this window open until it closes automatically. && echo. && (echo {"status": "downloading"} > "%s" && curl.exe -# -L -A "discord(dot)gg/luatools" "%s" -o "%s" && echo {"status": "extracting"} > "%s" && echo. && echo Extracting files... && tar.exe -xf "%s" -C "%s" && echo {"status": "extracted"} > "%s") || (echo. && echo ERROR: Download or extraction failed! && echo {"status": "failed"} > "%s" && timeout /t 5)"',
-            state_file, url, dest_path, state_file, dest_path, extract_dir, state_file, state_file
+            'cmd.exe /C start "LuaTools Downloader" cmd.exe /C "color 0B && echo LuaTools is downloading the requested files... && echo Please keep this window open until it closes automatically. && echo. && (echo {"status": "downloading"} > "%s" && curl.exe -# -L -A "discord(dot)gg/luatools"%s "%s" -o "%s" && echo {"status": "extracting"} > "%s" && echo. && echo Extracting files... && tar.exe -xf "%s" -C "%s" && echo {"status": "extracted"} > "%s") || (echo. && echo ERROR: Download or extraction failed! && echo {"status": "failed"} > "%s" && timeout /t 5)"',
+            state_file, cookie_arg, url, dest_path, state_file, dest_path, extract_dir, state_file, state_file
         )
         m_utils.exec(cmd)
     else
@@ -156,7 +172,7 @@ function downloads.start_add_via_luatools_from_url(appid, url, apiName)
         local dest_root = utils.ensure_temp_download_dir()
         local dest_path = fs.join(dest_root, tostring(appid) .. ".zip")
         local extract_dir = fs.join(dest_root, "extracted_" .. tostring(appid))
-        _launch_async_download(appid, url, dest_path, extract_dir)
+        _launch_async_download(appid, url, dest_path, extract_dir, _ryuu_cookie(url, apiName))
     end)
 
     if not ok then
@@ -216,17 +232,20 @@ function downloads.start_add_via_luatools(appid)
                     success = true
                 end
             else
-                local resp = http_client.head(url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+                local headers = { ["User-Agent"] = config.USER_AGENT }
+                local ck = _ryuu_cookie(url, name)
+                if ck then headers["Cookie"] = ck end
+                local resp = http_client.head(url, { headers = headers, timeout = 5 })
                 if resp and resp.status == success_code then
                     success = true
                 else
-                    local get_resp = http_client.get(url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+                    local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
                     if get_resp and get_resp.status == success_code then
                         success = true
                     end
                 end
             end
-            
+
             if success then
                 target_url = url
                 target_name = name
@@ -237,7 +256,7 @@ function downloads.start_add_via_luatools(appid)
         if not target_url then error("Not available on any API") end
         
         _set_download_state(appid, { status = "downloading", currentApi = target_name })
-        _launch_async_download(appid, target_url, dest_path, extract_dir)
+        _launch_async_download(appid, target_url, dest_path, extract_dir, _ryuu_cookie(target_url, target_name))
     end)
 
     if not ok then
@@ -290,12 +309,15 @@ function downloads.check_apis_for_app(appid)
             end
         else
             local success = false
-            local resp = http_client.head(url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+            local headers = { ["User-Agent"] = config.USER_AGENT }
+            local ck = _ryuu_cookie(url, name)
+            if ck then headers["Cookie"] = ck end
+            local resp = http_client.head(url, { headers = headers, timeout = 5 })
             if resp and resp.status == success_code then
                 success = true
             else
                 -- Fallback to GET if HEAD fails
-                local get_resp = http_client.get(url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+                local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
                 if get_resp and get_resp.status == success_code then
                     success = true
                 end
