@@ -1026,9 +1026,12 @@ function SyncDepotcache(appid, contentScriptQuery)
 end
 
 function RepairDepotCache(appid, contentScriptQuery, dry_run, fix_lua, orphan_age_days, remove_orphans)
-    -- Deferred: full repair pipeline (orphan cleanup + lua fix + dry-run) not yet ported.
-    -- Use CheckManifestStaleness + SyncDepotcache in the meantime.
-    return json_ok({ success = false, error = "RepairDepotCache not yet ported (use SyncDepotcache/CheckManifestStaleness)" })
+    -- Inventory report only; never mutates (see manifests.repair_depotcache), so dry_run/
+    -- remove_orphans are accepted for the frontend contract but do not change behavior.
+    local fix = fix_lua == true or fix_lua == "true" or fix_lua == 1 or fix_lua == "1"
+    local ok, res = pcall(manifests.repair_depotcache, dry_run, fix, orphan_age_days, remove_orphans)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 -- ── Diagnostics: cloud fix + millennium health (cloud_fix.py / health.py) ─────

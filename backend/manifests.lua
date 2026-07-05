@@ -250,4 +250,100 @@ function M.sync_depotcache(appid)
     }
 end
 
+-- Depot-cache inventory report. SAFE BY DESIGN — never deletes or moves anything. On a real
+-- machine the manifests whose depot is not named by any lua are overwhelmingly legit Steam-owned
+-- games (Steam manages/re-fetches them), so removal is neither useful nor safe. The genuinely
+-- useful repair (fetching missing pinned manifests for lua games) is SyncDepotcache's job; this
+-- reports the inventory and points there. NOTE on the lua format: addappid's args are
+-- (depot, flag, decryptionKey) — NOT (depot, manifestId); the manifest id lives in
+-- setManifestid(depot, "manifestId"). A manifest belongs to a lua game iff its depot is named by
+-- any lua, so classification is depot-based, not manifest-id-based.
+function M.repair_depotcache(dry_run, fix_lua, orphan_age_days, remove_orphans)
+    local base = st.steam_path()
+    if base == "" then return { success = false, error = "Steam path not found" } end
+    local stplug = st.stplug_dir()
+
+    -- Referenced depots (1st arg of non-commented addappid/setManifestid) and pinned manifest files.
+    local ref_depots, ref_depot_count = {}, 0
+    local pinned, pinned_count = {}, 0
+    if fs.is_directory(stplug) then
+        for _, e in ipairs(fs.list(stplug) or {}) do
+            local aid = (e.name or ""):match("^(%d+)%.lua$")
+            if aid then
+                local content = st.read_lua_file(tonumber(aid))
+                if content then
+                    for line in (content .. "\n"):gmatch("([^\n]*)\n") do
+                        local s = line:gsub("^%s+", "")
+                        if s:sub(1, 2) ~= "--" then
+                            local d1 = s:match("addappid%s*%(%s*(%d+)")
+                            if d1 and not ref_depots[d1] then ref_depots[d1] = true; ref_depot_count = ref_depot_count + 1 end
+                            local dm, mid = s:match("setManifestid%s*%(%s*(%d+)%s*,%s*\"?(%d+)")
+                            if dm then
+                                if not ref_depots[dm] then ref_depots[dm] = true; ref_depot_count = ref_depot_count + 1 end
+                                local fn = dm .. "_" .. mid .. ".manifest"
+                                if not pinned[fn] then pinned[fn] = true; pinned_count = pinned_count + 1 end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- On-disk manifests; classify by whether their depot is referenced by a lua game.
+    local cache_dirs = { fs.join(base, "depotcache"), fs.join(base, "config", "depotcache") }
+    local on_disk, present = 0, {}
+    local unref_count, unref_bytes = 0, 0
+    for _, cd in ipairs(cache_dirs) do
+        if fs.is_directory(cd) then
+            for _, e in ipairs(fs.list(cd) or {}) do
+                local name = e.name or ""
+                if name:match("%.manifest$") then
+                    on_disk = on_disk + 1
+                    present[name] = true
+                    local depot = name:match("^(%d+)_")
+                    if depot and not ref_depots[depot] then
+                        unref_count = unref_count + 1
+                        unref_bytes = unref_bytes + (fs.file_size(e.path or fs.join(cd, name)) or 0)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Pinned (setManifestid) manifests for lua games missing on disk → SyncDepotcache fetches these.
+    local missing_pinned = 0
+    for fn in pairs(pinned) do if not present[fn] then missing_pinned = missing_pinned + 1 end end
+
+    local unref_mb = math.floor(unref_bytes / (1024 * 1024) * 10 + 0.5) / 10
+
+    return {
+        success = true,
+        totals = {
+            manifests_scanned = on_disk,
+            manifests_downloaded = 0,
+            manifests_removed = 0,
+            junk_files_removed = 0,
+            lua_lines_fixed = 0,
+        },
+        phases = {
+            scan = {
+                on_disk = on_disk, lua_referenced_depots = ref_depot_count,
+                pinned_manifests = pinned_count,
+                unreferenced_by_lua = unref_count, unreferenced_size_mb = unref_mb,
+            },
+            download = {
+                downloaded = 0, missing_pinned = missing_pinned,
+                note = missing_pinned > 0 and "run Sync Depot Cache to fetch missing pinned manifests"
+                    or "no pinned manifests missing",
+            },
+            cleanup = {
+                removed = 0,
+                note = "report only: unreferenced manifests are mostly legit Steam-owned games; nothing deleted",
+            },
+            lua_fix = { enabled = fix_lua and true or false, files_fixed = 0, lines_commented_out = 0 },
+        },
+    }
+end
+
 return M
