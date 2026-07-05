@@ -134,7 +134,10 @@ end
 local function _persist_values(values)
     local payload = {version = SCHEMA_VERSION, values = values}
     _write_settings_file(payload)
-    _SETTINGS_CACHE = utils.read_json(SETTINGS_FILE).values or values
+    -- Cache the in-memory table we just wrote. (Previously re-read+decoded the file we had just
+    -- written on every call — a redundant native read whose `.values` also nil-indexed if the
+    -- read raced the write.)
+    _SETTINGS_CACHE = values
 end
 
 local manager = {}
@@ -222,31 +225,62 @@ function manager.get_settings_payload()
     }
 end
 
-function manager.apply_settings_changes(changes)
-    if type(changes) ~= "table" then return {success = false, error = "Invalid payload"} end
-    local current = manager._get_values_locked()
-    local updated = options.merge_defaults_with_values(current)
+-- Serialize server-method entry. Millennium dispatches RPCs by evaluating a global Lua function;
+-- if two applies overlap, the second must not run the heavy native path concurrently with the
+-- first. This flag rejects the overlapping call and logs it, so a genuine re-entrancy also leaves
+-- a breadcrumb (2026-07-05: hardening a native EXCEPTION_ACCESS_VIOLATION seen on the 2nd apply).
+local _apply_seq = 0
+local _apply_in_flight = false
 
-    for group_key, options_changes in pairs(changes) do
-        if type(options_changes) == "table" and updated[group_key] then
-            for option_key, value in pairs(options_changes) do
-                updated[group_key][option_key] = value
+function manager.apply_settings_changes(changes)
+    _apply_seq = _apply_seq + 1
+    local id = _apply_seq
+    if _apply_in_flight then
+        logger.warn(("apply[%d]: RE-ENTRANT call rejected — another apply is already in flight"):format(id))
+        return { success = false, error = "A settings apply is already in progress; please retry.", busy = true }
+    end
+    _apply_in_flight = true
+
+    local ok, result = pcall(function()
+        if type(changes) ~= "table" then return {success = false, error = "Invalid payload"} end
+        local current = manager._get_values_locked()
+        local updated = options.merge_defaults_with_values(current)
+
+        local prev_language = updated.general and updated.general.language or locales.DEFAULT_LOCALE
+
+        for group_key, options_changes in pairs(changes) do
+            if type(options_changes) == "table" and updated[group_key] then
+                for option_key, value in pairs(options_changes) do
+                    updated[group_key][option_key] = value
+                end
             end
         end
+
+        _ensure_language_valid(updated)
+        _persist_values(updated)
+
+        local language = updated.general and updated.general.language or locales.DEFAULT_LOCALE
+
+        local resp = {
+            success = true,
+            values = updated,
+            language = language
+        }
+        -- Only ship the full translations table when the language actually changed. Returning the
+        -- whole locale across the native Lua->JS IPC on every apply (e.g. a theme switch) is wasted
+        -- native serialization; the frontend already guards on `response.translations` being present.
+        if language ~= prev_language then
+            resp.translations = locales.get_locale_manager():get_locale_strings(language)
+        end
+        return resp
+    end)
+
+    _apply_in_flight = false
+    if not ok then
+        logger.warn("apply_settings_changes failed: " .. tostring(result))
+        return { success = false, error = tostring(result) }
     end
-
-    _ensure_language_valid(updated)
-    _persist_values(updated)
-
-    local language = updated.general and updated.general.language or locales.DEFAULT_LOCALE
-    local translations = locales.get_locale_manager():get_locale_strings(language)
-
-    return {
-        success = true,
-        values = updated,
-        language = language,
-        translations = translations
-    }
+    return result
 end
 
 return manager
