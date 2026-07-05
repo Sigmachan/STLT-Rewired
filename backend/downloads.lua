@@ -13,13 +13,12 @@ local cjson = require("json")
 local downloads = {}
 local DOWNLOAD_STATE = {}
 
--- Ryuu Premium is authenticated by a session cookie kept in data/secrets.local.json. Returns the
--- Cookie value for a Ryuu request (matched by api name or the Ryuu host), or nil for other sources.
-local RYUU_HOST = "167.235.229.108"
+-- The Ryuu session cookie (data/secrets.local.json) authenticates the generator.ryuu.lol hub —
+-- and ONLY that host (the cookie is domain-scoped; never send it cross-domain). Returns the Cookie
+-- value for a generator.ryuu.lol request, or nil for any other source.
+local RYUU_HOST = "generator.ryuu.lol"
 local function _ryuu_cookie(url, apiName)
-    local is_ryuu = (apiName ~= nil and string.lower(tostring(apiName)) == "ryuu")
-        or (url ~= nil and string.find(tostring(url), RYUU_HOST, 1, true) ~= nil)
-    if not is_ryuu then return nil end
+    if not (url and string.find(tostring(url), RYUU_HOST, 1, true)) then return nil end
     local ok, sess = pcall(settings_manager.get_ryuu_session)
     if ok and type(sess) == "string" and sess ~= "" then return sess end
     return nil
