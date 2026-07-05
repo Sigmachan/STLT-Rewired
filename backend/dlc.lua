@@ -171,4 +171,69 @@ function M.get_dlc_overview(appid)
     }
 end
 
+-- One-click DLC unlock, the luatools-native way (no external steam_api hook / SmokeAPI DLL):
+-- append `addappid(<dlc_id>)` for every store-listed DLC not already in the game's stplug-in lua,
+-- so Steam grants ownership of the DLC on next launch. Backs the lua up first (reversible).
+function M.unlock_all_dlc(appid)
+    appid = tonumber(appid)
+    if not appid then return { success = false, error = "invalid appid" } end
+
+    local ok, res = pcall(function()
+        local content, path = st.read_lua_file(appid)
+        if not content or not path then
+            return { success = false, error = "No stplug-in lua for this app — add the game first." }
+        end
+
+        local data = fetch_appdetails(appid, 10)
+        local app_name = (type(data) == "table" and data.name) or ("AppID " .. appid)
+        local dlc_ids = (type(data) == "table" and type(data.dlc) == "table") and data.dlc or {}
+        if #dlc_ids == 0 then
+            return { success = true, appid = appid, app_name = app_name, added = 0, already = 0,
+                     message = "No DLC listed for this app on the store." }
+        end
+
+        -- appids already present in the lua (via addappid)
+        local present = {}
+        for id in content:gmatch("addappid%s*%(%s*(%d+)") do present[tonumber(id)] = true end
+
+        local to_add, already = {}, 0
+        for _, dlc_id in ipairs(dlc_ids) do
+            local did = tonumber(dlc_id)
+            if did then
+                if present[did] then
+                    already = already + 1
+                else
+                    to_add[#to_add + 1] = did
+                    present[did] = true
+                end
+            end
+        end
+
+        if #to_add == 0 then
+            return { success = true, appid = appid, app_name = app_name, added = 0, already = already,
+                     message = "All " .. already .. " DLC already present in the lua." }
+        end
+
+        local backup = path .. ".bak-" .. st.stamp()
+        m_utils.write_file(backup, content)
+
+        local parts = { content }
+        if not content:match("\n$") then parts[#parts + 1] = "\n" end
+        parts[#parts + 1] = "-- DLC unlocked by STLT - Rewired\n"
+        for _, did in ipairs(to_add) do
+            parts[#parts + 1] = "addappid(" .. did .. ") -- DLC\n"
+        end
+        m_utils.write_file(path, table.concat(parts))
+
+        return {
+            success = true, appid = appid, app_name = app_name,
+            added = #to_add, already = already, total_dlc = #dlc_ids, backup = backup,
+            message = string.format("Unlocked %d DLC for %s (%d already present). Restart Steam to apply.",
+                #to_add, app_name, already),
+        }
+    end)
+    if not ok then return { success = false, error = tostring(res) } end
+    return res
+end
+
 return M

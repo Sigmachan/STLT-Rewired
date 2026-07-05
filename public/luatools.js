@@ -3799,6 +3799,19 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 });
             });
 
+            makeBtn('Unlock All DLC (add to lua)', 'fa-unlock', function () {
+                callAndShow('UnlockAllDlc', { appid: appid, contentScriptQuery: '' }, function (p) {
+                    if (!p.success) return '<span style="color:#f44336;">' + (p.error || 'Failed') + '</span>';
+                    var color = p.added > 0 ? '#4caf50' : '#ffc800';
+                    var html = '<div style="color:' + color + ';font-weight:600;">' + (p.message || 'Done') + '</div>';
+                    if (p.added > 0) {
+                        html += '<div style="color:#888;font-size:11px;margin-top:6px;">Added <b>' + p.added
+                            + '</b> DLC · ' + (p.already || 0) + ' already present · lua backed up. Restart Steam to apply.</div>';
+                    }
+                    return html;
+                });
+            });
+
             makeBtn('Profiles (save / switch configurations)', 'fa-id-card-clip', function () {
                 var r = resultArea();
                 r.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading profiles…';

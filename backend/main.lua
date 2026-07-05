@@ -832,6 +832,13 @@ function GetDlcOverview(appid, contentScriptQuery)
     return json_ok(res)
 end
 
+function UnlockAllDlc(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(dlc.unlock_all_dlc, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
 -- ── Hooks (events.py) ────────────────────────────────────────────────────────
 
 function GetHooksConfig()
