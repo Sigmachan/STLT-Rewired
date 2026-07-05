@@ -83,3 +83,6 @@ logs/
 
 # local dev tooling (not shipped)
 .dev/
+
+# oh-my-claudecode tooling scratch
+.omc/
