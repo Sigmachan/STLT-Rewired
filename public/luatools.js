@@ -1980,6 +1980,29 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 'Switch sets in one click or export to a .ltkeys blob for another machine.';
             body.appendChild(intro);
 
+            var ryuuStatus = document.createElement('div');
+            ryuuStatus.style.cssText = 'font-size:12px;margin-bottom:10px;padding:8px;border-radius:5px;background:rgba(255,255,255,0.03);color:#888;';
+            ryuuStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking Ryuu session…';
+            body.appendChild(ryuuStatus);
+            Millennium.callServerMethod('luatools', 'GetRyuuSession', { contentScriptQuery: '' })
+                .then(function (res) {
+                    var p = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (!p || !p.success) { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; return; }
+                    if (!p.configured) {
+                        ryuuStatus.style.color = '#888';
+                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> no session cookie — set <code>ryuuSession</code> in backend/data/secrets.local.json.';
+                    } else if (p.valid) {
+                        ryuuStatus.style.color = '#4caf50';
+                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ✅ ' + (p.username || 'logged in')
+                            + (p.premium ? ' · <span style="color:#ffc800;">premium</span>' : ' · free') + ' · session live';
+                    } else {
+                        ryuuStatus.style.color = '#ff9800';
+                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ⚠️ session expired (HTTP ' + (p.status || '?')
+                            + ') — regenerate at generator.ryuu.lol and update <code>ryuuSession</code> in secrets.local.json.';
+                    }
+                })
+                .catch(function () { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; });
+
             var saveRow = document.createElement('div');
             saveRow.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
             saveRow.innerHTML = '<input id="lt-kv-name" type="text" placeholder="profile name (e.g. main, work)" value="main" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;">' +

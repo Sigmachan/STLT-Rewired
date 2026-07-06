@@ -330,6 +330,31 @@ function GetMorrenusStats(api_key, force_refresh)
     return json_err("request failed")
 end
 
+-- Live status of the Ryuu Generator session cookie (generator.ryuu.lol/api/check_session), so the
+-- UI can tell the user whether the cookie is still valid instead of finding out on a failed add.
+function GetRyuuSession(contentScriptQuery)
+    local ok, res = pcall(function()
+        local sess = ""
+        pcall(function() sess = require("settings.manager").get_ryuu_session() or "" end)
+        if sess == "" then return { success = true, configured = false } end
+        local resp = http_client.get("https://generator.ryuu.lol/api/check_session",
+            { headers = { ["Cookie"] = sess, ["User-Agent"] = "STLT-Rewired" }, timeout = 12 })
+        if resp and resp.status == 200 and resp.body then
+            local ok2, data = pcall(cjson.decode, resp.body)
+            if ok2 and type(data) == "table" and data.username then
+                return {
+                    success = true, configured = true, valid = true,
+                    username = tostring(data.username), premium = data.premium == true,
+                    userId = tostring(data.user_id or ""),
+                }
+            end
+        end
+        return { success = true, configured = true, valid = false, status = (resp and resp.status) or 0 }
+    end)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
 function StartAddViaLuaToolsFromUrl(apiName, appid, contentScriptQuery, url)
     -- Millennium's IPC bridge sorts JS object keys alphabetically and passes their values as positional arguments.
     -- The JS passes: { apiName: ..., appid: ..., contentScriptQuery: "", url: ... }
