@@ -1263,6 +1263,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             const repairAllBtn = createMenuButton('lt-st-repair-all', 'menu.repairAll', '🔧 Repair Depot Cache', 'fa-screwdriver-wrench');
             const acctTransferBtn = createMenuButton('lt-st-acct-transfer', 'menu.accountTransfer', '🔁 Account Data Transfer', 'fa-arrow-right-arrow-left');
             const keyVaultBtn = createMenuButton('lt-st-key-vault', 'menu.keyVault', '🔑 API Key Vault', 'fa-key');
+            const ryuuCatalogBtn = createMenuButton('lt-st-ryuu-catalog', 'menu.ryuuCatalog', '🐉 Ryuu Catalog', 'fa-dragon');
             const acctSwitchBtn = createMenuButton('lt-st-acct-switch', 'menu.accountSwitch', '⚡ Quick Account Switch', 'fa-arrows-rotate');
             const tokeerBtn = createMenuButton('lt-st-tokeer', 'menu.tokeer', '🛡️ Tokeer (Denuvo) Setup', 'fa-shield-halved');
             const syncBtn = createMenuButton('lt-st-sync', 'menu.sync', '🔄 Multi-Machine Sync', 'fa-cloud-arrow-up');
@@ -1422,6 +1423,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     var existingOvs = document.querySelectorAll('.luatools-overlay, .luatools-settings-overlay');
                     existingOvs.forEach(function(o) { o.remove(); });
                     showKeyVaultPanel();
+                });
+            }
+            if (ryuuCatalogBtn) {
+                ryuuCatalogBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var existingOvs = document.querySelectorAll('.luatools-overlay, .luatools-settings-overlay');
+                    existingOvs.forEach(function(o) { o.remove(); });
+                    showRyuuCatalogPanel();
                 });
             }
             if (acctSwitchBtn) {
@@ -1969,6 +1978,84 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         });
     }
 
+
+    // ── Ryuu Catalog (browse/search generator.ryuu.lol/files/games.json) ────
+    function showRyuuCatalogPanel() {
+        _stOverlayShell('🐉 Ryuu Catalog', function (body, ov, colors) {
+            var searchRow = document.createElement('div');
+            searchRow.style.cssText = 'margin-bottom:10px;';
+            searchRow.innerHTML = '<input id="lt-ryuu-search" type="text" placeholder="search Ryuu catalog by name…" ' +
+                'style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid #333;border-radius:4px;color:#ccc;padding:8px 10px;font-size:13px;">';
+            body.appendChild(searchRow);
+
+            var status = document.createElement('div');
+            status.style.cssText = 'font-size:12px;color:#888;margin-bottom:8px;';
+            body.appendChild(status);
+
+            var results = document.createElement('div');
+            results.style.cssText = 'display:flex;flex-direction:column;gap:6px;max-height:430px;overflow-y:auto;';
+            body.appendChild(results);
+
+            var input = document.getElementById('lt-ryuu-search');
+
+            function render(list) {
+                results.innerHTML = '';
+                if (!list.length) { results.innerHTML = '<div style="color:#888;padding:10px;text-align:center;">No matches.</div>'; return; }
+                list.slice(0, 60).forEach(function (g) {
+                    var nsfw = g.nsfw ? ' <span style="color:#f44336;font-size:10px;">NSFW</span>' : '';
+                    var drm = g.drm ? ' <span style="color:#ff9800;font-size:10px;">DRM</span>' : '';
+                    var tags = (g.tags && g.tags.length) ? g.tags.slice(0, 3).join(', ') : '';
+                    var row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid #2a2a2a;border-radius:5px;';
+                    row.innerHTML =
+                        '<img src="' + (g.header_image || '') + '" style="width:92px;height:43px;object-fit:cover;border-radius:3px;flex:0 0 auto;background:#111;" onerror="this.style.visibility=\'hidden\';">' +
+                        '<div style="flex:1;min-width:0;">' +
+                            '<div style="color:#eee;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (g.name || '?') + nsfw + drm + '</div>' +
+                            '<div style="color:#666;font-size:10px;font-family:monospace;">appid ' + g.appid + (tags ? ' · ' + tags : '') + '</div>' +
+                        '</div>' +
+                        '<button class="lt-ryuu-add" data-appid="' + g.appid + '" data-name="' + String(g.name || '').replace(/"/g, '&quot;') + '" ' +
+                            'style="flex:0 0 auto;padding:5px 12px;background:rgba(0,167,230,0.15);border:1px solid rgba(0,167,230,0.4);border-radius:4px;color:#00a7e6;font-size:12px;cursor:pointer;">+ Add</button>';
+                    results.appendChild(row);
+                });
+                results.querySelectorAll('.lt-ryuu-add').forEach(function (b) {
+                    b.onclick = function () {
+                        var appid = b.getAttribute('data-appid');
+                        var name = b.getAttribute('data-name');
+                        b.textContent = '…'; b.disabled = true;
+                        Millennium.callServerMethod('luatools', 'StartAddViaLuaTools', { appid: appid, contentScriptQuery: '' });
+                        try { showLuaToolsToast('⏳ Adding ' + name + ' (appid ' + appid + ') via Ryuu…', 3500, 'info'); } catch (_) {}
+                        setTimeout(function () { b.textContent = '✓ started'; }, 400);
+                    };
+                });
+            }
+
+            function doSearch() {
+                if (!window.__ryuuCatalog) return;
+                var q = (input.value || '').trim().toLowerCase();
+                if (q.length < 2) { status.textContent = window.__ryuuCatalog.length + ' games in catalog · type ≥2 chars to search'; results.innerHTML = ''; return; }
+                var matches = window.__ryuuCatalog.filter(function (g) { return String(g.name || '').toLowerCase().indexOf(q) !== -1; });
+                status.textContent = matches.length + ' match(es)' + (matches.length > 60 ? ' (showing 60)' : '');
+                render(matches);
+            }
+
+            var deb;
+            input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 200); });
+
+            if (window.__ryuuCatalog) {
+                doSearch(); input.focus();
+            } else {
+                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading Ryuu catalog (~42MB, one-time this session)…';
+                fetch('https://generator.ryuu.lol/files/games.json')
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        window.__ryuuCatalog = Array.isArray(data) ? data : [];
+                        status.textContent = window.__ryuuCatalog.length + ' games in catalog · type ≥2 chars to search';
+                        input.focus();
+                    })
+                    .catch(function (e) { status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: ' + e + '</span>'; });
+            }
+        });
+    }
 
     // ── API Key Vault (Ryuu / DepotBox / Morrenus / etc. profiles) ────
     function showKeyVaultPanel() {
