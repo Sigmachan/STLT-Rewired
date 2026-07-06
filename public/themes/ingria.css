@@ -1,49 +1,60 @@
 /*
- * Ingria theme
- * Made in Ingria by Free People
+ * Ingria theme — бело-сине-белый / White-Blue-White
+ * Made in Ingria by Free People · Нет войне · No to war
  * Tehty Inkerissä vapaiden ihmisten toimesta
  * 59°57′N 30°19′E
  *
- * Palette inspired by clear northern skies over the Gulf of Finland —
- * the regional cultural identity of the territory around Saint Petersburg.
+ * The white-blue-white of the anti-war opposition raised over the free North:
+ * white bands of peace around the clear blue of the Baltic sky.
  */
 
 :root {
-    --lt-bg-primary: #0a1929;
-    --lt-bg-secondary: #102a43;
-    --lt-bg-tertiary: rgba(10, 25, 41, 0.95);
-    --lt-bg-hover: rgba(16, 42, 67, 0.95);
-    --lt-bg-container: rgba(10, 25, 41, 0.8);
-    --lt-bg-container-gradient: rgba(10, 25, 41, 0.9), #0a1929;
-    --lt-accent: #00a7e6;
-    --lt-accent-light: #ffffff;
-    --lt-accent-dark: #0086c3;
-    --lt-border: rgba(0, 167, 230, 0.35);
-    --lt-border-hover: rgba(255, 255, 255, 0.8);
-    --lt-text: #ffffff;
-    --lt-text-secondary: #d8edf8;
-    --lt-gradient: linear-gradient(135deg, #5cc4ee 0%, #00a7e6 100%);
-    --lt-gradient-light: linear-gradient(135deg, #ffffff 0%, #5cc4ee 100%);
-    --lt-shadow: rgba(0, 167, 230, 0.4);
-    --lt-shadow-hover: rgba(255, 255, 255, 0.6);
-    --lt-shadow-rgba: rgba(0, 167, 230, 0.3);
-    --lt-rgb: 0,167,230;
+    --lt-bg-primary: #ffffff;
+    --lt-bg-secondary: #eef4fc;
+    --lt-bg-tertiary: rgba(255, 255, 255, 0.97);
+    --lt-bg-hover: rgba(0, 57, 166, 0.08);
+    --lt-bg-container: rgba(255, 255, 255, 0.9);
+    --lt-bg-container-gradient: rgba(238, 244, 252, 0.95), #ffffff;
+    --lt-accent: #0039a6;
+    --lt-accent-light: #1f6fe0;
+    --lt-accent-dark: #002a7a;
+    --lt-border: rgba(0, 57, 166, 0.35);
+    --lt-border-hover: rgba(0, 57, 166, 0.75);
+    --lt-text: #0a1a3a;
+    --lt-text-secondary: #34517f;
+    --lt-gradient: linear-gradient(135deg, #ffffff 0%, #0039a6 100%);
+    --lt-gradient-light: linear-gradient(135deg, #ffffff 0%, #1f6fe0 100%);
+    --lt-shadow: rgba(0, 57, 166, 0.3);
+    --lt-shadow-hover: rgba(0, 57, 166, 0.5);
+    --lt-shadow-rgba: rgba(0, 57, 166, 0.25);
+    --lt-rgb: 0,57,166;
 }
 
+/* Select dropdown — white field, opposition-blue accents */
 select {
-    background-color: rgba(10, 25, 41, 0.95) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(0, 167, 230, 0.35) !important;
+    background-color: rgba(255, 255, 255, 0.97) !important;
+    color: #0a1a3a !important;
+    border: 1px solid rgba(0, 57, 166, 0.35) !important;
     border-radius: 3px;
 }
 
 select option {
-    background-color: #0a1929;
-    color: #ffffff;
+    background-color: #ffffff;
+    color: #0a1a3a;
 }
 
 select option:checked {
-    background: linear-gradient(#00a7e6, #00a7e6);
-    background-color: #00a7e6 !important;
+    background: linear-gradient(#0039a6, #0039a6);
+    background-color: #0039a6 !important;
     color: #ffffff !important;
+}
+
+select:hover {
+    border-color: rgba(0, 57, 166, 0.75) !important;
+}
+
+select:focus {
+    outline: none;
+    border-color: #0039a6 !important;
+    box-shadow: 0 0 0 2px rgba(0, 57, 166, 0.3);
 }
