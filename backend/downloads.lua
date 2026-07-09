@@ -93,18 +93,18 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     local success_list, files = pcall(fs.list_recursive, extract_dir)
     if success_list and files then
         for _, entry in ipairs(files) do
-            if entry.is_directory then goto continue end
-            if entry.name:match("%.manifest$") then
-                local dest_man = fs.join(depot_cache, entry.name)
-                local content = m_utils.read_file(entry.path)
-                if content then m_utils.write_file(dest_man, content) end
+            if not entry.is_directory then
+                if entry.name:match("%.manifest$") then
+                    local dest_man = fs.join(depot_cache, entry.name)
+                    local content = m_utils.read_file(entry.path)
+                    if content then m_utils.write_file(dest_man, content) end
+                end
+                if entry.name == tostring(appid) .. ".lua" then
+                    extracted_lua_path = entry.path
+                elseif not extracted_lua_path and entry.name:match("^%d+%.lua$") then
+                    extracted_lua_path = entry.path
+                end
             end
-            if entry.name == tostring(appid) .. ".lua" then
-                extracted_lua_path = entry.path
-            elseif not extracted_lua_path and entry.name:match("^%d+%.lua$") then
-                extracted_lua_path = entry.path
-            end
-            ::continue::
         end
     end
     
@@ -211,46 +211,54 @@ function downloads.start_add_via_luatools(appid)
             local name = api.name or "Unknown"
             local template = api.url or ""
             local success_code = tonumber(api.success_code) or 200
+            local usable = true
 
             if string.find(template, "<moapikey>") then
-                if not morrenus_api_key or morrenus_api_key == "" then goto continue end
-                template = template:gsub("<moapikey>", morrenus_api_key)
-            end
-            if string.find(template, "<apikey>") then
-                if not api.api_key or api.api_key == "" then goto continue end
-                template = template:gsub("<apikey>", api.api_key)
-            end
-            
-            local url = template:gsub("<appid>", tostring(appid))
-            
-            local success = false
-            if string.lower(name) == "morrenus" then
-                local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
-                local s_resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
-                if s_resp and s_resp.status == success_code then
-                    success = true
-                end
-            else
-                local headers = { ["User-Agent"] = config.USER_AGENT }
-                local ck = _ryuu_cookie(url, name)
-                if ck then headers["Cookie"] = ck end
-                local resp = http_client.head(url, { headers = headers, timeout = 5 })
-                if resp and resp.status == success_code then
-                    success = true
+                if not morrenus_api_key or morrenus_api_key == "" then
+                    usable = false
                 else
-                    local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
-                    if get_resp and get_resp.status == success_code then
-                        success = true
-                    end
+                    template = template:gsub("<moapikey>", morrenus_api_key)
+                end
+            end
+            if usable and string.find(template, "<apikey>") then
+                if not api.api_key or api.api_key == "" then
+                    usable = false
+                else
+                    template = template:gsub("<apikey>", api.api_key)
                 end
             end
 
-            if success then
-                target_url = url
-                target_name = name
-                break
+            if usable then
+                local url = template:gsub("<appid>", tostring(appid))
+
+                local success = false
+                if string.lower(name) == "morrenus" then
+                    local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
+                    local s_resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+                    if s_resp and s_resp.status == success_code then
+                        success = true
+                    end
+                else
+                    local headers = { ["User-Agent"] = config.USER_AGENT }
+                    local ck = _ryuu_cookie(url, name)
+                    if ck then headers["Cookie"] = ck end
+                    local resp = http_client.head(url, { headers = headers, timeout = 5 })
+                    if resp and resp.status == success_code then
+                        success = true
+                    else
+                        local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
+                        if get_resp and get_resp.status == success_code then
+                            success = true
+                        end
+                    end
+                end
+
+                if success then
+                    target_url = url
+                    target_name = name
+                    break
+                end
             end
-            ::continue::
         end
         if not target_url then error("Not available on any API") end
         
@@ -283,57 +291,60 @@ function downloads.check_apis_for_app(appid)
         local name = api.name or "Unknown"
         local template = api.url or ""
         local success_code = tonumber(api.success_code) or 200
+        local usable = true
 
         if string.find(template, "<moapikey>") then
             if not morrenus_api_key or morrenus_api_key == "" then
-                goto continue
-            end
-            template = template:gsub("<moapikey>", morrenus_api_key)
-        end
-        if string.find(template, "<apikey>") then
-            if not api.api_key or api.api_key == "" then
-                goto continue
-            end
-            template = template:gsub("<apikey>", api.api_key)
-        end
-
-        local url = template:gsub("<appid>", tostring(appid))
-        local available = false
-
-        if string.lower(name) == "morrenus" then
-            local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
-            local resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
-            if resp and resp.status == success_code then
-                available = true
-            end
-        else
-            local success = false
-            local headers = { ["User-Agent"] = config.USER_AGENT }
-            local ck = _ryuu_cookie(url, name)
-            if ck then headers["Cookie"] = ck end
-            local resp = http_client.head(url, { headers = headers, timeout = 5 })
-            if resp and resp.status == success_code then
-                success = true
+                usable = false
             else
-                -- Fallback to GET if HEAD fails
-                local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
-                if get_resp and get_resp.status == success_code then
+                template = template:gsub("<moapikey>", morrenus_api_key)
+            end
+        end
+        if usable and string.find(template, "<apikey>") then
+            if not api.api_key or api.api_key == "" then
+                usable = false
+            else
+                template = template:gsub("<apikey>", api.api_key)
+            end
+        end
+
+        if usable then
+            local url = template:gsub("<appid>", tostring(appid))
+            local available = false
+
+            if string.lower(name) == "morrenus" then
+                local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
+                local resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+                if resp and resp.status == success_code then
+                    available = true
+                end
+            else
+                local success = false
+                local headers = { ["User-Agent"] = config.USER_AGENT }
+                local ck = _ryuu_cookie(url, name)
+                if ck then headers["Cookie"] = ck end
+                local resp = http_client.head(url, { headers = headers, timeout = 5 })
+                if resp and resp.status == success_code then
                     success = true
+                else
+                    -- Fallback to GET if HEAD fails
+                    local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
+                    if get_resp and get_resp.status == success_code then
+                        success = true
+                    end
+                end
+
+                if success then
+                    available = true
                 end
             end
-            
-            if success then
-                available = true
-            end
-        end
 
-        table.insert(results, {
-            name = name,
-            available = available,
-            url = available and url or nil
-        })
-        
-        ::continue::
+            table.insert(results, {
+                name = name,
+                available = available,
+                url = available and url or nil
+            })
+        end
     end
 
     return { success = true, results = results }

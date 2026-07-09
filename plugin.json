@@ -1,5 +1,5 @@
 {
-    "$schema": "https://raw.githubusercontent.com/SteamClientHomebrew/Millennium/main/src/sys/plugin-schema.json",
+    "$schema": "https://raw.githubusercontent.com/SteamClientHomebrew/Millennium/main/src/system/plugin-schema.json",
     "name": "luatools",
     "common_name": "STLT - Rewired",
     "description": "STLT Rewired - LuaTools rebuilt on the modern Millennium 3.x Lua backend (piqseu base), with STLT's SteamTools-Ultimate features ported in. Native callServerMethod IPC, no Python HTTP bridge. Windows.",

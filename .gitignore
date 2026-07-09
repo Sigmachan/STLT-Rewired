@@ -7,6 +7,9 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+!.millennium/
+!.millennium/Dist/
+!.millennium/Dist/**
 downloads/
 eggs/
 .eggs/
@@ -86,6 +89,9 @@ logs/
 
 # oh-my-claudecode tooling scratch
 .omc/
+
+# Gemini CLI / agent scratch
+.gjc/
 
 # local personal secrets (Ryuu session, hubcap key) — never commit
 backend/data/secrets.local.json

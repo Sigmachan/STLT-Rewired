@@ -29,19 +29,42 @@ if ($Restore) {
 }
 
 # 1) back up the current deployment (if any) -> OUTSIDE plugins/ (see note above)
+$preservedData = $null
 if (Test-Path $dst) {
     New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
     Write-Host "Backing up current plugin -> $backup"
     Copy-Item $dst $backup -Recurse -Force
+
+    # Keep machine-local runtime state across deploys. The backup is still complete,
+    # but deleting $dst would otherwise wipe settings/secrets before the new tree is copied.
+    $liveData = Join-Path $dst "backend\data"
+    if (Test-Path $liveData) {
+        $tempRoot = $env:TEMP
+        if (-not $tempRoot) { $tempRoot = [System.IO.Path]::GetTempPath() }
+        $preservedData = Join-Path $tempRoot ("luatools-data-" + [guid]::NewGuid().ToString("N"))
+        Copy-Item $liveData $preservedData -Recurse -Force
+    }
+
     Remove-Item $dst -Recurse -Force
 }
 
-# 2) copy only the shipped surface (skip dev/vcs/research). Anything not shipped that also
-# declares a plugin.json (or just clutters the live dir) must be excluded here.
+# 2) copy only the shipped runtime surface. Anything outside this allowlist is dev/VCS/local
+# state and must not land in Steam's live plugin directory.
 New-Item -ItemType Directory -Path $dst -Force | Out-Null
-$exclude = @(".git", ".dev", ".omc", "_refs", "scripts", "REWIRED-PLAN.md", ".gitignore", "deploy.ps1", "run_tests.sh")
-Get-ChildItem $src -Force | Where-Object { $exclude -notcontains $_.Name } | ForEach-Object {
-    Copy-Item $_.FullName (Join-Path $dst $_.Name) -Recurse -Force
+$include = @("backend", "public", ".millennium", "plugin.json")
+foreach ($name in $include) {
+    $item = Join-Path $src $name
+    if (Test-Path $item) {
+        Copy-Item $item (Join-Path $dst $name) -Recurse -Force
+    }
+}
+
+if ($preservedData -and (Test-Path $preservedData)) {
+    $newData = Join-Path $dst "backend\data"
+    New-Item -ItemType Directory -Path $newData -Force | Out-Null
+    Copy-Item (Join-Path $preservedData "*") $newData -Recurse -Force
+    Remove-Item $preservedData -Recurse -Force
+    Write-Host "Preserved backend\data from the previous deployment" -ForegroundColor DarkGray
 }
 
 Write-Host "Deployed STLT-Rewired -> $dst" -ForegroundColor Green

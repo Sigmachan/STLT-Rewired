@@ -924,7 +924,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     var _themeColorsCache = null;
     var _themeColorsCacheThemeId = null;
     function getThemeColors() {
-        var currentId = (window.__LUATOOLS_CURRENT_THEME__ || {}).name || '_default';
+        // Cache MUST be keyed on the live theme key. It used to key on
+        // window.__LUATOOLS_CURRENT_THEME__.name, which is never assigned anywhere,
+        // so currentId was permanently '_default': the cache computed once on the
+        // first modal and every later call returned that first theme's colors — the
+        // whole inline-styled UI froze to whatever theme was active at load and
+        // theme switches did nothing. Key on getCurrentThemeKey() so the cache
+        // invalidates the moment the selected theme changes.
+        var currentId = getCurrentThemeKey();
         if (_themeColorsCache && _themeColorsCacheThemeId === currentId) return _themeColorsCache;
         const theme = getCurrentTheme();
         const rgb = hexToRgb(theme.accent);
@@ -4569,7 +4576,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             .then(function (r) {
                                 var s = typeof r === 'string' ? JSON.parse(r) : r;
                                 if (!s.supported) {
-                                    rc.innerHTML = '<div style="padding:12px;background:rgba(255,200,0,0.1);border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:#ffc800;">⚠️ ' + (s.message || 'Windows-only feature') + '</div>';
+                                    rc.innerHTML = '<div style="padding:12px;background:rgba(255,200,0,0.1);border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:#ffc800;">⚠️ ' + (s.error || s.message || 'Background Sentinel service is unavailable in this backend.') + '</div>';
                                     return;
                                 }
                                 var html = '<div style="padding:14px;background:rgba(0,0,0,0.25);border-radius:8px;border:1px solid rgba(255,255,255,0.08);">';
@@ -7387,6 +7394,12 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     return;
                 }
 
+                // Capture the theme BEFORE state.config.values is overwritten below,
+                // otherwise the post-save reload guard compares the new value to itself
+                // (oldTheme === newTheme, always) and never re-applies the theme.
+                const themeBeforeSave = (state.config.values && state.config.values.general)
+                    ? state.config.values.general.theme : undefined;
+
                 const newValues = (response && response.values && typeof response.values === 'object') ? response.values : state.draft;
                 state.config.values = initialiseSettingsDraft({
                     schema: state.config.schema,
@@ -7432,10 +7445,13 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 renderSettings();
                 setStatus(t('settings.saveSuccess', 'Settings saved successfully.'), '#8bc34a');
 
-                // Reload theme if it changed
-                const oldTheme = state.config.values?.general?.theme;
+                // Reload theme if it changed. Compare the pre-save theme (captured above)
+                // against the freshly-saved value; state.config.values/state.draft were both
+                // overwritten with newValues above, so reading oldTheme from them here would
+                // always equal newTheme and skip the reload.
                 const newTheme = state.draft?.general?.theme;
-                if (oldTheme !== newTheme) {
+                if (themeBeforeSave !== newTheme) {
+                    invalidateThemeCache();
                     ensureLuaToolsStyles();
                 }
 
@@ -9083,10 +9099,23 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 function _showManualButton() {
                                     if (!autoEl) return;
                                     autoEl.innerHTML = '';
+
+                                    // Honest note: steam://install can pop "No License" because the freshly
+                                    // written .lua (addappid) is only executed by Steam's loader at startup —
+                                    // the running client has no live license yet. Restarting Steam makes the
+                                    // loader grant it. The game is already written to disk either way.
+                                    var hint = document.createElement('div');
+                                    hint.style.cssText = 'margin-bottom:8px;font-size:12px;line-height:1.45;opacity:0.85;';
+                                    hint.innerHTML = lt('Added to disk. If Steam says "No License", restart Steam to finish — the license is granted on the next launch.');
+                                    autoEl.appendChild(hint);
+
+                                    var btnRow = document.createElement('div');
+                                    btnRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+
                                     var dlBtn = document.createElement('a');
                                     dlBtn.href = '#';
                                     dlBtn.style.cssText = 'display:inline-block;padding:8px 14px;background:rgba(102,192,244,0.15);border:1px solid rgba(102,192,244,0.5);border-radius:6px;color:#66c0f4;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;';
-                                    dlBtn.innerHTML = '<i class="fa-solid fa-download" style="margin-right:6px;"></i>' + lt('Start download (no restart)');
+                                    dlBtn.innerHTML = '<i class="fa-solid fa-download" style="margin-right:6px;"></i>' + lt('Try download (no restart)');
                                     dlBtn.onclick = function (e) {
                                         e.preventDefault();
                                         dlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i>' + lt('Starting…');
@@ -9099,7 +9128,21 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                             })
                                             .catch(function (err) { try { showLuaToolsToast('⚠ ' + err, 5000, 'info'); } catch (_) { } });
                                     };
-                                    autoEl.appendChild(dlBtn);
+                                    btnRow.appendChild(dlBtn);
+
+                                    var restartBtn = document.createElement('a');
+                                    restartBtn.href = '#';
+                                    restartBtn.style.cssText = 'display:inline-block;padding:8px 14px;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.5);border-radius:6px;color:#7bd88f;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;';
+                                    restartBtn.innerHTML = '<i class="fa-solid fa-rotate" style="margin-right:6px;"></i>' + lt('Restart Steam to finish');
+                                    restartBtn.onclick = function (e) {
+                                        e.preventDefault();
+                                        restartBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i>' + lt('Restarting…');
+                                        Millennium.callServerMethod('luatools', 'RestartSteam', { contentScriptQuery: '' })
+                                            .catch(function (err) { try { showLuaToolsToast('⚠ ' + err, 5000, 'info'); } catch (_) { } });
+                                    };
+                                    btnRow.appendChild(restartBtn);
+
+                                    autoEl.appendChild(btnRow);
                                 }
                                 Millennium.callServerMethod('luatools', 'AutoFinalizeActivation', { appid: _finalizeAppid, contentScriptQuery: '' })
                                     .then(function (raw) {

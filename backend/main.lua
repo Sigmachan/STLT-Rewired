@@ -509,10 +509,22 @@ end
 function GetInstalledLuaScripts()
     local ok, res = pcall(function()
         local base = steam_utils.detect_steam_install_path()
+        if not base or base == "" then
+            logger.warn("GetInstalledLuaScripts: Steam install path not found")
+            return { success = false, error = "Steam install path not found", scripts = st.A({}) }
+        end
         local target_dir = fs.join(base, "config", "stplug-in")
-        local scripts = {}
+
         local ok2, files = pcall(fs.list, target_dir)
-        if ok2 and files then
+        if not ok2 then
+            -- A read failure is a real error, not "no scripts installed" — surface it
+            -- so the UI shows the error state instead of a misleading empty list.
+            logger.warn("GetInstalledLuaScripts: cannot list " .. tostring(target_dir) .. " — " .. tostring(files))
+            return { success = false, error = "stplug-in not readable", scripts = st.A({}) }
+        end
+
+        local scripts = {}
+        if files then
             for _, entry in ipairs(files) do
                 local name = entry.name or ""
                 if name:match("%.lua$") or name:match("%.lua%.disabled$") then
@@ -529,7 +541,10 @@ function GetInstalledLuaScripts()
                 end
             end
         end
-        return { success = true, scripts = scripts }
+        logger.log("GetInstalledLuaScripts: " .. tostring(#scripts) .. " script(s) in " .. tostring(target_dir))
+        -- st.A() pins array encoding so an empty list serializes as [] (not {} under
+        -- encode_empty_table_as_object), matching the frontend's Array.isArray check.
+        return { success = true, scripts = st.A(scripts), scannedPath = target_dir }
     end)
     if not ok then return json_err(res) end
     return json_ok(res)
@@ -1543,6 +1558,7 @@ function AutoFinalizeActivation(appid, contentScriptQuery)
     if not appid then return json_err("Invalid appid") end
     local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
     return json_ok({ success = ok == true, appid = appid, started = ok == true,
+        downloadTriggered = ok == true, autoFixed = st.A({}),
         message = ok and ("Handed steam://install/" .. appid .. " to Steam.")
                      or "Failed to launch steam://install." })
 end
