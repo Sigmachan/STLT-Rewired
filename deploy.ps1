@@ -28,6 +28,13 @@ if ($Restore) {
     return
 }
 
+# Keep the shipped webkit module in sync with public\luatools.js. Millennium 3.4 loads
+# .millennium\Dist\webkit.js directly; using add_browser_js for store pages is CSP-blocked.
+$bundleScript = Join-Path $src "scripts\build_webkit_bundle.py"
+if (Test-Path $bundleScript) {
+    python $bundleScript
+}
+
 # 1) back up the current deployment (if any) -> OUTSIDE plugins/ (see note above)
 $preservedData = $null
 if (Test-Path $dst) {

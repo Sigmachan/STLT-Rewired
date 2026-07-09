@@ -72,8 +72,10 @@ This file is never committed (see `.gitignore`) and is carried across deploys by
   manifests, DLC, achievements, workshop, backup, sync, account, key vault, diagnostics,
   sentinel, …). RPC entry points are global functions in `backend/main.lua` that Millennium
   dispatches via `callServerMethod`.
-- **Frontend** — `public/luatools.js`, injected into the Steam UI (webkit) via Millennium's
-  `add_browser_js` / `add_browser_css`; the rich UI bundle lives in `.millennium/Dist/`.
+- **Frontend** — `public/luatools.js`, embedded into `.millennium/Dist/webkit.js` by
+  `scripts/build_webkit_bundle.py` and loaded through Millennium's webkit module path. Do not
+  use `add_browser_js` / `add_browser_css` for store-page injection on Millennium 3.4; Steam CSP
+  blocks those `millennium.host/v1/themes/...` script URLs.
 - **IPC** — native Millennium `callServerMethod('luatools', '<Method>', args)`; method names are
   PascalCase and map 1:1 to the global Lua functions.
 
@@ -85,6 +87,8 @@ This file is never committed (see `.gitignore`) and is carried across deploys by
 - UI kept compact for 4K @ 175–200% scaling (modals ≤ 580px).
 - Compatibility target is Millennium `v3.4.0-beta.8`; `GetMillenniumHealth` reports the
   loaded Millennium version plus required Lua API availability.
+- Run `python scripts/build_webkit_bundle.py` after editing `public/luatools.js`; `deploy.ps1`
+  runs it automatically before copying the runtime surface.
 
 ## Rollback
 
