@@ -89,31 +89,10 @@ local function copy_webkit_files()
 end
 
 local function inject_webkit_files()
-    local public_dir = fs.join(paths.get_plugin_dir(), "public")
-
-    local css = m_utils.read_file(fs.join(public_dir, "steamdb-webkit.css"))
-    if css and css ~= "" then
-        local ok, hook_id = pcall(millennium.add_browser_css, css, ".*")
-        if ok then
-            logger.log("Injected LuaTools browser CSS hook " .. tostring(hook_id))
-        else
-            logger.warn("Failed to inject LuaTools browser CSS: " .. tostring(hook_id))
-        end
-    else
-        logger.warn("LuaTools browser CSS missing or empty")
-    end
-
-    local js = m_utils.read_file(fs.join(public_dir, "luatools.js"))
-    if js and js ~= "" then
-        local ok, hook_id = pcall(millennium.add_browser_js, js, ".*")
-        if ok then
-            logger.log("Injected LuaTools browser JS hook " .. tostring(hook_id) .. " (" .. tostring(#js) .. " bytes)")
-        else
-            logger.warn("Failed to inject LuaTools browser JS: " .. tostring(hook_id))
-        end
-    else
-        logger.warn("LuaTools browser JS missing or empty")
-    end
+    -- Millennium 3.4's add_browser_js/add_browser_css route maps arguments through
+    -- millennium.host/v1/themes/<arg>. Store/help pages reject those script URLs by CSP,
+    -- so LuaTools is bootstrapped from the shipped .millennium/Dist/webkit.js module instead.
+    logger.log("LuaTools browser bootstrap is provided by .millennium/Dist/webkit.js")
 end
 
 -- ── Lifecycle ────────────────────────────────────────────────────────────────
