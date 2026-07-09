@@ -60,41 +60,6 @@ local function json_err(msg)
     return json_ok({ success = false, error = tostring(msg) })
 end
 
--- ── Webkit file management ───────────────────────────────────────────────────
-
-local function copy_webkit_files()
-    local steam_dir = steam_utils.detect_steam_install_path()
-    if not steam_dir or steam_dir == "" then return end
-
-    local target_webkit_dir = fs.join(steam_dir, "steamui", "webkit")
-    if not fs.exists(target_webkit_dir) then
-        fs.create_directories(target_webkit_dir)
-    end
-
-    local public_dir = fs.join(paths.get_plugin_dir(), "public")
-
-    local src_js = fs.join(public_dir, "luatools.js")
-    local dst_js = fs.join(target_webkit_dir, "luatools.js")
-    if fs.exists(src_js) then
-        local content = m_utils.read_file(src_js)
-        if content then m_utils.write_file(dst_js, content) end
-    end
-
-    local src_css = fs.join(public_dir, "steamdb-webkit.css")
-    local dst_css = fs.join(target_webkit_dir, "steamdb-webkit.css")
-    if fs.exists(src_css) then
-        local content = m_utils.read_file(src_css)
-        if content then m_utils.write_file(dst_css, content) end
-    end
-end
-
-local function inject_webkit_files()
-    -- Millennium 3.4's add_browser_js/add_browser_css route maps arguments through
-    -- millennium.host/v1/themes/<arg>. Store/help pages reject those script URLs by CSP,
-    -- so LuaTools is bootstrapped from the shipped .millennium/Dist/webkit.js module instead.
-    logger.log("LuaTools browser bootstrap is provided by .millennium/Dist/webkit.js")
-end
-
 -- ── Lifecycle ────────────────────────────────────────────────────────────────
 
 local function on_load()
@@ -110,8 +75,7 @@ local function on_load()
         api_manifest.store_last_message(upd_msg)
     end
 
-    copy_webkit_files()
-    inject_webkit_files()
+    logger.log("LuaTools browser bootstrap is provided by .millennium/Dist/webkit.js")
 
     local res = api_manifest.init_apis()
     logger.log("InitApis (boot) result: " .. tostring(res.message or ""))
@@ -129,7 +93,6 @@ end
 
 local function on_frontend_loaded()
     logger.log("Frontend loaded")
-    copy_webkit_files()
 end
 
 -- ── Logger (called as "Logger.log" from JS) ──────────────────────────────────
