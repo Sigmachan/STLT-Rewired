@@ -8,6 +8,13 @@ HTTP bridge, no persistent daemon. Windows.
 > of maintenance tools (diagnostics, backup/restore, achievements, workshop, sync, key vault,
 > and more) to the Steam UI.
 
+## Project docs
+
+- `docs/ARCHITECTURE.md` — runtime shape, backend modules, RPC surface, safety model.
+- `docs/GEN1_GEN2_COMPARISON.md` — notes from the Gen 1 plugin archive and Gen 2 portable app.
+- `docs/REWIRED_MANAGER_PLAN.md` — proposed independent companion app / Ryuu Manager roadmap.
+- `docs/UPSTREAM_COLLABORATION.md` — technical fork brief for maintainers/contributors.
+
 ## Requirements
 
 - **Steam** (desktop client) on **Windows**.
@@ -60,12 +67,12 @@ Personal credentials that you don't want re-entering after every redeploy live i
 
 ```json
 {
-  "ryuuSession": "session=…",
-  "morrenusApiKey": "smm_…"
+  "ryuuSession": "<Ryuu Cookie header>",
+  "morrenusApiKey": "<Morrenus API key>"
 }
 ```
 
-- **`ryuuSession`** — the Ryuu Premium session cookie (the `session=…` header string from the
+- **`ryuuSession`** — the Ryuu Premium session cookie header string from the
   Ryuu generator). It is attached as `Cookie:` on Ryuu availability checks and the download
   request, so authenticated Ryuu content works.
 - **`morrenusApiKey`** — the hubcap/Morrenus API key used for `<moapikey>` and hub status calls.

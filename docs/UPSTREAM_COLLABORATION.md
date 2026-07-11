@@ -1,12 +1,12 @@
-# Upstream collaboration brief
+# Technical fork brief
 
-This document is meant for maintainers of LuaTools / the Steam Plugin rewrite. It explains what STLT-Rewired is, why it exists, what it already ports, and how to evaluate/merge useful work without having to reverse-engineer the fork first.
+This document is meant for future maintainers, contributors, and any LuaTools / Steam Plugin developers who want to understand STLT-Rewired without reverse-engineering the fork first. It can be used for upstream collaboration, but the project should stand on its own as an independent Windows-first power-user fork.
 
 ## Short version
 
 STLT-Rewired is a Windows-first Millennium 3.x Lua backend implementation of the LuaTools Steam plugin surface, with a large set of STLT / SteamTools-Ultimate style augmentations ported into native Millennium IPC.
 
-The goal is not to compete with the official rewrite. The useful outcome is to upstream the parts that are already solved here:
+The project goal is not to beg for acceptance from any single upstream channel. The useful outcome is to keep a working integration lab and make the solved parts easy to reuse, review, or upstream later:
 
 - Millennium 3.x native Lua `callServerMethod` contract.
 - Steam UI injection via bundled webkit surface.
