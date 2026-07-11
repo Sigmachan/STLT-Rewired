@@ -98,11 +98,11 @@ Rewired answers:
 | Plugin install/update | scripts | app service | deploy.ps1 | app-assisted deploy + rollback |
 | Ryuu Premium | unclear/basic | not confirmed | yes | make Ryuu Manager the flagship |
 | Morrenus/Hubcap | source/API path | service + stats | yes | better key validation + stats UI |
-| Source health | basic | likely app-side | partial | full source health dashboard |
+| Source health | basic | likely app-side | yes | full source health dashboard + redacted bundle |
 | Fixes | basic | Denuvo/fix services | hardened + Ryuu fallback | preview, audit, unfix, attribution |
-| CloudRedirect | not apparent | service visible | manual/external | explicit assistant, no silent patching |
-| Steamless/unlocker | not apparent | service visible | not silent | only explicit opt-in workflows |
-| Diagnostics | limited | app logs likely | broad modules | redacted support bundle |
+| CloudRedirect | not apparent | service visible | explicit assistant | explicit assistant, no silent patching |
+| Steamless/unlocker | not apparent | service visible | explicit policy | only explicit opt-in workflows |
+| Diagnostics | limited | app logs likely | redacted bundle | redacted support bundle |
 | App metadata cache | limited | SteamAppInfoCache | partial | shared cache for plugin/app |
 | Secrets UX | unclear | app settings | local gitignored JSON | DPAPI-backed manager + plugin sync |
 
@@ -176,8 +176,8 @@ Gen2 shows the value of a native app. Rewired should adopt the shape, not the ba
 ### Plugin short-term
 
 1. Keep Ryuu catalog/fixes stable.
-2. Polish source health UI.
-3. Add redacted diagnostics export.
+2. Keep source health UI useful and redacted.
+3. Maintain redacted diagnostics export.
 4. Improve fixes manager UX:
    - source labels;
    - archive preview;

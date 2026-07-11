@@ -43,20 +43,17 @@ confirms the base before investing in the feature port. `GetMillenniumHealth` sh
 Millennium `3.4.0-beta.8` or newer and all required Lua APIs available.
 
 ### Phase 2+ — Port STLT's SteamTools-Ultimate features to Lua
-Not in piqseu; port from STLT's Python → Lua, highest-value Windows-first:
-1. Backup / restore (stplug-in + depotcache zip)
-2. Smart cache clean (preserves achievements/playtime)
-3. Manifest updater (GitHub → hubcapmanifest → ManifestHub chain)
-4. Diagnostics (`diagnose_app`: Goldberg PE-scan, conflicting-files, SAC/Defender)
-5. Tokeer / Denuvo launcher config (Windows)
-6. Achievements (schema seed + read-only watchlist)
-7. Workshop manager · Batch pipeline · Download history + source stats
-8. Key vault · Account switch (DPAPI) / transfer · DLC config gen · depot repair
-9. Per-game update lock (ACF AutoUpdateBehavior + read-only)
-10. Config export/import · event hooks · mod system
+Ported feature clusters now include backup/restore, cache manager, manifests/depot repair,
+diagnostics, Tokeer/Denuvo launch options, achievements, workshop, batch pipeline,
+history/source stats, key vault, account switch/transfer, DLC config generation, update lock,
+config transfer, hooks/mods, plus Gen2-style source health/companion parity panels:
+- Source Health dashboard for LuaTools/Ryuu/Hubcap/fixes endpoints with redacted URLs.
+- Companion / Gen2 Parity detector for official LuaTools/Rewired Manager and live plugin state.
+- Redacted Support Bundle export (`backend/data/diagnostics/...`) with no cookies/API keys.
+- CloudRedirect Assistant as an explicit checklist/launcher only — no silent Steam/CloudRedirect patching.
 
-Each ported feature = a Lua backend module + global IPC fn(s) + the matching UI in
-`public/luatools.js` (STLT's richer panels), verified on-machine.
+Still Windows-first; feature work should remain a Lua backend module + global IPC fn(s) +
+the matching UI in `public/luatools.js`, verified on-machine.
 
 ### Explicitly NOT ported
 ACCELA, SLSsteam, `linux_platform`, Proton/compat tools — Linux-only, dropped.

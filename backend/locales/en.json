@@ -2,7 +2,7 @@
   "_meta": {
     "code": "en",
     "name": "English",
-    "nativeName": "English",
+    "nativeName": "American English",
     "credits": ""
   },
   "strings": {
@@ -218,8 +218,9 @@
     "settings.installedLua.unknownInfo": "Games showing 'Unknown Game' were installed from external sources (not via LuaTools).",
     "settings.language.description": "Choose the language used by LuaTools.",
     "settings.language.label": "Language",
+    "settings.language.option.de": "Deutsch",
     "settings.language.option.en": "English",
-    "settings.language.option.pt-BR": "Brazilian Portuguese",
+    "settings.language.option.ru": "Русский",
     "settings.loading": "Loading settings...",
     "settings.morrenusApiKey.description": "API Key required to use Sadie Source. Get from {link}",
     "settings.morrenusApiKey.label": "Morrenus API Key",

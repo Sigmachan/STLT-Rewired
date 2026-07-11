@@ -45,6 +45,7 @@ local tokeer          = require("tokeer")
 local sync            = require("sync")
 local account         = require("account")
 local sentinel        = require("sentinel")
+local feature_parity  = require("feature_parity")
 local st              = require("st_util")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
@@ -1481,6 +1482,45 @@ end
 
 function StartSentinelServiceNow()
     return json_ok(sentinel.start_service_now())
+end
+
+-- ── LuaTools Gen2 parity / safe companion workflows ─────────────────────────
+
+function GetSourceHealth()
+    local ok, res = pcall(feature_parity.get_source_health)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetCompanionStatus()
+    local ok, res = pcall(feature_parity.get_companion_status)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function OpenCompanionPath(contentScriptQuery, path)
+    if type(contentScriptQuery) == "table" then
+        path = contentScriptQuery.path
+    elseif (not path or path == "") and type(contentScriptQuery) == "string" and contentScriptQuery ~= "" then
+        path = contentScriptQuery
+    end
+    local ok, res = pcall(feature_parity.open_path, path)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetCloudRedirectGuide(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(feature_parity.get_cloudredirect_guide, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function ExportSupportBundle(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(feature_parity.export_support_bundle, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 -- ── Frontend log passthrough ────────────────────────────────────────────────

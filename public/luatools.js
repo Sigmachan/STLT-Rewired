@@ -1271,6 +1271,10 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             const acctTransferBtn = createMenuButton('lt-st-acct-transfer', 'menu.accountTransfer', '🔁 Account Data Transfer', 'fa-arrow-right-arrow-left');
             const keyVaultBtn = createMenuButton('lt-st-key-vault', 'menu.keyVault', '🔑 API Key Vault', 'fa-key');
             const ryuuCatalogBtn = createMenuButton('lt-st-ryuu-catalog', 'menu.ryuuCatalog', '🐉 Ryuu Catalog', 'fa-dragon');
+            const sourceHealthBtn = createMenuButton('lt-st-source-health', 'menu.sourceHealth', '🛰 Source Health', 'fa-satellite-dish');
+            const companionBtn = createMenuButton('lt-st-companion', 'menu.companion', '🧰 Companion / Gen2 Parity', 'fa-toolbox');
+            const supportBundleBtn = createMenuButton('lt-st-support-bundle', 'menu.supportBundle', '🧾 Redacted Support Bundle', 'fa-file-shield');
+            const cloudRedirectBtn = createMenuButton('lt-st-cloudredirect', 'menu.cloudRedirect', '☁️ CloudRedirect Assistant', 'fa-cloud');
             const acctSwitchBtn = createMenuButton('lt-st-acct-switch', 'menu.accountSwitch', '⚡ Quick Account Switch', 'fa-arrows-rotate');
             const tokeerBtn = createMenuButton('lt-st-tokeer', 'menu.tokeer', '🛡️ Tokeer (Denuvo) Setup', 'fa-shield-halved');
             const syncBtn = createMenuButton('lt-st-sync', 'menu.sync', '🔄 Multi-Machine Sync', 'fa-cloud-arrow-up');
@@ -1302,7 +1306,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             // throws, the full menu is left intact.
             try {
                 var _advancedBtns = [sentinelBtn, repairAllBtn, acctTransferBtn,
-                    keyVaultBtn, acctSwitchBtn, tokeerBtn, syncBtn, migratorBtn,
+                    keyVaultBtn, sourceHealthBtn, companionBtn, supportBundleBtn, cloudRedirectBtn, acctSwitchBtn,
+                    tokeerBtn, syncBtn, migratorBtn,
                     achieveBtn, gameToolsBtn, cacheInfoBtn, folderStatsBtn,
                     conflictsBtn, libScanBtn, backupBtn, customApisBtn,
                     compatToolBtn].filter(Boolean);
@@ -1438,6 +1443,34 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     var existingOvs = document.querySelectorAll('.luatools-overlay, .luatools-settings-overlay');
                     existingOvs.forEach(function(o) { o.remove(); });
                     showRyuuCatalogPanel();
+                });
+            }
+            if (sourceHealthBtn) {
+                sourceHealthBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try { overlay.remove(); } catch (_) { }
+                    showSourceHealthPanel();
+                });
+            }
+            if (companionBtn) {
+                companionBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try { overlay.remove(); } catch (_) { }
+                    showCompanionParityPanel();
+                });
+            }
+            if (supportBundleBtn) {
+                supportBundleBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try { overlay.remove(); } catch (_) { }
+                    showSupportBundlePanel();
+                });
+            }
+            if (cloudRedirectBtn) {
+                cloudRedirectBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try { overlay.remove(); } catch (_) { }
+                    showCloudRedirectAssistant();
                 });
             }
             if (acctSwitchBtn) {
@@ -1798,6 +1831,169 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     function _stStatusBadge(status) {
         var c = status === 'healthy' ? '#4caf50' : status === 'warning' ? '#ff9800' : '#f44336';
         return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:6px;"></span>';
+    }
+
+    function _ltParsePayload(res) {
+        var payload = res;
+        if (payload && payload.result) payload = payload.result;
+        if (payload && payload.value) payload = payload.value;
+        if (typeof payload === 'string') {
+            try { payload = JSON.parse(payload); } catch (_) { }
+        }
+        return payload || {};
+    }
+
+    function _ltServer(method, args) {
+        if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
+            return Promise.resolve({ success: false, error: 'Millennium bridge unavailable' });
+        }
+        return Millennium.callServerMethod('luatools', method, args || { contentScriptQuery: '' }).then(_ltParsePayload).catch(function (err) {
+            return { success: false, error: (err && err.message) ? err.message : String(err || 'request failed') };
+        });
+    }
+
+    function _ltCurrentAppIdOrZero() {
+        try {
+            var match = window.location.href.match(/\/app\/(\d+)/);
+            if (match) return parseInt(match[1], 10) || 0;
+            return window.__LuaToolsCurrentAppId || 0;
+        } catch (_) { return 0; }
+    }
+
+    function _ltEscapeHtml(v) {
+        return String(v == null ? '' : v).replace(/[&<>\"]/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch];
+        });
+    }
+
+    function _ltStatusColor(status) {
+        if (status === 'ok' || status === 'healthy') return '#4caf50';
+        if (status === 'warn' || status === 'warning' || status === 'skipped') return '#ff9800';
+        return '#f44336';
+    }
+
+    function showSourceHealthPanel() {
+        _stOverlayShell('🛰 Source Health', function (body, ov, colors) {
+            body.innerHTML = '<div style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Checking LuaTools/Ryuu/Hubcap/fixes sources…</div>';
+            _ltServer('GetSourceHealth', { contentScriptQuery: '' }).then(function (p) {
+                if (!p || !p.success) {
+                    body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
+                    return;
+                }
+                var counts = p.counts || {};
+                var html = '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">Gen2-style source dashboard with Rewired redaction/safety: no cookies or API keys are printed.</div>';
+                html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">';
+                ['ok', 'warn', 'error', 'skipped'].forEach(function (k) {
+                    html += '<div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border:1px solid ' + colors.borderRgba + ';border-radius:6px;">'
+                        + '<div style="font-size:18px;font-weight:700;color:' + _ltStatusColor(k) + ';">' + (counts[k] || 0) + '</div>'
+                        + '<div style="font-size:10px;color:#aaa;text-transform:uppercase;">' + k + '</div></div>';
+                });
+                html += '</div><div style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">';
+                (p.sources || []).forEach(function (src) {
+                    var c = _ltStatusColor(src.status);
+                    html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-left:4px solid ' + c + ';border-radius:6px;background:rgba(0,0,0,0.18);">'
+                        + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>' + _ltEscapeHtml(src.name) + '</b><span style="color:' + c + ';font-size:11px;text-transform:uppercase;">' + _ltEscapeHtml(src.status) + '</span></div>'
+                        + '<div style="font-size:11px;color:#aaa;margin-top:3px;">' + _ltEscapeHtml(src.kind) + ' · HTTP ' + _ltEscapeHtml(src.httpStatus || 0) + ' · ' + _ltEscapeHtml(src.message || '') + '</div>'
+                        + '<div style="font-size:10px;color:#777;word-break:break-all;margin-top:3px;">' + _ltEscapeHtml(src.url || '') + '</div></div>';
+                });
+                html += '</div>';
+                body.innerHTML = html;
+                setTimeout(function () { if (window.GamepadNav) window.GamepadNav.scanElements(); }, 100);
+            });
+        });
+    }
+
+    function showCompanionParityPanel() {
+        _stOverlayShell('🧰 Companion / Gen2 Parity', function (body, ov, colors) {
+            body.innerHTML = '<div style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Checking companion apps and explicit external workflows…</div>';
+            _ltServer('GetCompanionStatus', { contentScriptQuery: '' }).then(function (p) {
+                if (!p || !p.success) {
+                    body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
+                    return;
+                }
+                var html = '<div style="font-size:12px;color:#aaa;line-height:1.55;margin-bottom:10px;">Rewired now mirrors the useful Gen2 LuaTools product surfaces: plugin health, source health, companion detection, redacted diagnostics, and explicit CloudRedirect/Steamless/unlocker policy. It does <b>not</b> copy closed code or silently patch Steam.</div>';
+                html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-radius:6px;margin-bottom:8px;"><b>Live plugin</b><div style="font-size:11px;color:#aaa;word-break:break-all;">' + _ltEscapeHtml(p.livePluginDir || '') + '</div><div style="color:' + (p.livePluginPresent ? '#4caf50' : '#ff9800') + ';font-size:12px;">' + (p.livePluginPresent ? 'Detected' : 'Not found') + '</div></div>';
+                html += '<div style="font-weight:700;color:' + colors.accent + ';margin:8px 0 4px;">Official LuaTools / managers</div>';
+                if ((p.officialLuaTools || []).length) {
+                    (p.officialLuaTools || []).forEach(function (x, idx) {
+                        html += '<div style="padding:7px;border:1px solid ' + colors.borderRgba + ';border-radius:5px;margin-bottom:5px;">'
+                            + '<div style="word-break:break-all;font-size:11px;">' + _ltEscapeHtml(x.path) + '</div>'
+                            + '<div style="font-size:10px;color:#aaa;">version ' + _ltEscapeHtml(x.version || '?') + '</div>'
+                            + '<button data-open-companion="' + idx + '" style="margin-top:5px;padding:5px 10px;background:rgba(102,192,244,0.18);border:1px solid rgba(102,192,244,0.45);border-radius:4px;color:#66c0f4;cursor:pointer;">Open</button></div>';
+                    });
+                } else {
+                    html += '<div style="color:#ff9800;font-size:12px;margin-bottom:8px;">No official/companion executable detected.</div>';
+                }
+                html += '<div style="font-weight:700;color:' + colors.accent + ';margin:8px 0 4px;">CloudRedirect</div>';
+                html += (p.cloudRedirectDetected ? '<div style="color:#4caf50;font-size:12px;">Detected: ' + (p.cloudRedirect || []).map(_ltEscapeHtml).join('<br>') + '</div>' : '<div style="color:#aaa;font-size:12px;">Not detected. Use the CloudRedirect Assistant for the safe workflow checklist.</div>');
+                html += '<div style="font-size:11px;color:#aaa;margin-top:10px;padding:8px;background:rgba(255,200,0,0.06);border:1px solid rgba(255,200,0,0.2);border-radius:5px;">' + _ltEscapeHtml(p.policy || '') + '</div>';
+                body.innerHTML = html;
+                Array.prototype.forEach.call(body.querySelectorAll('[data-open-companion]'), function (btn) {
+                    btn.onclick = function () {
+                        var item = (p.officialLuaTools || [])[parseInt(btn.getAttribute('data-open-companion'), 10)];
+                        if (!item) return;
+                        _ltServer('OpenCompanionPath', { path: item.path, contentScriptQuery: '' }).then(function (r) {
+                            if (!r || !r.success) ShowLuaToolsAlert('Companion', 'Could not open: ' + ((r && r.error) || 'unknown error'));
+                        });
+                    };
+                });
+                setTimeout(function () { if (window.GamepadNav) window.GamepadNav.scanElements(); }, 100);
+            });
+        });
+    }
+
+    function showSupportBundlePanel() {
+        _stOverlayShell('🧾 Redacted Support Bundle', function (body, ov, colors) {
+            var appid = _ltCurrentAppIdOrZero();
+            body.innerHTML = '<div style="font-size:12px;color:#aaa;line-height:1.6;margin-bottom:10px;">Exports a local text bundle with plugin/Millennium/source-health/app diagnostics. Cookies, API keys, tokens and sessions are redacted before writing.</div>'
+                + '<button id="lt-export-support" style="padding:8px 12px;background:rgba(102,192,244,0.2);border:1px solid rgba(102,192,244,0.45);border-radius:5px;color:#66c0f4;cursor:pointer;">Export bundle' + (appid ? ' for AppID ' + appid : '') + '</button>'
+                + '<div id="lt-support-out" style="margin-top:10px;font-size:12px;color:#aaa;"></div>';
+            body.querySelector('#lt-export-support').onclick = function () {
+                var out = body.querySelector('#lt-support-out');
+                out.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exporting…';
+                _ltServer('ExportSupportBundle', { appid: appid, contentScriptQuery: '' }).then(function (p) {
+                    if (p && p.success) {
+                        out.innerHTML = '<div style="color:#4caf50;">Exported.</div><div style="word-break:break-all;color:#aaa;">' + _ltEscapeHtml(p.path) + '</div>';
+                    } else {
+                        out.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
+                    }
+                });
+            };
+        });
+    }
+
+    function showCloudRedirectAssistant() {
+        _stOverlayShell('☁️ CloudRedirect Assistant', function (body, ov, colors) {
+            var appid = _ltCurrentAppIdOrZero();
+            body.innerHTML = '<div style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Loading CloudRedirect checklist…</div>';
+            _ltServer('GetCloudRedirectGuide', { appid: appid, contentScriptQuery: '' }).then(function (p) {
+                if (!p || !p.success) {
+                    body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
+                    return;
+                }
+                var html = '<div style="font-size:12px;color:#aaa;line-height:1.6;margin-bottom:10px;">' + _ltEscapeHtml(p.note || '') + '</div>';
+                html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-radius:6px;margin-bottom:8px;">CloudRedirect executable: <b style="color:' + (p.detected ? '#4caf50' : '#ff9800') + ';">' + (p.detected ? 'detected' : 'not detected') + '</b></div>';
+                if ((p.candidates || []).length) {
+                    (p.candidates || []).forEach(function (path, idx) {
+                        html += '<div style="word-break:break-all;font-size:11px;margin-bottom:5px;">' + _ltEscapeHtml(path) + ' <button data-open-cloud="' + idx + '" style="padding:3px 8px;background:rgba(102,192,244,0.18);border:1px solid rgba(102,192,244,0.45);border-radius:4px;color:#66c0f4;cursor:pointer;">Open</button></div>';
+                    });
+                }
+                html += '<ol style="font-size:12px;color:#ddd;line-height:1.7;padding-left:20px;">';
+                (p.steps || []).forEach(function (s) { html += '<li>' + _ltEscapeHtml(s) + '</li>'; });
+                html += '</ol><div style="font-size:11px;color:#ff9800;margin-top:8px;">Nothing here runs a patch automatically; this panel is an explicit checklist/launcher only.</div>';
+                body.innerHTML = html;
+                Array.prototype.forEach.call(body.querySelectorAll('[data-open-cloud]'), function (btn) {
+                    btn.onclick = function () {
+                        var path = (p.candidates || [])[parseInt(btn.getAttribute('data-open-cloud'), 10)];
+                        if (!path) return;
+                        _ltServer('OpenCompanionPath', { path: path, contentScriptQuery: '' }).then(function (r) {
+                            if (!r || !r.success) ShowLuaToolsAlert('CloudRedirect', 'Could not open: ' + ((r && r.error) || 'unknown error'));
+                        });
+                    };
+                });
+                setTimeout(function () { if (window.GamepadNav) window.GamepadNav.scanElements(); }, 100);
+            });
+        });
     }
 
 
@@ -4867,14 +5063,26 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
             const settingsVals = ((window.__LuaToolsSettings || {}).values || {}).general || {};
             const useSteamLang = typeof settingsVals.useSteamLanguage === 'boolean' ? settingsVals.useSteamLanguage : true;
+            const SUPPORTED_LOCALES = { en: true, de: true, ru: true };
+            function normalizeLuaToolsLanguage(code) {
+                if (!code) return 'en';
+                const raw = String(code).trim();
+                const low = raw.toLowerCase();
+                if (low === 'english' || low === 'en-us' || low === 'en-gb' || low === 'en') return 'en';
+                if (low === 'german' || low === 'deutsch' || low.indexOf('de') === 0) return 'de';
+                if (low === 'russian' || low.indexOf('ru') === 0) return 'ru';
+                if (SUPPORTED_LOCALES[raw]) return raw;
+                if (SUPPORTED_LOCALES[low]) return low;
+                return 'en';
+            }
             let targetLanguage = (typeof preferredLanguage === 'string' && preferredLanguage) ? preferredLanguage : '';
             if (!targetLanguage) {
-                let steamLang = document.documentElement.lang || 'en';
-                if (steamLang.toLowerCase() === 'pt-br') steamLang = 'pt-BR';
-                if (steamLang.toLowerCase() === 'zh-cn') steamLang = 'zh-CN';
-                if (steamLang.toLowerCase() === 'zh-tw') steamLang = 'zh-TW';
-                if (steamLang.toLowerCase() === 'es-419') steamLang = 'es';
-                targetLanguage = useSteamLang ? steamLang : ((window.__LuaToolsI18n && window.__LuaToolsI18n.language) || 'en');
+                const steamLang = document.documentElement.lang || 'en';
+                targetLanguage = useSteamLang
+                    ? normalizeLuaToolsLanguage(steamLang)
+                    : normalizeLuaToolsLanguage((window.__LuaToolsI18n && window.__LuaToolsI18n.language) || 'en');
+            } else {
+                targetLanguage = normalizeLuaToolsLanguage(targetLanguage);
             }
             return Millennium.callServerMethod('luatools', 'GetTranslations', {
                 language: targetLanguage,
