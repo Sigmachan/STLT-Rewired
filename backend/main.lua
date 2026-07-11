@@ -40,6 +40,7 @@ local batch           = require("batch")
 local achievements    = require("achievements")
 local backup          = require("backup")
 local key_vault       = require("key_vault")
+local ryuu            = require("ryuu")
 local tokeer          = require("tokeer")
 local sync            = require("sync")
 local account         = require("account")
@@ -320,6 +321,17 @@ function GetRyuuSession(contentScriptQuery)
     return json_ok(res)
 end
 
+function SearchRyuuCatalog(contentScriptQuery, limit, query)
+    if type(contentScriptQuery) == "table" then
+        local p = contentScriptQuery
+        query = p.query
+        limit = p.limit
+    end
+    local ok, res = pcall(ryuu.search_catalog, query, limit)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
 function StartAddViaLuaToolsFromUrl(apiName, appid, contentScriptQuery, url)
     -- Millennium's IPC bridge sorts JS object keys alphabetically and passes their values as positional arguments.
     -- The JS passes: { apiName: ..., appid: ..., contentScriptQuery: "", url: ... }
@@ -417,9 +429,14 @@ function CheckForFixes(appid)
 end
 
 function ApplyGameFix(appid, contentScriptQuery, downloadUrl, fixType, gameName, installPath)
-    -- Millennium's IPC bridge sorts JS object keys alphabetically and passes their values as positional arguments.
-    -- The JS passes: { appid, contentScriptQuery, downloadUrl, fixType, gameName, installPath }
-    -- So the Lua signature MUST be (appid, contentScriptQuery, downloadUrl, fixType, gameName, installPath)
+    if type(appid) == "table" then
+        local p = appid
+        appid = p.appid
+        downloadUrl = p.downloadUrl
+        installPath = p.installPath
+        fixType = p.fixType
+        gameName = p.gameName
+    end
 
     local ok, res = pcall(fixes.apply_game_fix,
         tonumber(appid), tostring(downloadUrl or ""),
@@ -1521,11 +1538,9 @@ function AutoFinalizeActivation(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     appid = tonumber(appid)
     if not appid then return json_err("Invalid appid") end
-    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
-    return json_ok({ success = ok == true, appid = appid, started = ok == true,
-        downloadTriggered = ok == true, autoFixed = st.A({}),
-        message = ok and ("Handed steam://install/" .. appid .. " to Steam.")
-                     or "Failed to launch steam://install." })
+    return json_ok({ success = true, appid = appid, skipped = true, downloadTriggered = false,
+        autoFixed = st.A({}),
+        message = "Game files were added. Restart Steam before starting the download to avoid No License." })
 end
 
 function StartDownloadNoRestart(appid, contentScriptQuery)

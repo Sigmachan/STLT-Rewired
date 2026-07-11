@@ -10,6 +10,107 @@ local st = require("st_util")
 
 local fixes = {}
 
+local function ps_quote(value)
+    return "'" .. tostring(value or ""):gsub("'", "''") .. "'"
+end
+
+local function write_windows_fix_script(script_path, state_file, download_url, dest_zip, install_path, appid, fix_type, game_name)
+    local log_path = fs.join(install_path, "luatools-fix-log-" .. tostring(appid) .. ".log")
+    local content = table.concat({
+        "$ErrorActionPreference = 'Stop'",
+        "$ProgressPreference = 'Continue'",
+        "$stateFile = " .. ps_quote(state_file),
+        "$url = " .. ps_quote(download_url),
+        "$zip = " .. ps_quote(dest_zip),
+        "$install = " .. ps_quote(install_path),
+        "$log = " .. ps_quote(log_path),
+        "$fixType = " .. ps_quote(fix_type),
+        "$gameName = " .. ps_quote(game_name),
+        "$appid = " .. ps_quote(appid),
+        "$tarExe = Join-Path $env:WINDIR 'System32\\tar.exe'",
+        "$curlExe = Join-Path $env:WINDIR 'System32\\curl.exe'",
+        "if (-not (Test-Path -LiteralPath $tarExe)) { $tarExe = 'tar.exe' }",
+        "if (-not (Test-Path -LiteralPath $curlExe)) { $curlExe = 'curl.exe' }",
+        "function Test-SafeArchiveEntry([string]$entry) {",
+        "  if ([string]::IsNullOrWhiteSpace($entry)) { return $false }",
+        "  $normalized = $entry.Replace('\\', '/')",
+        "  if ($normalized.StartsWith('/') -or $normalized.StartsWith('\\')) { return $false }",
+        "  if ($normalized -match '^[A-Za-z]:') { return $false }",
+        "  if ($normalized.Contains(':')) { return $false }",
+        "  foreach ($part in $normalized.Split('/')) {",
+        "    if ($part -eq '..') { return $false }",
+        "  }",
+        "  return $true",
+        "}",
+        "function Write-State([string]$status, [string]$errorMessage = '') {",
+        "  $obj = @{ status = $status }",
+        "  if ($errorMessage -ne '') { $obj.error = $errorMessage }",
+        "  $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $stateFile -Encoding ASCII",
+        "}",
+        "try {",
+        "  Write-State 'downloading'",
+        "  & $curlExe -L -A 'discord(dot)gg/luatools' $url -o $zip",
+        "  if ($LASTEXITCODE -ne 0) { throw \"curl.exe failed with exit code $LASTEXITCODE\" }",
+        "  if (-not (Test-Path -LiteralPath $zip)) { throw 'Downloaded archive was not created' }",
+        "  Write-State 'extracting'",
+        "  $entries = @(& $tarExe -tf $zip 2>$null | Where-Object { $_ -and -not $_.EndsWith('/') } | ForEach-Object { $_.Replace('\\', '/') })",
+        "  foreach ($entry in $entries) { if (-not (Test-SafeArchiveEntry $entry)) { throw ('Unsafe archive entry: ' + $entry) } }",
+        "  & $tarExe -xf $zip -C $install",
+        "  if ($LASTEXITCODE -ne 0) { throw \"tar.exe failed with exit code $LASTEXITCODE\" }",
+        "  $stamp = (Get-Date).ToString('o')",
+        "  $lines = New-Object System.Collections.Generic.List[string]",
+        "  $lines.Add('[FIX]')",
+        "  $lines.Add('Date: ' + $stamp)",
+        "  $lines.Add('Game: ' + $gameName)",
+        "  $lines.Add('Fix Type: ' + $fixType)",
+        "  $lines.Add('Download URL: ' + $url)",
+        "  $lines.Add('Files:')",
+        "  foreach ($entry in $entries) { $lines.Add($entry) }",
+        "  $lines.Add('[/FIX]')",
+        "  Add-Content -LiteralPath $log -Value ($lines -join [Environment]::NewLine) -Encoding UTF8",
+        "  Write-State 'extracted'",
+        "}",
+        "catch {",
+        "  Write-State 'failed' ($_.Exception.Message)",
+        "  Write-Host ('ERROR: ' + $_.Exception.Message)",
+        "  Start-Sleep -Seconds 5",
+        "  exit 1",
+        "}",
+    }, "\n")
+    m_utils.write_file(script_path, content)
+end
+
+local function add_ryuu_fixes(result, appid)
+    local headers = { ["User-Agent"] = "STLT-Rewired" }
+    pcall(function()
+        local sess = require("settings.manager").get_ryuu_session() or ""
+        if sess ~= "" then headers["Cookie"] = sess end
+    end)
+
+    local ok, resp = pcall(http_client.get, "https://generator.ryuu.lol/fixes", { headers = headers, timeout = 12 })
+    if not ok or not resp or resp.status ~= 200 or not resp.body then return end
+
+    local appid_s = tostring(appid)
+    local marker = 'data%-appid="' .. appid_s .. '" data%-name="'
+    local block_start = resp.body:find(marker)
+    if not block_start then return end
+    local block_end = resp.body:find('<div class="game%-card"', block_start + 1) or (#resp.body + 1)
+    local block = resp.body:sub(block_start, block_end - 1)
+
+    for href, name in block:gmatch('<a%s+href="([^"]+)"%s+class="fix%-item%-click">.-<div class="fix%-name">%s*([^<]-)%s*</div>') do
+        local url = href:gsub(" ", "%%20")
+        local lower_name = name:lower()
+        local is_online = block:find('data%-badge%-key="online"', 1, false) ~= nil or lower_name:find("online", 1, true) ~= nil
+        local target = is_online and result.onlineFix or result.genericFix
+        target.status = 200
+        target.available = true
+        target.url = url
+        target.source = "Ryuu Premium"
+        target.name = name
+        break
+    end
+end
+
 function fixes.check_for_fixes(appid)
     if type(appid) == "string" then appid = tonumber(appid) end
     local result = {
@@ -21,7 +122,12 @@ function fixes.check_for_fixes(appid)
     }
     
     local FIXES_INDEX_URL = "https://index.luatools.work/fixes-index.json"
-    local resp = http_client.get(FIXES_INDEX_URL, { timeout = 10 })
+    local ok_http, resp = pcall(http_client.get, FIXES_INDEX_URL, { timeout = 10 })
+    if not ok_http then
+        logger.warn("LuaTools: fixes index request failed: " .. tostring(resp))
+        result.error = "Failed to fetch fixes index"
+        return result
+    end
     if resp and resp.status == 200 and resp.body then
         local data = utils.decode_json(resp.body)
         if type(data) == "table" then
@@ -48,24 +154,44 @@ function fixes.check_for_fixes(appid)
                 result.onlineFix.status = 404
             end
         end
+    elseif resp and resp.status == 429 then
+        result.rateLimited = true
+        result.error = "Fixes index rate limited"
+    elseif resp and resp.status then
+        logger.warn("LuaTools: fixes index returned HTTP " .. tostring(resp.status))
+        result.error = "Fixes index HTTP " .. tostring(resp.status)
+    else
+        result.error = "Fixes index unavailable"
     end
+    pcall(add_ryuu_fixes, result, appid)
     
     return result
 end
 
 function fixes.apply_game_fix(appid, download_url, install_path, fix_type, game_name)
+    appid = tonumber(appid)
+    if not appid then return { success = false, error = "Invalid appid" } end
+    if not download_url or download_url == "" then return { success = false, error = "Invalid fix download URL" } end
+    if not install_path or install_path == "" or not fs.is_directory(install_path) then
+        return { success = false, error = "Game install path not found" }
+    end
+
     local dest_root = utils.ensure_temp_download_dir()
     local dest_zip = fs.join(dest_root, "fix_" .. tostring(appid) .. ".zip")
     local state_file = fs.join(dest_root, "fix_" .. tostring(appid) .. "_state.json")
+    local script_file = fs.join(dest_root, "fix_" .. tostring(appid) .. "_apply.ps1")
     
     logger.log("LuaTools: Applying fix to " .. tostring(install_path))
+    pcall(fs.remove, dest_zip)
+    pcall(fs.remove, script_file)
     m_utils.write_file(state_file, '{"status": "downloading"}')
     
     local is_windows = m_utils.getenv("OS") == "Windows_NT"
     if is_windows then
+        write_windows_fix_script(script_file, state_file, download_url, dest_zip, install_path, appid, fix_type, game_name)
         local cmd = string.format(
-            'cmd.exe /C start "LuaTools Downloader" cmd.exe /C "color 0B && echo LuaTools is downloading the requested files... && echo Please keep this window open until it closes automatically. && echo. && (echo {"status": "downloading"} > "%s" && curl.exe -# -L -A "discord(dot)gg/luatools" "%s" -o "%s" && echo {"status": "extracting"} > "%s" && echo. && echo Extracting files... && tar.exe -xf "%s" -C "%s" && echo {"status": "extracted"} > "%s") || (echo. && echo ERROR: Download or extraction failed! && echo {"status": "failed"} > "%s" && timeout /t 5)"',
-            state_file, download_url, dest_zip, state_file, dest_zip, install_path, state_file, state_file
+            'cmd.exe /C start "LuaTools Fix Downloader" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%s"',
+            script_file
         )
         m_utils.exec(cmd)
     else
@@ -98,8 +224,11 @@ function fixes.get_apply_status(appid)
                 data.status = "done"
                 pcall(fs.remove, state_file)
                 pcall(fs.remove, dest_zip)
+                pcall(fs.remove, fs.join(dest_root, "fix_" .. tostring(appid) .. "_apply.ps1"))
             elseif data.status == "failed" then
                 pcall(fs.remove, state_file)
+                pcall(fs.remove, dest_zip)
+                pcall(fs.remove, fs.join(dest_root, "fix_" .. tostring(appid) .. "_apply.ps1"))
             end
             return { success = true, state = data }
         end

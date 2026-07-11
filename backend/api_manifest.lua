@@ -137,11 +137,19 @@ function api_manifest.load_api_manifest()
     -- Cookie-authed Ryuu Generator (generator.ryuu.lol). Registered in code — not api.json — so it
     -- survives manifest refreshes and only appears when a Ryuu session is configured. The session
     -- cookie is attached per-request by downloads._ryuu_cookie. Prepended so it is preferred.
+    local has_ryuu_generator = false
+    for _, api in ipairs(apis) do
+        if tostring(api.url or ""):find("generator%.ryuu%.lol/api/download", 1, false) then
+            has_ryuu_generator = true
+            break
+        end
+    end
+
     local sess = ""
     pcall(function() sess = require("settings.manager").get_ryuu_session() or "" end)
-    if sess ~= "" then
+    if sess ~= "" and not has_ryuu_generator then
         table.insert(apis, 1, {
-            name = "Ryuu Generator",
+            name = "Ryuu Premium",
             url = "https://generator.ryuu.lol/api/download/<appid>",
             success_code = 200,
             unavailable_code = 404,

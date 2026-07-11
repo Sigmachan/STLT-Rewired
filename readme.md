@@ -19,8 +19,9 @@ HTTP bridge, no persistent daemon. Windows.
 Deploy the shipped surface into the live Millennium plugins directory with the included script:
 
 ```powershell
-pwsh -File deploy.ps1            # deploy (backs up the current plugin first)
-pwsh -File deploy.ps1 -Restore   # roll back to the last backup
+pwsh -File deploy.ps1                         # deploy (backs up the current plugin first)
+pwsh -File deploy.ps1 -InstallMillenniumBeta  # update Millennium beta, then deploy
+pwsh -File deploy.ps1 -Restore                # roll back to the last plugin backup
 ```
 
 The script copies only the runtime surface (`backend/`, `public/`, `.millennium/`,
@@ -29,6 +30,11 @@ The script copies only the runtime surface (`backend/`, `public/`, `.millennium/
 plugins by the `name` field in `plugin.json`, not the folder name; a second folder declaring
 `name: "luatools"` (e.g. a backup left inside `plugins\`) collides and prevents the Steam UI
 from starting.
+
+With `-InstallMillenniumBeta`, the script downloads the tested Millennium beta runtime,
+checks its SHA256 file, backs up the current Millennium loader/runtime under
+`…\Steam\millennium\_millennium-backups\`, then deploys LuaTools as usual. Use
+`-MillenniumVersion <tag>` or `-SteamPath <path>` if your setup differs from the defaults.
 
 After deploying: fully restart Steam, then confirm `luatools` is enabled in Millennium settings.
 

@@ -2036,31 +2036,41 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 });
             }
 
+            var searchSeq = 0;
             function doSearch() {
-                if (!window.__ryuuCatalog) return;
-                var q = (input.value || '').trim().toLowerCase();
-                if (q.length < 2) { status.textContent = window.__ryuuCatalog.length + ' games in catalog · type ≥2 chars to search'; results.innerHTML = ''; return; }
-                var matches = window.__ryuuCatalog.filter(function (g) { return String(g.name || '').toLowerCase().indexOf(q) !== -1; });
-                status.textContent = matches.length + ' match(es)' + (matches.length > 60 ? ' (showing 60)' : '');
-                render(matches);
+                var q = (input.value || '').trim();
+                if (q.length < 2) {
+                    status.textContent = 'type ≥2 chars to search Ryuu catalog';
+                    results.innerHTML = '';
+                    return;
+                }
+                var seq = ++searchSeq;
+                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching Ryuu catalog…';
+                Millennium.callServerMethod('luatools', 'SearchRyuuCatalog', {
+                    query: q,
+                    limit: 60,
+                    contentScriptQuery: ''
+                }).then(function (res) {
+                    if (seq !== searchSeq) return;
+                    var payload = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (!payload || payload.success !== true) {
+                        throw new Error((payload && payload.error) || 'search failed');
+                    }
+                    var matches = Array.isArray(payload.results) ? payload.results : [];
+                    var total = payload.total || matches.length;
+                    status.textContent = total + ' match(es)' + (total > matches.length ? ' (showing ' + matches.length + ')' : '')
+                        + (payload.catalogSize ? ' · ' + payload.catalogSize + ' games indexed' : '');
+                    render(matches);
+                }).catch(function (e) {
+                    if (seq !== searchSeq) return;
+                    status.innerHTML = '<span style="color:#f44336;">Failed to search catalog: ' + e + '</span>';
+                });
             }
 
             var deb;
-            input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 200); });
-
-            if (window.__ryuuCatalog) {
-                doSearch(); input.focus();
-            } else {
-                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading Ryuu catalog (~42MB, one-time this session)…';
-                fetch('https://generator.ryuu.lol/files/games.json')
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        window.__ryuuCatalog = Array.isArray(data) ? data : [];
-                        status.textContent = window.__ryuuCatalog.length + ' games in catalog · type ≥2 chars to search';
-                        input.focus();
-                    })
-                    .catch(function (e) { status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: ' + e + '</span>'; });
-            }
+            input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 250); });
+            status.textContent = 'type ≥2 chars to search Ryuu catalog';
+            input.focus();
         });
     }
 
@@ -5337,6 +5347,10 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         }
 
         // left thing in fixes modal
+        data = data || {};
+        data.genericFix = data.genericFix || { status: 404, available: false };
+        data.onlineFix = data.onlineFix || { status: 404, available: false };
+
         const genericStatus = data.genericFix.status;
         const genericSection = createFixButton(
             lt('Generic Fix'),
