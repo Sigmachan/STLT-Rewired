@@ -770,23 +770,23 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         },
         ingria: {
             name: 'Ingria',
-            bgPrimary: '#0a1929',
-            bgSecondary: '#102a43',
-            bgTertiary: 'rgba(10, 25, 41, 0.95)',
-            bgHover: 'rgba(16, 42, 67, 0.95)',
-            bgContainer: 'rgba(10,25,41,0.8)',
-            bgContainerGradient: 'rgba(10, 25, 41, 0.9), #0a1929',
-            accent: '#00a7e6',
-            accentLight: '#ffffff',
-            accentDark: '#0086c3',
-            border: 'rgba(0, 167, 230, 0.35)',
-            borderHover: 'rgba(255, 255, 255, 0.8)',
-            text: '#ffffff',
-            textSecondary: '#d8edf8',
-            gradient: 'linear-gradient(135deg, #5cc4ee 0%, #00a7e6 100%)',
-            gradientLight: 'linear-gradient(135deg, #ffffff 0%, #5cc4ee 100%)',
-            shadow: 'rgba(0, 167, 230, 0.4)',
-            shadowHover: 'rgba(255, 255, 255, 0.6)',
+            bgPrimary: '#ffffff',
+            bgSecondary: '#eef4fc',
+            bgTertiary: 'rgba(255, 255, 255, 0.97)',
+            bgHover: 'rgba(0, 57, 166, 0.08)',
+            bgContainer: 'rgba(255, 255, 255, 0.9)',
+            bgContainerGradient: 'rgba(238, 244, 252, 0.95), #ffffff',
+            accent: '#0039a6',
+            accentLight: '#1f6fe0',
+            accentDark: '#002a7a',
+            border: 'rgba(0, 57, 166, 0.35)',
+            borderHover: 'rgba(0, 57, 166, 0.75)',
+            text: '#0a1a3a',
+            textSecondary: '#34517f',
+            gradient: 'linear-gradient(135deg, #ffffff 0%, #0039a6 100%)',
+            gradientLight: 'linear-gradient(135deg, #ffffff 0%, #1f6fe0 100%)',
+            shadow: 'rgba(0, 57, 166, 0.3)',
+            shadowHover: 'rgba(0, 57, 166, 0.5)',
         }
     };
 
@@ -3554,25 +3554,26 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         card.id = 'lt-ingria-suggest';
         card.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;' +
             'width:340px;padding:14px;border-radius:8px;' +
-            'background:#0a1929;border:1px solid rgba(0,167,230,0.4);' +
-            'box-shadow:0 8px 24px rgba(0,0,0,0.5);' +
+            'background:linear-gradient(180deg,#ffffff 0%,#eef4fc 55%,#ffffff 100%);' +
+            'border:1px solid rgba(0,57,166,0.35);border-top:4px solid #0039a6;' +
+            'box-shadow:0 8px 24px rgba(0,57,166,0.22);' +
             'font-family:system-ui,-apple-system,sans-serif;' +
             'animation:lt-ingria-fadein 0.3s ease;';
 
         card.innerHTML =
             '<style>@keyframes lt-ingria-fadein{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}</style>' +
-            '<div style="font-size:14px;font-weight:500;color:#ffffff;margin-bottom:4px;">' +
-            'Тема Ingria' +
+            '<div style="font-size:14px;font-weight:600;color:#0a1a3a;margin-bottom:4px;">' +
+            'Тема Ingria · бело-сине-белый' +
             '</div>' +
-            '<div style="font-size:10px;color:#5cc4ee;letter-spacing:0.5px;margin-bottom:8px;font-family:Georgia,serif;font-style:italic;">' +
+            '<div style="font-size:10px;color:#0039a6;letter-spacing:0.5px;margin-bottom:8px;font-family:Georgia,serif;font-style:italic;">' +
             'Made in Ingria by Free People' +
             '</div>' +
-            '<div style="font-size:11px;color:#d8edf8;line-height:1.5;margin-bottom:10px;">' +
-            'Светлая тема в синих тонах. Применить?' +
+            '<div style="font-size:11px;color:#34517f;line-height:1.5;margin-bottom:10px;">' +
+            'Светлая тема: белый — синий — белый. Применить?' +
             '</div>' +
             '<div style="display:flex;gap:6px;">' +
-            '<button id="lt-ingria-apply" style="flex:1;padding:6px 10px;background:#00a7e6;border:none;border-radius:4px;color:#ffffff;font-size:12px;font-weight:500;cursor:pointer;">Применить</button>' +
-            '<button id="lt-ingria-dismiss" style="padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#d8edf8;font-size:12px;cursor:pointer;">Позже</button>' +
+            '<button id="lt-ingria-apply" style="flex:1;padding:6px 10px;background:#0039a6;border:none;border-radius:4px;color:#ffffff;font-size:12px;font-weight:500;cursor:pointer;">Применить</button>' +
+            '<button id="lt-ingria-dismiss" style="padding:6px 10px;background:rgba(255,255,255,0.9);border:1px solid rgba(0,57,166,0.25);border-radius:4px;color:#34517f;font-size:12px;cursor:pointer;">Позже</button>' +
             '</div>';
         document.body.appendChild(card);
 
