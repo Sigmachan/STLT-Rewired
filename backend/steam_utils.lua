@@ -24,6 +24,11 @@ function steam_utils.has_lua_for_app(appid)
     if not base_path or base_path == "" then return false end
 
     local stplug_path = fs.join(base_path, "config", "stplug-in")
+    local unlock_ok, unlock_paths_mod = pcall(require, "unlock_paths")
+    if unlock_ok and unlock_paths_mod and unlock_paths_mod.lua_script_dir then
+        local alt = unlock_paths_mod.lua_script_dir()
+        if alt and alt ~= "" then stplug_path = alt end
+    end
     local lua_file = fs.join(stplug_path, tostring(appid) .. ".lua")
     local disabled_file = fs.join(stplug_path, tostring(appid) .. ".lua.disabled")
 

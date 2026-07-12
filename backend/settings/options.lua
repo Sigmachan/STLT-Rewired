@@ -55,6 +55,35 @@ options.SETTINGS_GROUPS = {
                 metadata = {placeholder = "Enter your ManifestHub API key..."}
             }
         }
+    },
+    {
+        key = "unlock",
+        label = "Unlock backend",
+        description = "Where unlock Lua files are written. Rewired Manager can install OpenSteamTool so Millennium is optional.",
+        options = {
+            {
+                key = "backend",
+                label = "Backend preference",
+                option_type = "select",
+                description = "auto detects OpenSteamTool, LumaCore, or SteamTools. opensteamtool uses config/lua.",
+                default = "auto",
+                choices = {
+                    {value = "auto", label = "Auto-detect"},
+                    {value = "opensteamtool", label = "OpenSteamTool (config/lua)"},
+                    {value = "steamtools", label = "SteamTools (stplug-in)"},
+                    {value = "lumacore", label = "LumaCore (stplug-in)"},
+                    {value = "millennium", label = "Millennium plugin only"}
+                }
+            },
+            {
+                key = "millenniumOptional",
+                label = "Millennium optional",
+                option_type = "toggle",
+                description = "When enabled, Rewired Manager is the primary control surface; in-Steam UI is a bonus.",
+                default = true,
+                metadata = {yesLabel = "Yes", noLabel = "No"}
+            }
+        }
     }
 }
 

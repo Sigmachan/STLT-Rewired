@@ -8,6 +8,7 @@ local steam_utils = require("steam_utils")
 local utils = require("plugin_utils")
 local api_manifest = require("api_manifest")
 local settings_manager = require("settings.manager")
+local unlock_paths = require("unlock_paths")
 local cjson = require("json")
 
 local downloads = {}
@@ -80,11 +81,15 @@ end
 
 function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name)
     _set_download_state(appid, { status = "processing" })
+    local ok_dir, target_dir = unlock_paths.ensure_lua_script_dir()
+    if not ok_dir then
+        _set_download_state(appid, { status = "failed", error = target_dir or "lua script dir unavailable" })
+        return { success = false, error = target_dir }
+    end
+
     local base_path = steam_utils.detect_steam_install_path()
-    local target_dir = fs.join(base_path, "config", "stplug-in")
-    if not fs.exists(target_dir) then fs.create_directories(target_dir) end
-    
-    local depot_cache = fs.join(base_path, "depotcache")
+    local depot_cache = unlock_paths.depotcache_dir()
+    if depot_cache == "" then depot_cache = fs.join(base_path, "depotcache") end
     if not fs.exists(depot_cache) then fs.create_directories(depot_cache) end
     
     local target_lua = fs.join(target_dir, tostring(appid) .. ".lua")

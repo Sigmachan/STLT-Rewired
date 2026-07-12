@@ -53,11 +53,20 @@ function M.steam_path()
     return p or ""
 end
 
---- <Steam>/config/stplug-in ("" if Steam not found).
-function M.stplug_dir()
+--- Unlock Lua directory (stplug-in or config/lua depending on backend).
+function M.lua_script_dir()
+    local ok, unlock_paths = pcall(require, "unlock_paths")
+    if ok and unlock_paths and unlock_paths.lua_script_dir then
+        return unlock_paths.lua_script_dir()
+    end
     local base = M.steam_path()
     if base == "" then return "" end
     return fs.join(base, "config", "stplug-in")
+end
+
+--- Back-compat alias — all new code should use lua_script_dir().
+function M.stplug_dir()
+    return M.lua_script_dir()
 end
 
 --- Windows: %LOCALAPPDATA%\Steam (holds htmlcache/shadercache mirrors).

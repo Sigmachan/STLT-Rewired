@@ -1,15 +1,16 @@
 # STLT — Rewired
 
-LuaTools rebuilt on the modern **Millennium 3.x Lua backend** (piqseu base), with the
-SteamTools-Ultimate (STLT) feature set ported in. Native `callServerMethod` IPC — no Python
-HTTP bridge, no persistent daemon. Windows.
+**Rewired Manager** is the primary control plane (unlock backend, add games, deploy). The Millennium
+plugin is optional in-Steam UI on top of the same backend.
 
-> A Millennium plugin for the Steam client. It adds a game-manifest/source workflow plus a set
-> of maintenance tools (diagnostics, backup/restore, achievements, workshop, sync, key vault,
-> and more) to the Steam UI.
+LuaTools rebuilt on **Millennium 3.x Lua** (piqseu base), with STLT's SteamTools-Ultimate features
+ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
+
+> See `docs/PRODUCTION_STACK.md` for the recommended install path (Manager + OpenSteamTool, Millennium optional).
 
 ## Project docs
 
+- `docs/PRODUCTION_STACK.md` — Manager-first install, unlock backends, release layout.
 - `docs/ARCHITECTURE.md` — runtime shape, backend modules, RPC surface, safety model.
 - `docs/GEN1_GEN2_COMPARISON.md` — notes from the Gen 1 plugin archive and Gen 2 portable app.
 - `docs/COMPETITIVE_BASELINE.md` — official LuaTools/Gen2 baseline and Rewired differentiators.

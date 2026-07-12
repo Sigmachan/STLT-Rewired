@@ -48,6 +48,7 @@ local sync            = require("sync")
 local account         = require("account")
 local sentinel        = require("sentinel")
 local setup_assistant = require("setup_assistant")
+local unlock_paths    = require("unlock_paths")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -174,6 +175,12 @@ function HasLuaToolsForApp(appid)
     local ok, exists = pcall(steam_utils.has_lua_for_app, tonumber(appid))
     if not ok then return json_err(exists) end
     return json_ok({ success = true, exists = exists == true })
+end
+
+function GetUnlockBackendStatus()
+    local ok, res = pcall(unlock_paths.get_unlock_status)
+    if not ok then return json_err(res) end
+    return json_ok({ success = true, status = res })
 end
 
 function StartAddViaLuaTools(appid)

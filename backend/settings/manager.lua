@@ -145,6 +145,21 @@ local function _write_settings_file(data)
     utils.write_json(SETTINGS_FILE, data)
 end
 
+local function _merge_shared_unlock_config(values)
+    local ok, unlock_paths = pcall(require, "unlock_paths")
+    if not ok or not unlock_paths or not unlock_paths.read_shared_config then return end
+    local shared = unlock_paths.read_shared_config()
+    if type(shared) ~= "table" then return end
+    values.unlock = values.unlock or {}
+    local backend = shared.unlockBackend or shared.unlock_backend
+    if type(backend) == "string" and backend ~= "" then
+        values.unlock.backend = backend
+    end
+    if shared.millenniumOptional ~= nil then
+        values.unlock.millenniumOptional = shared.millenniumOptional == true
+    end
+end
+
 local function _persist_values(values)
     local payload = {version = SCHEMA_VERSION, values = values}
     _write_settings_file(payload)
@@ -164,6 +179,7 @@ function manager._load_settings_cache()
 
     local first_launch = (values == nil)
     local merged_values = options.merge_defaults_with_values(values)
+    _merge_shared_unlock_config(merged_values)
 
     if first_launch then
         local detected = _detect_steam_language()
