@@ -9,7 +9,10 @@ local CATALOG_CACHE = nil
 local CATALOG_CACHE_TS = 0
 local CATALOG_TTL = 10 * 60
 local PAGE_LIMIT = 40
-local MAX_SEARCH_PAGES = 80
+-- Keep this small: SearchRyuuCatalog runs on Millennium's Lua thread; long paginated
+-- loops freeze the Steam UI (the old 80-page scan could block for minutes).
+local MAX_SEARCH_PAGES = 3
+local HTTP_TIMEOUT = 8
 
 local function now_seconds()
     return os.time()
@@ -30,13 +33,20 @@ local function url_encode(s)
     end)
 end
 
-local function contains(haystack, needle)
-    return tostring(haystack or ""):lower():find(tostring(needle or ""):lower(), 1, true) ~= nil
+local function normalize_game(g)
+    return {
+        appid = tostring(g.appid or ""),
+        name = tostring(g.name or ""),
+        header_image = tostring(g.header_image or ""),
+        tags = st.A(g.tags or {}),
+        nsfw = g.nsfw == true,
+        drm = g.drm == true,
+    }
 end
 
 local function fetch_page(query, page)
     local url = SEARCH_URL .. "?limit=" .. PAGE_LIMIT .. "&page=" .. tostring(page) .. "&search=" .. url_encode(query)
-    local ok_http, resp = pcall(http_client.get, url, { headers = ryuu_headers(), timeout = 15 })
+    local ok_http, resp = pcall(http_client.get, url, { headers = ryuu_headers(), timeout = HTTP_TIMEOUT })
     if not ok_http then
         return nil, "Ryuu catalog fetch failed: " .. tostring(resp)
     end
@@ -50,9 +60,9 @@ local function fetch_page(query, page)
     end
 
     if type(data.games) == "table" then
-        return data.games, nil, tonumber(data.total_pages) or page
+        return data.games, nil, tonumber(data.total_pages) or page, tonumber(data.total)
     end
-    return data, nil, page
+    return data, nil, page, nil
 end
 
 local function search_remote(query, limit)
@@ -63,42 +73,41 @@ local function search_remote(query, limit)
     end
 
     local out = {}
-    local total = 0
     local first_err = nil
-    local max_pages = MAX_SEARCH_PAGES
-    for page = 1, max_pages do
-        local games, err, total_pages = fetch_page(query, page)
+    local pages_scanned = 0
+    local reported_total = 0
+    for page = 1, MAX_SEARCH_PAGES do
+        local games, err, total_pages, api_total = fetch_page(query, page)
         if not games then
             first_err = first_err or err
             break
         end
+        pages_scanned = page
+        if api_total and api_total > reported_total then reported_total = api_total end
         if #games == 0 then break end
 
+        -- The Ryuu API already filters by ?search=; trust page results instead of
+        -- re-scanning up to 80 pages client-side (that pattern froze Steam).
         for _, g in ipairs(games) do
-            if contains(g.name, query) or tostring(g.appid or "") == query then
-                total = total + 1
-                if #out < limit then
-                    table.insert(out, {
-                        appid = tostring(g.appid or ""),
-                        name = tostring(g.name or ""),
-                        header_image = tostring(g.header_image or ""),
-                        tags = st.A(g.tags or {}),
-                        nsfw = g.nsfw == true,
-                        drm = g.drm == true,
-                    })
-                end
+            if #out < limit then
+                table.insert(out, normalize_game(g))
             end
         end
 
+        if total_pages and tonumber(total_pages) then
+            reported_total = math.max(reported_total, tonumber(total_pages) * PAGE_LIMIT)
+        end
         if #out >= limit then break end
-        if total_pages and page >= math.min(total_pages, max_pages) then break end
+        if #games < PAGE_LIMIT then break end
+        if total_pages and page >= total_pages then break end
     end
 
     if #out == 0 and first_err then
         return nil, first_err
     end
 
-    local result = { total = total, results = out, scannedPages = max_pages }
+    local total = reported_total > 0 and reported_total or #out
+    local result = { total = total, results = out, scannedPages = pages_scanned }
     CATALOG_CACHE = CATALOG_CACHE or {}
     CATALOG_CACHE[cache_key] = result
     CATALOG_CACHE_TS = now

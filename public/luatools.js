@@ -2225,7 +2225,12 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         var appid = b.getAttribute('data-appid');
                         var name = b.getAttribute('data-name');
                         b.textContent = '…'; b.disabled = true;
-                        Millennium.callServerMethod('luatools', 'StartAddViaLuaTools', { appid: appid, contentScriptQuery: '' });
+                        Millennium.callServerMethod('luatools', 'StartAddViaLuaToolsFromUrl', {
+                            apiName: 'Ryuu Premium',
+                            appid: appid,
+                            url: 'https://generator.ryuu.lol/api/download/' + appid,
+                            contentScriptQuery: ''
+                        });
                         try { showLuaToolsToast('⏳ Adding ' + name + ' (appid ' + appid + ') via Ryuu…', 3500, 'info'); } catch (_) {}
                         setTimeout(function () { b.textContent = '✓ started'; }, 400);
                     };
@@ -2244,7 +2249,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching Ryuu catalog…';
                 Millennium.callServerMethod('luatools', 'SearchRyuuCatalog', {
                     query: q,
-                    limit: 60,
+                    limit: 40,
                     contentScriptQuery: ''
                 }).then(function (res) {
                     if (seq !== searchSeq) return;
@@ -2264,7 +2269,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
 
             var deb;
-            input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 250); });
+            input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 450); });
             status.textContent = 'type ≥2 chars to search Ryuu catalog';
             input.focus();
         });

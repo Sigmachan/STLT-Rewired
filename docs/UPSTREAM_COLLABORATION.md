@@ -20,7 +20,10 @@ The project goal is not to beg for acceptance from any single upstream channel. 
 
 ### Gen 1: `ltsteamplugin-main.zip`
 
-Local reference: `C:\Users\sened\Downloads\ltsteamplugin-main.zip`
+Local references:
+
+- archive: `C:\Users\sened\Downloads\ltsteamplugin-main.zip`
+- upstream repo: https://github.com/madoiscool/ltsteamplugin
 
 Observed metadata:
 
@@ -49,6 +52,12 @@ Gen 2 is a different product surface: a desktop app that can manage/install/plug
 ### STLT-Rewired
 
 Local repo: `F:\STLT-Rewired`
+
+Companion / tooling on the same machine:
+
+- `F:\Rewired-Manager` — source for Rewired Manager (Ryuu/source health probes, plugin discovery)
+- `F:\Rewired-Manager-Binaries` — published manager zips
+- `F:\dotnet-sdk` — local .NET SDK used to build the manager
 
 Observed metadata:
 
@@ -110,24 +119,25 @@ deploy.ps1                live deploy + backup/restore + optional Millennium run
 
 ## Recent hardening worth upstreaming
 
-### Add-to-Steam / no-license guard
+### Add-to-Steam / no-restart flow
 
-Problem: immediately triggering `steam://install/<appid>` after writing Lua activation files can produce a Steam `No License` prompt because Steam has not reloaded the injected app license state yet.
+Problem: immediately triggering `steam://install/<appid>` after writing Lua activation files can produce a Steam `No License` prompt on some builds because Steam has not reloaded the injected app license state yet.
 
-Implemented behavior:
+Current behavior (matches upstream Gen1 `steam://install` links in the loaded-apps popup):
 
-- `AutoFinalizeActivation` writes/finishes activation without auto-launching `steam://install`.
-- UI communicates restart-first flow.
-- explicit manual `StartDownloadNoRestart` remains available for users who intentionally want to try.
+- `AutoFinalizeActivation` triggers `steam://install/<appid>` on the running client after the `.lua` is written.
+- UI shows “Downloading — no restart needed” when that succeeds.
+- Manual **Try download (no restart)** and **Restart Steam to finish** remain as fallbacks when Steam still shows No License.
+
+Ryuu catalog search must stay bounded: Rewired Manager probes with a **single** paginated request (`limit=40&page=1&search=…`). The plugin backend caps at **3 pages** with short timeouts so Millennium’s blocking Lua thread cannot freeze Steam (never scan 80 pages synchronously inside the webkit path).
 
 ### Ryuu Premium source and catalog
 
-Implemented:
-
 - `backend/api.json` includes `Ryuu Premium` as `https://generator.ryuu.lol/api/download/<appid>`.
 - `backend/api_manifest.lua` prevents duplicate generator entries and prefers local Ryuu session when configured.
-- `backend/ryuu.lua` uses paginated `/api/games?limit=40&page=N&search=<query>` rather than giant `files/games.json`, which can hang/chunk indefinitely in the Steam/Millennium path.
-- `backend/data/secrets.local.json` stores `ryuuSession` locally; it is gitignored and preserved by deploy.
+- `backend/ryuu.lua` uses the same paginated API as `F:\Rewired-Manager\...\SourceHealthService.cs` (max 3 pages, 8s timeout).
+- Ryuu catalog **+ Add** uses `StartAddViaLuaToolsFromUrl` directly (avoids synchronous probe-all-APIs loop).
+- `backend/data/secrets.local.json` stores `ryuuSession` locally; gitignored and preserved by deploy.
 
 ### Fixes workflow
 

@@ -1578,9 +1578,18 @@ function AutoFinalizeActivation(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     appid = tonumber(appid)
     if not appid then return json_err("Invalid appid") end
-    return json_ok({ success = true, appid = appid, skipped = true, downloadTriggered = false,
+    -- Match upstream ltsteamplugin behavior: after the .lua is written, kick off
+    -- steam://install on the running client so the user does not need a full restart.
+    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
+    return json_ok({
+        success = ok == true,
+        appid = appid,
+        skipped = false,
+        downloadTriggered = ok == true,
         autoFixed = st.A({}),
-        message = "Game files were added. Restart Steam before starting the download to avoid No License." })
+        message = ok and ("Triggered download for AppID " .. appid .. " on the running Steam client.")
+                     or "Game files were added, but steam://install could not be launched.",
+    })
 end
 
 function StartDownloadNoRestart(appid, contentScriptQuery)
