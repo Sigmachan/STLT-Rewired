@@ -183,7 +183,7 @@ Gen2 shows the value of a native app. Rewired should adopt the shape, not the ba
    - archive preview;
    - safe unfix status;
    - clear 429/offline state.
-5. Cut release artifacts and tags.
+5. Cut release artifacts and tags — **Done** (`scripts/build_release.ps1` → `releases/STLT-Rewired.zip`; `update.json` → `Sigmachan/STLT-Rewired`).
 
 ### Manager short-term
 

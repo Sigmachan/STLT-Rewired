@@ -1,6 +1,7 @@
 local fs = require("fs")
 local config = require("config")
 local http_client = require("http_client")
+local github_mirror = require("github_mirror")
 local logger = require("plugin_logger")
 local utils = require("plugin_utils")
 local paths = require("paths")
@@ -24,16 +25,19 @@ function api_manifest.init_apis()
         logger.log("InitApis: Local file exists -> " .. api_json_path .. "; skipping remote fetch")
     else
         logger.log("InitApis: Local file not found -> " .. api_json_path)
-        local manifest_text = ""
-        
         logger.log("InitApis: Fetching manifest from " .. config.API_MANIFEST_URL)
-        local resp = http_client.get(config.API_MANIFEST_URL, { timeout = 15 })
-        if resp and resp.status == 200 and resp.body then
-            manifest_text = resp.body
+        local manifest_text = github_mirror.fetch(
+            http_client,
+            config.API_MANIFEST_URL,
+            { timeout = 15 },
+            config.GITHUB_PROXY_BASE
+        ) or ""
+
+        if manifest_text ~= "" then
             logger.log("InitApis: Fetched manifest, length=" .. tostring(#manifest_text))
         else
             logger.warn("InitApis: Primary URL failed, trying proxy...")
-            resp = http_client.get(config.API_MANIFEST_PROXY_URL, { timeout = config.HTTP_PROXY_TIMEOUT_SECONDS })
+            local resp = http_client.get(config.API_MANIFEST_PROXY_URL, { timeout = config.HTTP_PROXY_TIMEOUT_SECONDS })
             if resp and resp.status == 200 and resp.body then
                 manifest_text = resp.body
                 logger.log("InitApis: Fetched manifest from proxy, length=" .. tostring(#manifest_text))

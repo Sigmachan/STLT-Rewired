@@ -1,0 +1,34 @@
+<Window x:Class="RewiredManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rewired Manager"
+        Height="520" Width="640"
+        MinHeight="420" MinWidth="520"
+        Background="#1b2838">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Rewired Manager" FontSize="22" FontWeight="SemiBold" Foreground="#c7d5e0" Margin="0,0,0,12"/>
+        <TextBlock Grid.Row="1" x:Name="StatusText" TextWrapping="Wrap" Foreground="#8f98a0" Margin="0,0,0,8"/>
+        <TextBlock Grid.Row="2" x:Name="PluginVersionText" Foreground="#66c0f4" Margin="0,0,0,16"/>
+
+        <Border Grid.Row="3" Background="#2a475e" CornerRadius="6" Padding="16">
+            <StackPanel>
+                <TextBlock Text="ManifestHub" FontSize="16" Foreground="#c7d5e0" Margin="0,0,0,8"/>
+                <TextBlock x:Name="SecretsText" Foreground="#8f98a0" Margin="0,0,0,12"/>
+                <PasswordBox x:Name="ManifestHubKeyBox" Height="28" Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button Content="Test key" Click="TestManifestHub_Click" Padding="12,4" Margin="0,0,8,0"/>
+                    <Button Content="Save to plugin" Click="SaveManifestHub_Click" Padding="12,4" Margin="0,0,8,0"/>
+                    <Button Content="Refresh" Click="Refresh_Click" Padding="12,4"/>
+                </StackPanel>
+                <TextBlock x:Name="HubResultText" TextWrapping="Wrap" Foreground="#acb2b8"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

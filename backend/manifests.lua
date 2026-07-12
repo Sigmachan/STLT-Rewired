@@ -8,9 +8,11 @@
 local cjson       = require("json")
 local m_utils     = require("utils")
 local fs          = require("fs")
-local http_client = require("http_client")
-local logger      = require("plugin_logger")
-local st          = require("st_util")
+local http_client   = require("http_client")
+local github_mirror = require("github_mirror")
+local config        = require("config")
+local logger        = require("plugin_logger")
+local st            = require("st_util")
 
 local M = {}
 
@@ -50,7 +52,10 @@ local function get_manifesthub_key()
 end
 
 local function try_fetch(url)
-    local ok, resp = pcall(http_client.get, url, { timeout = 30, headers = { ["User-Agent"] = USER_AGENT } })
+    local opts = { timeout = 30, headers = { ["User-Agent"] = USER_AGENT } }
+    local body = github_mirror.fetch(http_client, url, opts, config.GITHUB_PROXY_BASE)
+    if body then return body end
+    local ok, resp = pcall(http_client.get, url, opts)
     if ok and resp and resp.status == 200 and resp.body and #resp.body > 0 then
         return resp.body
     end

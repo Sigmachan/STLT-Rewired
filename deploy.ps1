@@ -233,8 +233,8 @@ Write-Host "Deployed STLT-Rewired -> $dst" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next:" -ForegroundColor Cyan
 Write-Host "  1. Fully restart Steam (Steam menu -> Exit, then relaunch)."
-Write-Host "  2. In Steam -> Millennium settings, confirm 'luatools' is enabled."
+Write-Host "  2. In Steam -> Millennium settings, confirm 'luatools' (Rewired) is enabled."
 Write-Host "  3. Open the Millennium/CEF console; expect: [LuaTools] rich UI loaded (<n> bytes)"
-Write-Host "  4. Open a game page -> the LuaTools button/panels should appear."
+Write-Host "  4. Open a game page -> Add via Rewired button and Rewired menu should appear."
 Write-Host ""
 Write-Host "Roll back any time:  pwsh -File deploy.ps1 -Restore" -ForegroundColor DarkGray

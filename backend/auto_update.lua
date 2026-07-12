@@ -50,9 +50,6 @@ function auto_update.check_for_updates_now()
                     break
                 end
             end
-            if zip_url == "" and tag_name ~= "" then
-                zip_url = "https://luatools.vercel.app/api/get-plugin/" .. tag_name
-            end
         end
     end
     
@@ -95,7 +92,7 @@ function auto_update.check_for_updates_now()
     
     if fs.exists(pending_zip) then fs.remove(pending_zip) end
     
-    local msg = "LuaTools updated to " .. latest_version .. ". Please restart Steam."
+    local msg = "Rewired updated to " .. latest_version .. ". Please restart Steam."
     return { success = true, message = msg }
 end
 

@@ -17,7 +17,7 @@ Rewired intentionally keeps a **Windows-first, native Lua** backend (~169 RPCs) 
 | `getPageGameName()` on add | Done |
 | `sync-from-live.ps1` | Done |
 | Gen2 parity panels (source health, companion, CloudRedirect, support bundle) | Done |
-| Locales: en, de, ru, **uk**, **be** | Done |
+| Locales: en, de, ru, **uk**, **be** | Done (Rewired branding in all shipped locales via `scripts/rebrand_locales.py`) |
 | First-run setup assistant (Lua + JS modal) | Done (`setup_assistant.lua`, `GetSetupState` / `RunSetup` / `MarkSetupSeen`) |
 | Self-heal on load | Done (`SelfHeal` RPC + `on_load` hook) |
 | Health preflight (Windows) | Done (`health.run_health_check`, settings health panel no longer Linux-only skip) |
@@ -34,7 +34,7 @@ Rewired intentionally keeps a **Windows-first, native Lua** backend (~169 RPCs) 
 ## STLT 10.x features — still open
 
 1. **Regression test suite** — STLT `tests/`; Rewired has little automated coverage for add/remove/finalize paths.
-2. **jsDelivr mirror fallback** in downloads when primary manifest hosts fail.
+2. **jsDelivr mirror fallback** in downloads when primary manifest hosts fail — **Done** (`backend/github_mirror.lua`, wired into `manifests.lua` + `api_manifest.lua`).
 3. **Skyflare** in default `api.json` if desired for parity with STLT catalog breadth.
 4. **Denuvo diagnostics** — STLT health probes; partial coverage in Rewired health engine.
 

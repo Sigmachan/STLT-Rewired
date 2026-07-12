@@ -30,6 +30,7 @@ $required = @(
     "backend\manifesthub.lua",
     "backend\manifests.lua",
     "backend\manifest_auto_updater.lua",
+    "backend\github_mirror.lua",
     "backend\health.lua",
     "backend\setup_assistant.lua",
     "backend\ryuu.lua"
@@ -89,10 +90,21 @@ if (Test-Path -LiteralPath $webkit) {
         "WarmRyuuCatalogCache",
         "RunManifestAutoUpdate",
         "GetSetupState",
-        "Test ManifestHub key"
+        "Test ManifestHub key",
+        "Remove via Rewired",
+        "Rewired \u00b7 Menu"
     )) {
         if ($content -match [regex]::Escape($needle)) { Pass "contains '$needle'" } else { Fail "webkit.js missing '$needle'" }
     }
+}
+
+# --- locale branding (runtime strings) ---
+Write-Host "[locale branding]" -ForegroundColor Cyan
+$enLocale = Join-Path $dst "backend\locales\en.json"
+if (Test-Path -LiteralPath $enLocale) {
+    $en = Get-Content -Raw -LiteralPath $enLocale
+    if ($en -match 'Add via Rewired') { Pass "en.json Add via Rewired" } else { Fail "en.json missing Add via Rewired" }
+    if ($en -match '"common\.appName": "Rewired"') { Pass "en.json common.appName=Rewired" } else { Fail "en.json common.appName not Rewired" }
 }
 
 # --- backend RPC markers ---
@@ -164,9 +176,10 @@ if ($warnings.Count -gt 0) {
 Write-Host ""
 Write-Host "Manual UI checklist (after Steam restart):" -ForegroundColor Cyan
 Write-Host "  1. CEF console: [LuaTools] rich UI loaded"
-Write-Host "  2. Game page: Add via LuaTools button appears"
-Write-Host "  3. Settings -> Test ManifestHub key"
-Write-Host "  4. Ryuu catalog opens and search works (first open may cache ~1 min)"
+Write-Host "  2. Game page: Add via Rewired button appears"
+Write-Host "  3. Menu title: Rewired · Menu"
+Write-Host "  4. Settings -> Test ManifestHub key"
+Write-Host "  5. Ryuu catalog opens and search works (first open may cache ~1 min)"
 Write-Host ""
 
 if ($failures.Count -gt 0) { exit 1 }

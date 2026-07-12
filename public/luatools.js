@@ -1212,7 +1212,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             const title = document.createElement('div');
             title.style.cssText = `font-size:15px;color:${colors.text};font-weight:700;text-shadow:0 2px 8px ${colors.shadow};background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-            title.textContent = t('menu.title', 'LuaTools · Menu');
+            title.textContent = t('menu.title', 'Rewired · Menu');
 
             const iconButtons = document.createElement('div');
             iconButtons.style.cssText = 'display:flex;gap:6px;';
@@ -1304,7 +1304,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             createSectionLabel('menu.manageGameLabel', 'Manage Game');
 
-            const removeBtn = createMenuButton('lt-settings-remove-lua', 'menu.removeLuaTools', 'Remove via LuaTools', 'fa-trash-can');
+            const removeBtn = createMenuButton('lt-settings-remove-lua', 'menu.removeLuaTools', 'Remove via Rewired', 'fa-trash-can');
             removeBtn.style.display = 'none';
 
             const fixesMenuBtn = createMenuButton('lt-settings-fixes-menu', 'menu.fixesMenu', 'Fixes Menu', 'fa-wrench');
@@ -1667,7 +1667,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             try {
                                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                 const msg = (payload && payload.message) ? String(payload.message) : lt('No updates available.');
-                                ShowLuaToolsAlert('LuaTools', msg);
+                                ShowLuaToolsAlert('Rewired', msg);
                             } catch (_) { }
                         });
                     } catch (_) { }
@@ -1707,7 +1707,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 const successText = lt('Loaded free APIs: {count}').replace('{count}', (count != null ? count : '?'));
                                 const failText = (payload && payload.error) ? String(payload.error) : lt('Failed to load free APIs.');
                                 const text = ok ? successText : failText;
-                                ShowLuaToolsAlert('LuaTools', text);
+                                ShowLuaToolsAlert('Rewired', text);
                             } catch (_) { }
                         });
                     } catch (_) { }
@@ -1742,7 +1742,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 overlay.remove();
                             } catch (_) { }
                             const errText = t('menu.error.noAppId', 'Could not determine game AppID');
-                            ShowLuaToolsAlert('LuaTools', errText);
+                            ShowLuaToolsAlert('Rewired', errText);
                             return;
                         }
 
@@ -1773,7 +1773,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 overlay.remove();
                             } catch (_) { }
                             const errorText = t('menu.error.getPath', 'Error getting game path');
-                            ShowLuaToolsAlert('LuaTools', errorText);
+                            ShowLuaToolsAlert('Rewired', errorText);
                         });
                     } catch (err) {
                         backendLog('LuaTools: Fixes Menu button error: ' + err);
@@ -1805,14 +1805,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                                 window.__LuaToolsPresenceCheckAppId = undefined;
                                                 addLuaToolsButton();
                                                 const successText = t('menu.remove.success', 'LuaTools removed for this app.');
-                                                ShowLuaToolsAlert('LuaTools', successText);
+                                                ShowLuaToolsAlert('Rewired', successText);
                                             } catch (err) {
                                                 backendLog('LuaTools: post-delete cleanup failed: ' + err);
                                             }
                                         }).catch(function (err) {
                                             const failureText = t('menu.remove.failure', 'Failed to remove LuaTools.');
                                             const errMsg = (err && err.message) ? err.message : failureText;
-                                            ShowLuaToolsAlert('LuaTools', errMsg);
+                                            ShowLuaToolsAlert('Rewired', errMsg);
                                         });
                                     } catch (err) {
                                         backendLog('LuaTools: doDelete failed: ' + err);
@@ -1826,7 +1826,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         overlay.remove();
                                     } catch (_) { }
                                     const confirmMessage = t('menu.remove.confirm', 'Remove via LuaTools for this game?');
-                                    showLuaToolsConfirm('LuaTools', confirmMessage, function () {
+                                    showLuaToolsConfirm('Rewired', confirmMessage, function () {
                                         doDelete();
                                     }, function () {
                                         try {
@@ -5506,7 +5506,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const titleColors = getThemeColors();
         title.style.cssText = `font-size:14px;color:${titleColors.text};margin-bottom:12px;font-weight:700;text-shadow:0 2px 8px ${titleColors.shadow};background:${titleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.className = 'luatools-title';
-        title.textContent = t('common.appName', 'LuaTools');
+        title.textContent = t('common.appName', 'Rewired');
 
         // API list container — filled by startLuaToolsAdd / renderSources
         const apiListContainer = document.createElement('div');
@@ -5933,7 +5933,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     try {
                         overlay.remove();
                     } catch (_) { }
-                    showLuaToolsConfirm('LuaTools', lt('Are you sure you want to un-fix? This will remove fix files and verify game files.'),
+                    showLuaToolsConfirm('Rewired', lt('Are you sure you want to un-fix? This will remove fix files and verify game files.'),
                         function () {
                             startUnfix(data.appid);
                         },
@@ -6087,11 +6087,11 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     } else {
                         const errorKey = (payload && payload.error) ? String(payload.error) : '';
                         const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start un-fix'));
-                        ShowLuaToolsAlert('LuaTools', errorMsg);
+                        ShowLuaToolsAlert('Rewired', errorMsg);
                     }
                 }).catch(function () {
                     const msg = lt('Error starting un-fix');
-                    ShowLuaToolsAlert('LuaTools', msg);
+                    ShowLuaToolsAlert('Rewired', msg);
                 });
             } catch (err) {
                 backendLog('LuaTools: Un-Fix start error: ' + err);
@@ -6168,11 +6168,11 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 showFixesResultsPopup(payload, isGameInstalled);
             } else {
                 const errText = (payload && payload.error) ? String(payload.error) : lt('Failed to check for fixes.');
-                ShowLuaToolsAlert('LuaTools', errText);
+                ShowLuaToolsAlert('Rewired', errText);
             }
         }).catch(function () {
             const msg = lt('Error checking for fixes');
-            ShowLuaToolsAlert('LuaTools', msg);
+            ShowLuaToolsAlert('Rewired', msg);
         }).finally(function () {
             clearInterval(progressInterval);
             progressBar.style.width = '100%';
@@ -6196,7 +6196,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             // Check if we have the game install path
             if (!window.__LuaToolsGameInstallPath) {
                 const msg = lt('Game install path not found');
-                ShowLuaToolsAlert('LuaTools', msg);
+                ShowLuaToolsAlert('Rewired', msg);
                 return;
             }
 
@@ -6219,17 +6219,17 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     } else {
                         const errorKey = (payload && payload.error) ? String(payload.error) : '';
                         const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start fix download'));
-                        ShowLuaToolsAlert('LuaTools', errorMsg);
+                        ShowLuaToolsAlert('Rewired', errorMsg);
                     }
                 } catch (err) {
                     backendLog('LuaTools: ApplyGameFix response error: ' + err);
                     const msg = lt('Error applying fix');
-                    ShowLuaToolsAlert('LuaTools', msg);
+                    ShowLuaToolsAlert('Rewired', msg);
                 }
             }).catch(function (err) {
                 backendLog('LuaTools: ApplyGameFix error: ' + err);
                 const msg = lt('Error applying fix');
-                ShowLuaToolsAlert('LuaTools', msg);
+                ShowLuaToolsAlert('Rewired', msg);
             });
         } catch (err) {
             backendLog('LuaTools: applyFix error: ' + err);
@@ -6305,7 +6305,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     if (msgEl2 && msgEl2.dataset.last) msgEl2.textContent = msgEl2.dataset.last;
                     backendLog('LuaTools: CancelApplyFix response error: ' + err);
                     const msg = lt('Failed to cancel fix download');
-                    ShowLuaToolsAlert('LuaTools', msg);
+                    ShowLuaToolsAlert('Rewired', msg);
                 }
             }).catch(function (err) {
                 cancelBtn.dataset.pending = '0';
@@ -6315,7 +6315,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 if (msgEl2 && msgEl2.dataset.last) msgEl2.textContent = msgEl2.dataset.last;
                 backendLog('LuaTools: CancelApplyFix error: ' + err);
                 const msg = lt('Failed to cancel fix download');
-                ShowLuaToolsAlert('LuaTools', msg);
+                ShowLuaToolsAlert('Rewired', msg);
             });
         };
         btnRow.appendChild(cancelBtn);
@@ -6645,7 +6645,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const title = document.createElement('div');
         const settingsTitleColors = getThemeColors();
         title.style.cssText = `font-size:14px;color:${settingsTitleColors.text};font-weight:700;text-shadow:0 2px 8px ${settingsTitleColors.shadow};background:${settingsTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-        title.textContent = t('settings.title', 'LuaTools · Settings');
+        title.textContent = t('settings.title', 'Rewired · Settings');
 
         const iconButtons = document.createElement('div');
         iconButtons.style.cssText = 'display:flex;gap:6px;';
@@ -6933,7 +6933,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         header.appendChild(iconButtons);
 
         function applyStaticTranslations() {
-            title.textContent = t('settings.title', 'LuaTools · Settings');
+            title.textContent = t('settings.title', 'Rewired · Settings');
             refreshBtn.title = t('settings.refresh', 'Refresh');
             saveBtn.title = t('settings.save', 'Save Settings');
             backBtn.title = t('Back', 'Back');
@@ -8108,7 +8108,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const titleEl = document.createElement('div');
         const alertTitleColors = getThemeColors();
         titleEl.style.cssText = `font-size:13px;color:${alertTitleColors.text};margin-bottom:12px;font-weight:700;text-align:left;text-shadow:0 2px 8px ${alertTitleColors.shadow};background:${alertTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-        titleEl.textContent = String(title || 'LuaTools');
+        titleEl.textContent = String(title || 'Rewired');
 
         const messageEl = document.createElement('div');
         const alertMsgColors = getThemeColors();
@@ -8190,7 +8190,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const titleEl = document.createElement('div');
         const titleConfirmColors = getThemeColors();
         titleEl.style.cssText = `font-size:13px;color:${titleConfirmColors.text};margin-bottom:12px;font-weight:700;text-align:center;text-shadow:0 2px 8px ${titleConfirmColors.shadow};background:${titleConfirmColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-        titleEl.textContent = String(title || 'LuaTools');
+        titleEl.textContent = String(title || 'Rewired');
 
         const messageEl = document.createElement('div');
         const msgColors = getThemeColors();
@@ -8649,9 +8649,9 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 // Use luatools-btn primary class for that premium modal look
                 headerBtn.className = 'luatools-btn primary luatools-header-button Focusable';
                 headerBtn.style.cssText = 'margin-left:12px; display:inline-flex; align-items:center; justify-content:center; align-self:center; cursor:pointer; flex-shrink:0; width:36px; height:36px; padding:0; border-radius:8px; border-width:1px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);';
-                headerBtn.title = 'LuaTools Settings';
+                headerBtn.title = 'Rewired Settings';
 
-                headerBtn.setAttribute('data-tooltip-text', 'LuaTools Settings');
+                headerBtn.setAttribute('data-tooltip-text', 'Rewired Settings');
 
                 const img = document.createElement('img');
                 img.style.height = '18px';
@@ -8752,7 +8752,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         try {
                             // Ensure any settings overlays are closed before confirm
                             closeSettingsOverlay();
-                            showLuaToolsConfirm('LuaTools', lt('Restart Steam now?'),
+                            showLuaToolsConfirm('Rewired', lt('Restart Steam now?'),
                                 function () {
                                     try {
                                         Millennium.callServerMethod('luatools', 'RestartSteam', {
@@ -8765,7 +8765,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 }
                             );
                         } catch (_) {
-                            showLuaToolsConfirm('LuaTools', lt('Restart Steam now?'),
+                            showLuaToolsConfirm('Rewired', lt('Restart Steam now?'),
                                 function () {
                                     try {
                                         Millennium.callServerMethod('luatools', 'RestartSteam', {
@@ -8796,8 +8796,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 iconBtn.className = 'btnv6_blue_hoverfade btn_medium luatools-icon-button';
                             }
                             iconBtn.href = '#';
-                            iconBtn.title = 'LuaTools Helper';
-                            iconBtn.setAttribute('data-tooltip-text', 'LuaTools Helper');
+                            iconBtn.title = 'Rewired Helper';
+                            iconBtn.setAttribute('data-tooltip-text', 'Rewired Helper');
 
                             // Normalize margins to match native buttons
                             try {
@@ -9259,7 +9259,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
                             if (isUpdateMsg) {
                                 // For update messages, use confirm dialog with OK (restart) and Cancel options
-                                showLuaToolsConfirm('LuaTools', msg, function () {
+                                showLuaToolsConfirm('Rewired', msg, function () {
                                     // User clicked Confirm - restart Steam
                                     try {
                                         Millennium.callServerMethod('luatools', 'RestartSteam', {
@@ -9271,7 +9271,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 });
                             } else {
                                 // For non-update messages, use regular alert
-                                ShowLuaToolsAlert('LuaTools', msg);
+                                ShowLuaToolsAlert('Rewired', msg);
                             }
                         }
                     } catch (_) { }
@@ -9326,17 +9326,17 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
                     const buttonMode = anchor.getAttribute('data-lt-mode') || 'add';
                     if (buttonMode === 'remove') {
-                        showLuaToolsConfirm('LuaTools', t('menu.remove.confirm', 'Remove via LuaTools for this game?'), function () {
+                        showLuaToolsConfirm('Rewired', t('menu.remove.confirm', 'Remove via LuaTools for this game?'), function () {
                             Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
                                 appid: appid,
                                 contentScriptQuery: ''
                             }).then(function () {
                                 setLuaToolsButtonMode(anchor, 'add');
                                 window.__LuaToolsGameAdded = false;
-                                ShowLuaToolsAlert('LuaTools', t('menu.remove.success', 'LuaTools removed for this app.'));
+                                ShowLuaToolsAlert('Rewired', t('menu.remove.success', 'LuaTools removed for this app.'));
                             }).catch(function (err) {
                                 const errMsg = (err && err.message) ? err.message : t('menu.remove.failure', 'Failed to remove LuaTools.');
-                                ShowLuaToolsAlert('LuaTools', errMsg);
+                                ShowLuaToolsAlert('Rewired', errMsg);
                             });
                         }, function () { });
                         return;
@@ -9554,7 +9554,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         if (st.status === 'checking' && st.currentApi && title) {
                             title.textContent = lt('LuaTools · {api}').replace('{api}', st.currentApi);
                         } else if ((st.status === 'downloading' || st.status === 'processing' || st.status === 'installing') && title) {
-                            title.textContent = t('common.appName', 'LuaTools');
+                            title.textContent = t('common.appName', 'Rewired');
                         }
 
                         if (status) {
@@ -9640,7 +9640,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         
                         if (["checking content", "done"].includes(st.status)) {
                             // Update popup if visible
-                            if (title) title.textContent = t('common.appName', 'LuaTools');
+                            if (title) title.textContent = t('common.appName', 'Rewired');
                             if (bar) bar.style.width = '100%';
                             if (percent) percent.textContent = '100%';
 
