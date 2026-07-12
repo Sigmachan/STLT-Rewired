@@ -80,6 +80,8 @@ logs/
 *.temp
 *.bak
 *.cache
+.tmp_*.json
+backend/data/*.sample
 
 # Tools / Scripts
 /tools/

@@ -89,6 +89,41 @@ local function write_manifest_to_cache(base, depot_id, manifest_id, data)
     return wrote
 end
 
+local function remove_stale_depot_manifests(base, depot_id, keep_mid)
+    keep_mid = tostring(keep_mid or "")
+    depot_id = tostring(depot_id or "")
+    for _, subdir in ipairs({ "depotcache", fs.join("config", "depotcache") }) do
+        local cd = fs.join(base, subdir)
+        if fs.is_directory(cd) then
+            for _, e in ipairs(fs.list(cd) or {}) do
+                local name = e.name or ""
+                local d, m = name:match("^(%d+)_(%d+)%.manifest$")
+                if d == depot_id and m ~= keep_mid then
+                    pcall(fs.remove, e.path or fs.join(cd, name))
+                end
+            end
+        end
+    end
+end
+
+local function depot_has_stale_manifest(base, depot_id, keep_mid)
+    keep_mid = tostring(keep_mid or "")
+    depot_id = tostring(depot_id or "")
+    for _, subdir in ipairs({ "depotcache", fs.join("config", "depotcache") }) do
+        local cd = fs.join(base, subdir)
+        if fs.is_directory(cd) then
+            for _, e in ipairs(fs.list(cd) or {}) do
+                local name = e.name or ""
+                local d, m = name:match("^(%d+)_(%d+)%.manifest$")
+                if d == depot_id and m ~= keep_mid then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- Extract (depot, second-addappid-arg) pairs. NOTE: mirrors the Python quirk of
 -- treating addappid's 2nd argument as the "local manifest" for staleness/sync.
 local function addappid_pairs(content)
@@ -117,30 +152,44 @@ function M.update_manifests(appid)
 
     local api_key = get_manifesthub_key()
 
-    local dl, sk, fl = {}, {}, {}
+    local dl, sk, rf, fl = {}, {}, {}, {}
     for _, did in ipairs(depot_ids) do
         local mid = st.get_manifest_id(depots_data, did)
         if not mid or mid == "" then
             table.insert(fl, { depotId = did, reason = "No public manifest" })
+        elseif st.find_manifest_file(base, did, mid) then
+            table.insert(sk, { depotId = did, manifestId = mid })
         else
-            if st.find_manifest_file(base, did, mid) then
-                table.insert(sk, { depotId = did, manifestId = mid })
-            else
-                local data = fetch_manifest_bytes(did, mid, api_key)
-                if data and write_manifest_to_cache(base, did, mid, data) then
-                    table.insert(dl, { depotId = did, manifestId = mid, sizeBytes = #data })
+            local was_stale = depot_has_stale_manifest(base, did, mid)
+            if was_stale then
+                remove_stale_depot_manifests(base, did, mid)
+            end
+            local data = fetch_manifest_bytes(did, mid, api_key)
+            if data and write_manifest_to_cache(base, did, mid, data) then
+                local rec = { depotId = did, manifestId = mid, sizeBytes = #data }
+                if was_stale then rec.refreshed = true end
+                if was_stale then
+                    table.insert(rf, rec)
                 else
-                    table.insert(fl, { depotId = did, manifestId = mid,
-                        reason = "All sources failed (GitHub mirror / ManifestHub API)" })
+                    table.insert(dl, rec)
                 end
+            else
+                table.insert(fl, { depotId = did, manifestId = mid,
+                    reason = "All sources failed (GitHub mirror / ManifestHub API)" })
             end
         end
     end
 
     return {
         success = true, appid = appid,
-        downloaded = st.A(dl), skipped = st.A(sk), failed = st.A(fl),
-        summary = { total = #depot_ids, downloaded = #dl, skipped = #sk, failed = #fl },
+        downloaded = st.A(dl), refreshed = st.A(rf), skipped = st.A(sk), failed = st.A(fl),
+        summary = {
+            total = #depot_ids,
+            downloaded = #dl,
+            refreshed = #rf,
+            skipped = #sk,
+            failed = #fl,
+        },
     }
 end
 

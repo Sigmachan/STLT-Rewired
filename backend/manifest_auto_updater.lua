@@ -63,6 +63,7 @@ local function tally_manifest_run(sync_res, upd_res)
     end
     if upd_res and upd_res.success and type(upd_res.summary) == "table" then
         downloaded = downloaded + (tonumber(upd_res.summary.downloaded) or 0)
+        downloaded = downloaded + (tonumber(upd_res.summary.refreshed) or 0)
         skipped = skipped + (tonumber(upd_res.summary.skipped) or 0)
         failed = failed + (tonumber(upd_res.summary.failed) or 0)
     end

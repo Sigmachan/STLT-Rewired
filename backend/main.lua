@@ -33,7 +33,7 @@ local acf_lock        = require("acf_lock")
 local crack_migrator  = require("crack_migrator")
 local manifests       = require("manifests")
 local manifest_auto   = require("manifest_auto_updater")
-local manifest_auto   = require("manifest_auto_updater")
+local manifesthub     = require("manifesthub")
 local cloud_fix       = require("cloud_fix")
 local health          = require("health")
 local diagnostics     = require("diagnostics")
@@ -330,6 +330,19 @@ function GetManifestHubStats(api_key, force_refresh)
         return resp.body -- already JSON string
     end
     return json_err("request failed")
+end
+
+function ValidateMorrenusKey(apiKey, contentScriptQuery)
+    return ValidateManifestHubKey(apiKey, contentScriptQuery)
+end
+
+function ValidateManifestHubKey(apiKey, contentScriptQuery)
+    if type(apiKey) == "table" then
+        apiKey = apiKey.apiKey or apiKey.api_key
+    end
+    local ok, res = pcall(manifesthub.validate_key, apiKey)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 -- Live status of the Ryuu Generator session cookie (generator.ryuu.lol/api/check_session), so the

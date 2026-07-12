@@ -7289,6 +7289,51 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         });
 
                         controlWrap.appendChild(textInput);
+
+                        if (option.key === 'morrenusApiKey') {
+                            const testRow = document.createElement('div');
+                            testRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+                            const testBtn = document.createElement('a');
+                            testBtn.className = 'btnv6_blue_hoverfade btn_small';
+                            testBtn.href = '#';
+                            testBtn.innerHTML = '<span>' + t('settings.manifestHub.testKey', 'Test ManifestHub key') + '</span>';
+                            const testStatus = document.createElement('span');
+                            testStatus.style.cssText = 'font-size:12px;color:' + textColors.textSecondary + ';';
+                            testBtn.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                var key = (state.draft[group.key][option.key] || textInput.value || '').trim();
+                                if (!key) {
+                                    testStatus.textContent = t('settings.manifestHub.enterKey', 'Enter a key first.');
+                                    testStatus.style.color = '#ff9800';
+                                    return;
+                                }
+                                testStatus.textContent = t('settings.manifestHub.testing', 'Testing…');
+                                testStatus.style.color = textColors.textSecondary;
+                                _ltServer('ValidateManifestHubKey', { apiKey: key, contentScriptQuery: '' }).then(function (p) {
+                                    if (!p || p.success !== true) {
+                                        testStatus.textContent = (p && p.error) || t('settings.manifestHub.testFailed', 'Test failed');
+                                        testStatus.style.color = '#f44336';
+                                        return;
+                                    }
+                                    if (p.valid) {
+                                        var usage = (p.dailyUsage != null && p.dailyLimit != null)
+                                            ? ' · ' + p.dailyUsage + '/' + p.dailyLimit
+                                            : '';
+                                        testStatus.textContent = '✅ ' + (p.username || 'OK') + usage;
+                                        testStatus.style.color = '#4caf50';
+                                    } else {
+                                        testStatus.textContent = '⚠️ ' + (p.message || p.reason || 'Invalid key');
+                                        testStatus.style.color = '#ff9800';
+                                    }
+                                }).catch(function (err) {
+                                    testStatus.textContent = String(err || t('settings.manifestHub.testFailed', 'Test failed'));
+                                    testStatus.style.color = '#f44336';
+                                });
+                            });
+                            testRow.appendChild(testBtn);
+                            testRow.appendChild(testStatus);
+                            controlWrap.appendChild(testRow);
+                        }
                     } else {
                         const unsupported = document.createElement('div');
                         unsupported.style.cssText = 'font-size:12px;color:#ffb347;';
