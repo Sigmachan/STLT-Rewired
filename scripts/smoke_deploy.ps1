@@ -1,5 +1,6 @@
 # smoke_deploy.ps1 — post-deploy sanity checks for STLT-Rewired (Phase 1 verify).
 # Does not require Steam to be running; validates the live plugin tree on disk.
+# Run: pwsh -NoProfile -File scripts/smoke_deploy.ps1
 [CmdletBinding()]
 param(
     [string]$SteamPath = "C:\Program Files (x86)\Steam",

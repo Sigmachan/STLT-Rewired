@@ -1,5 +1,5 @@
 # build_release.ps1 — production zip for GitHub Releases (STLT-Rewired.zip).
-# Rebuilds webkit.js, packages the same runtime surface as deploy.ps1 (no local secrets).
+# Run: pwsh -NoProfile -File scripts/build_release.ps1
 [CmdletBinding()]
 param(
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent),

@@ -1,9 +1,11 @@
 # deploy.ps1 - install STLT-Rewired into the live Millennium plugins dir.
 # Reversible: backs up the currently-deployed plugin first. Does NOT restart Steam.
 #
-#   pwsh -File deploy.ps1                                    # deploy LuaTools/STLT only
-#   pwsh -File deploy.ps1 -InstallMillenniumBeta             # update Millennium beta, then deploy
-#   pwsh -File deploy.ps1 -Restore                           # roll back to the last plugin backup
+#   pwsh -NoProfile -File deploy.ps1                         # deploy (recommended)
+#   pwsh -NoProfile -File deploy.ps1 -InstallMillenniumBeta  # update Millennium beta, then deploy
+#   pwsh -NoProfile -File deploy.ps1 -Restore                # roll back to the last plugin backup
+#
+# Use -NoProfile: some PowerShell profiles hang after the welcome banner and never run the script.
 [CmdletBinding()]
 param(
     [switch]$Restore,
