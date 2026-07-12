@@ -1,15 +1,15 @@
 # Rewired Manager product plan
 
-Rewired Manager is the proposed independent companion app for STLT-Rewired. It should make the project feel like a serious product instead of a loose plugin fork, while keeping risky operations explicit and reversible.
+**Rewired Manager** is our Windows desktop app for STLT-Rewired — the same project as the Millennium plugin, not a third-party fork or a research artifact.
 
 ## Product thesis
 
-LuaTools should be split into two cooperating surfaces:
+STLT-Rewired ships two surfaces we own:
 
-1. **STLT-Rewired plugin** — runs inside Steam/Millennium and handles in-Steam actions.
-2. **Rewired Manager app** — a Windows desktop companion for setup, accounts, source health, repair, diagnostics, and heavyweight workflows.
+1. **STLT-Rewired plugin** — in-Steam UI via Millennium (`backend/`, `public/`).
+2. **Rewired Manager** — our desktop app for setup, secrets, deploy, source health, diagnostics, and heavy workflows (`manager/`).
 
-This mirrors the useful parts of the Gen2 portable app without copying its implementation or giving up the in-Steam plugin UX.
+The plugin works standalone. The manager makes setup and maintenance easier; it is optional, not a daemon.
 
 ## Guiding principles
 
@@ -153,25 +153,19 @@ Recommended: **.NET 8 WPF**, because Gen2 proves the audience accepts a Windows 
 
 ## Repo strategy
 
-Current repo stays the plugin source:
+STLT-Rewired is one project: **Millennium plugin + Rewired Manager** in the same repo.
 
 ```text
 F:\STLT-Rewired
+  backend/  public/              # in-Steam plugin (Rewired)
+  manager/
+    src/RewiredManager.Core/     # Rewired Manager code — stays here
+    docs/REWIRED_MANAGER_ARCHITECTURE.md
+  scripts/smoke_deploy.ps1       # our deploy verification
+  docs/REWIRED_MANAGER_PLAN.md
 ```
 
-Future companion app can live either as:
-
-```text
-F:\STLT-Rewired\manager
-```
-
-or separate repo:
-
-```text
-F:\Rewired-Manager
-```
-
-Recommendation: start in a separate repo once the app skeleton exists. Keep this repo focused and buildable as a Millennium plugin.
+Future option: split the WPF shell to its own repo once scaffolded.
 
 ## Initial milestone checklist
 
@@ -214,4 +208,4 @@ Recommendation: start in a separate repo once the app skeleton exists. Keep this
 
 Do not frame this as begging upstream to accept patches. Frame it as:
 
-> STLT-Rewired is an independent Windows-first LuaTools/Millennium power-user fork and integration lab. It keeps the in-Steam plugin UX, adds Ryuu-first workflows, hardens fixes/deploy behavior, and may ship a companion desktop manager for setup and diagnostics.
+> STLT-Rewired ships the Millennium plugin and **Rewired Manager**, our Windows desktop app for setup, source health, deploy, and diagnostics.

@@ -94,7 +94,7 @@ Rewired answers:
 | Feature area | Gen1 plugin | Gen2 portable app | Rewired current | Rewired direction |
 | --- | --- | --- | --- | --- |
 | Steam UI plugin | yes | app-assisted | yes | keep in-Steam UX first-class |
-| Desktop manager | no | yes | planned | build Rewired Manager |
+| Desktop manager | no | yes | **Rewired Manager** (`manager/`) | expand WPF shell |
 | Plugin install/update | scripts | app service | deploy.ps1 | app-assisted deploy + rollback |
 | Ryuu Premium | unclear/basic | not confirmed | yes | make Ryuu Manager the flagship |
 | Morrenus/Hubcap | source/API path | service + stats | yes | better key validation + stats UI |
@@ -206,6 +206,6 @@ Gen2 shows the value of a native app. Rewired should adopt the shape, not the ba
 
 Suggested repo/product wording:
 
-> STLT-Rewired is an independent Windows-first LuaTools/Millennium power-user fork. It keeps the in-Steam plugin UX, adds Ryuu-first workflows, hardens fixes and deployment, and is designed to grow a companion Rewired Manager app for setup, source health, and diagnostics.
+> STLT-Rewired is an independent Windows-first LuaTools/Millennium power-user fork. It ships the in-Steam plugin plus **Rewired Manager**, our desktop app for setup, source health, deploy, and diagnostics.
 
 This keeps the tone technical and confident: official LuaTools is the baseline, not the authority.

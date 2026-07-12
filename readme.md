@@ -13,7 +13,7 @@ HTTP bridge, no persistent daemon. Windows.
 - `docs/ARCHITECTURE.md` — runtime shape, backend modules, RPC surface, safety model.
 - `docs/GEN1_GEN2_COMPARISON.md` — notes from the Gen 1 plugin archive and Gen 2 portable app.
 - `docs/COMPETITIVE_BASELINE.md` — official LuaTools/Gen2 baseline and Rewired differentiators.
-- `docs/REWIRED_MANAGER_PLAN.md` — proposed independent companion app / Ryuu Manager roadmap.
+- `docs/REWIRED_MANAGER_PLAN.md` — **Rewired Manager** (our desktop app) roadmap.
 - `docs/UPSTREAM_COLLABORATION.md` — technical fork brief for maintainers/contributors.
 
 ## Requirements

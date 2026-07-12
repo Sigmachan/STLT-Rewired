@@ -37,18 +37,16 @@ Gen1 is useful as a small reference implementation for the official plugin contr
 
 ### Gen2 portable app
 
-Path:
+Local reference (optional, typically in a **private** dev checkout — not committed to STLT-Rewired):
 
 ```text
 E:\LuaTools-win-Portable
 ```
 
 Observed:
-
-- Portable Windows app, not a Millennium Lua plugin.
 - `current/sq.version` identifies:
   - app id: `LuaTools`
-  - version: `1.2.2`
+  - version: `1.2.2` (public notes; newer builds may differ)
   - runtime dependency: `net8-x64-desktop`
 - key binaries:
   - `LuaTools.exe`
@@ -113,9 +111,7 @@ STLT-Rewired is already closer to a feature lab / power-user fork than to Gen1. 
 
 Do not copy binaries or hidden code. Use these as product requirements and implement our own clean version:
 
-1. Desktop shell concept
-   - STLT-Rewired can later grow a companion app, tentatively `Rewired Manager`.
-   - It should manage plugin deploy/update, Ryuu auth, source status, backup/restore, and diagnostics.
+1. Desktop shell — **Rewired Manager** (`manager/`) is our app for plugin deploy, Ryuu auth, source status, backup/restore, and diagnostics.
 
 2. Plugin installer/updater
    - Gen2 has `PluginInstallerService` and `CefInjectorService` concepts.
@@ -155,7 +151,7 @@ Build an independent two-layer product:
    - diagnostics and per-game maintenance;
    - no daemon.
 
-2. optional `Rewired Manager` desktop app:
+2. **Rewired Manager** desktop app (`manager/`):
    - installer/updater/rollback;
    - Ryuu account/session helper;
    - source health dashboard;
