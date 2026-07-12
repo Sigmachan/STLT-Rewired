@@ -39,12 +39,35 @@ options.SETTINGS_GROUPS = {
                 metadata = {yesLabel = "Yes", noLabel = "No"}
             },
             {
+                key = "autoUpdateManifests",
+                label = "Auto-Update Manifests",
+                option_type = "toggle",
+                description = "After adding a game and on a throttled schedule, fetch missing or outdated depot manifests into depotcache.",
+                default = true,
+                metadata = {yesLabel = "Yes", noLabel = "No"}
+            },
+            {
                 key = "morrenusApiKey",
                 label = "Morrenus API Key",
                 option_type = "text",
                 description = "API Key required to use Sadie Source. Get from hubcapmanifest.com",
                 default = "",
                 metadata = {placeholder = "Enter your API key..."}
+            }
+        }
+    },
+    {
+        key = "steamtools",
+        label = "SteamTools",
+        description = "Manifest sources and depotcache maintenance.",
+        options = {
+            {
+                key = "manifestHubApiKey",
+                label = "ManifestHub API Key",
+                option_type = "text",
+                description = "For direct ManifestHub manifest downloads. Get yours at manifesthub.filegear-sg.me",
+                default = "",
+                metadata = {placeholder = "mh_xxxxxxxxxx"}
             }
         }
     }

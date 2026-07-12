@@ -228,6 +228,14 @@ function manager.get_ryuu_session()
     return tostring(general.ryuuSession or "")
 end
 
+function manager.get_manifesthub_api_key()
+    local secret = _read_local_secret("manifestHubApiKey")
+    if secret then return secret end
+    local values = manager._get_values_locked()
+    local steamtools = values.steamtools or {}
+    return tostring(steamtools.manifestHubApiKey or "")
+end
+
 function manager.get_available_locales()
     return _available_locale_codes()
 end

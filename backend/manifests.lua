@@ -57,6 +57,38 @@ local function try_fetch(url)
     return nil
 end
 
+local function fetch_manifest_bytes(depot_id, manifest_id, mo_key, mh_key)
+    local data = try_fetch(MH_BACKUP_URL .. "/" .. depot_id .. "_" .. manifest_id .. ".manifest")
+    if not data and mo_key ~= "" then
+        data = try_fetch(MORRENUS_MANIFEST_URL .. "?depot_id=" .. depot_id .. "&manifest_id=" .. manifest_id .. "&api_key=" .. mo_key)
+    end
+    if not data and mh_key ~= "" then
+        data = try_fetch(MANIFESTHUB_API_URL .. "?apikey=" .. mh_key .. "&depotid=" .. depot_id .. "&manifestid=" .. manifest_id)
+    end
+    return data
+end
+
+local function write_manifest_to_cache(base, depot_id, manifest_id, data)
+    if not data or data == "" then return false end
+    local cache_dirs = {
+        fs.join(base, "depotcache"),
+        fs.join(base, "config", "depotcache"),
+    }
+    local fname = depot_id .. "_" .. manifest_id .. ".manifest"
+    local wrote = false
+    for _, cd in ipairs(cache_dirs) do
+        pcall(fs.create_directories, cd)
+        local dest = fs.join(cd, fname)
+        local f = io.open(dest, "wb")
+        if f then
+            f:write(data)
+            f:close()
+            wrote = true
+        end
+    end
+    return wrote
+end
+
 -- Extract (depot, second-addappid-arg) pairs. NOTE: mirrors the Python quirk of
 -- treating addappid's 2nd argument as the "local manifest" for staleness/sync.
 local function addappid_pairs(content)
@@ -93,19 +125,11 @@ function M.update_manifests(appid)
             table.insert(fl, { depotId = did, reason = "No public manifest" })
         else
             local dest = fs.join(dc, did .. "_" .. mid .. ".manifest")
-            if fs.is_file(dest) and (fs.file_size(dest) or 0) > 0 then
+            if st.find_manifest_file(base, did, mid) then
                 table.insert(sk, { depotId = did, manifestId = mid })
             else
-                local data = try_fetch(MH_BACKUP_URL .. "/" .. did .. "_" .. mid .. ".manifest")
-                if not data and mo_key ~= "" then
-                    data = try_fetch(MORRENUS_MANIFEST_URL .. "?depot_id=" .. did .. "&manifest_id=" .. mid .. "&api_key=" .. mo_key)
-                end
-                if not data and mh_key ~= "" then
-                    data = try_fetch(MANIFESTHUB_API_URL .. "?apikey=" .. mh_key .. "&depotid=" .. did .. "&manifestid=" .. mid)
-                end
-                if data then
-                    local f = io.open(dest, "wb")
-                    if f then f:write(data); f:close() end
+                local data = fetch_manifest_bytes(did, mid, mo_key, mh_key)
+                if data and write_manifest_to_cache(base, did, mid, data) then
                     table.insert(dl, { depotId = did, manifestId = mid, sizeBytes = #data })
                 else
                     table.insert(fl, { depotId = did, manifestId = mid,
@@ -217,19 +241,13 @@ function M.sync_depotcache(appid)
     end
 
     local fetched, failed = 0, 0
+    local mo_key = get_key("get_morrenus_api_key")
     local mh_key = get_key("get_manifesthub_api_key")
-    if mh_key ~= "" and #missing > 0 then
+    if #missing > 0 then
         for i = 1, math.min(#missing, 100) do
             local item = missing[i]
-            local url = MANIFESTHUB_API_URL .. "?apikey=" .. mh_key ..
-                "&depotid=" .. item.depot .. "&manifestid=" .. item.manifest
-            local ok, resp = pcall(http_client.get, url, { timeout = 30, headers = { ["User-Agent"] = "Mozilla/5.0" } })
-            if ok and resp and resp.status == 200 and resp.body and #resp.body > 50 then
-                local fname = item.depot .. "_" .. item.manifest .. ".manifest"
-                for _, cd in ipairs(cache_dirs) do
-                    local f = io.open(fs.join(cd, fname), "wb")
-                    if f then f:write(resp.body); f:close() end
-                end
+            local data = fetch_manifest_bytes(item.depot, item.manifest, mo_key, mh_key)
+            if data and write_manifest_to_cache(base, item.depot, item.manifest, data) then
                 fetched = fetched + 1
             else
                 failed = failed + 1
@@ -247,6 +265,7 @@ function M.sync_depotcache(appid)
         failed = failed,
         still_missing = #missing - fetched,
         manifesthub_available = mh_key ~= "",
+        morrenus_available = mo_key ~= "",
     }
 end
 

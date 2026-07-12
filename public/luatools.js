@@ -2289,22 +2289,30 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
 
             var searchSeq = 0;
+            var catalogReady = false;
+            var catalogSize = 0;
+
             function doSearch() {
                 var q = (input.value || '').trim();
                 if (q.length < 2) {
-                    status.textContent = 'type ≥2 chars to search Ryuu catalog';
+                    status.textContent = catalogReady
+                        ? ('type ≥2 chars to search (' + catalogSize + ' games indexed)')
+                        : 'Loading Ryuu catalog index…';
                     results.innerHTML = '';
+                    return;
+                }
+                if (!catalogReady) {
+                    status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Still loading catalog index…';
                     return;
                 }
                 var seq = ++searchSeq;
                 status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching Ryuu catalog…';
-                Millennium.callServerMethod('luatools', 'SearchRyuuCatalog', {
+                _ltServer('SearchRyuuCatalog', {
                     query: q,
                     limit: 40,
                     contentScriptQuery: ''
-                }).then(function (res) {
+                }).then(function (payload) {
                     if (seq !== searchSeq) return;
-                    var payload = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!payload || payload.success !== true) {
                         throw new Error((payload && payload.error) || 'search failed');
                     }
@@ -2321,8 +2329,21 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             var deb;
             input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 450); });
-            status.textContent = 'type ≥2 chars to search Ryuu catalog';
-            input.focus();
+            status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading Ryuu catalog index (first run may take ~1 min)…';
+            _ltServer('WarmRyuuCatalogCache', { contentScriptQuery: '' }).then(function (payload) {
+                if (!payload || payload.success !== true) {
+                    status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: '
+                        + _ltEscapeHtml((payload && payload.error) || 'unknown error') + '</span>';
+                    return;
+                }
+                catalogReady = true;
+                catalogSize = payload.catalogSize || 0;
+                status.textContent = catalogSize + ' games indexed — type ≥2 chars to search';
+                input.focus();
+                if ((input.value || '').trim().length >= 2) doSearch();
+            }).catch(function (e) {
+                status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: ' + _ltEscapeHtml(String(e)) + '</span>';
+            });
         });
     }
 
@@ -9096,6 +9117,26 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                     .catch(function () { });
                             } catch (_) { }
                         }, 1800);
+                    }
+                } catch (_) { }
+
+                // Throttled manifest auto-update sweep (after settings load).
+                try {
+                    if (!window.__LUATOOLS_MANIFEST_AUTO__) {
+                        window.__LUATOOLS_MANIFEST_AUTO__ = true;
+                        var autoManifests = !(cfg && cfg.values && cfg.values.general
+                            && cfg.values.general.autoUpdateManifests === false);
+                        if (autoManifests) {
+                            setTimeout(function () {
+                                _ltServer('RunManifestAutoUpdate', { contentScriptQuery: '' })
+                                    .then(function (p) {
+                                        if (p && p.success && !p.skipped && (p.downloaded || 0) > 0) {
+                                            showLuaToolsToast('📦 Updated ' + p.downloaded + ' depot manifest(s) automatically', 4500, 'info');
+                                        }
+                                    })
+                                    .catch(function () { });
+                            }, 4000);
+                        }
                     }
                 } catch (_) { }
             }).catch(function (_) {

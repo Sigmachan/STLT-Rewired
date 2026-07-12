@@ -32,6 +32,8 @@ local steam_version   = require("steam_version")
 local acf_lock        = require("acf_lock")
 local crack_migrator  = require("crack_migrator")
 local manifests       = require("manifests")
+local manifest_auto   = require("manifest_auto_updater")
+local manifest_auto   = require("manifest_auto_updater")
 local cloud_fix       = require("cloud_fix")
 local health          = require("health")
 local diagnostics     = require("diagnostics")
@@ -358,6 +360,15 @@ function SearchRyuuCatalog(contentScriptQuery, limit, query)
         limit = p.limit
     end
     local ok, res = pcall(ryuu.search_catalog, query, limit)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function WarmRyuuCatalogCache(contentScriptQuery, forceRefresh)
+    if type(contentScriptQuery) == "table" then
+        forceRefresh = contentScriptQuery.forceRefresh
+    end
+    local ok, res = pcall(ryuu.warm_catalog_cache, forceRefresh == true)
     if not ok then return json_err(res) end
     return json_ok(res)
 end
@@ -1080,6 +1091,22 @@ end
 function SyncDepotcache(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     local ok, res = pcall(manifests.sync_depotcache, appid)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function RunManifestAutoUpdate(contentScriptQuery, force)
+    if type(contentScriptQuery) == "table" then
+        force = contentScriptQuery.force
+    end
+    local ok, res = pcall(manifest_auto.run_scheduled, force == true)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function UpdateManifestsForApp(appid, contentScriptQuery)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(manifest_auto.update_app, appid, "manual")
     if not ok then return json_err(res) end
     return json_ok(res)
 end

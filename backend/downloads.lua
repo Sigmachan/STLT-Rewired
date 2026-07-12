@@ -128,6 +128,10 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     pcall(fs.remove_all, extract_dir)
     pcall(fs.remove, dest_path)
     _set_download_state(appid, { status = "done", success = true, api = api_name })
+
+    pcall(function()
+        require("manifest_auto_updater").update_app(appid, "after_add")
+    end)
 end
 
 local function _launch_async_download(appid, url, dest_path, extract_dir, cookie)
