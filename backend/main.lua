@@ -45,8 +45,7 @@ local tokeer          = require("tokeer")
 local sync            = require("sync")
 local account         = require("account")
 local sentinel        = require("sentinel")
-local feature_parity  = require("feature_parity")
-local st              = require("st_util")
+local setup_assistant = require("setup_assistant")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +70,8 @@ local function on_load()
 
     local ok_s, err_s = pcall(settings_manager.init_settings)
     if not ok_s then logger.warn("settings init failed: " .. tostring(err_s)) end
+
+    pcall(setup_assistant.self_heal)
 
     local ok_u, upd_msg = pcall(auto_update.apply_pending_update_if_any)
     if ok_u and upd_msg and upd_msg ~= "" then
@@ -176,6 +177,34 @@ end
 function StartAddViaLuaTools(appid)
     if type(appid) == "table" then appid = appid.appid end
     local ok, res = pcall(downloads.start_add_via_luatools, tonumber(appid))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+-- Upstream-compatible add flow: check sources, let the user pick, then download.
+function StartLuaToolsAdd(appid, contentScriptQuery, name)
+    if type(appid) == "table" then
+        name = appid.name
+        appid = appid.appid
+    end
+    local ok, res = pcall(downloads.begin_add_with_picker, tonumber(appid), tostring(name or ""))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function PickLuaToolsAddSource(appid, contentScriptQuery, source)
+    if type(appid) == "table" then
+        source = appid.source
+        appid = appid.appid
+    end
+    local ok, res = pcall(downloads.pick_add_source, tonumber(appid), tostring(source or ""))
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetLuaToolsAddStatus(appid)
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(downloads.get_lua_tools_add_status, tonumber(appid))
     if not ok then return json_err(res) end
     return json_ok(res)
 end
@@ -1545,31 +1574,40 @@ function FixCompatToolsForActivated(contentScriptQuery, force, tool)
 end
 
 function GetLinuxHealthReport(appid, contentScriptQuery)
-    return json_ok({ success = false, platform = "windows",
-        error = "Linux-only preflight. On Windows use the Quick Dashboard / Health panels." })
+    if type(appid) == "table" then appid = appid.appid end
+    local ok, res = pcall(health.run_health_check, tonumber(appid), false)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
--- ── First-run setup assistant: SLSsteam setup is Linux-only ──────────────────
--- On Windows there is nothing to auto-configure, so setup is always "ready".
+function EnsureStpluginDir()
+    local ok, res = pcall(health.ensure_stplugin_dir)
+    if not ok then return json_err(res) end
+    return json_ok({ success = res == true })
+end
 
 function GetSetupState()
-    return json_ok({ success = true, ready = true, platform = "windows", seen = true,
-        canAutoFix = st.A({}), mustDoYourself = st.null,
-        message = "Windows: no SLSsteam setup required." })
+    local ok, res = pcall(setup_assistant.get_setup_state)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 function RunSetup()
-    return json_ok({ success = true, ready = true, platform = "windows",
-        applied = st.A({}), message = "Nothing to set up on Windows." })
+    local ok, res = pcall(setup_assistant.run_setup)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 function MarkSetupSeen()
-    return json_ok({ success = true })
+    local ok, res = pcall(setup_assistant.mark_setup_seen)
+    if not ok then return json_err(res) end
+    return json_ok({ success = res == true })
 end
 
 function SelfHeal()
-    return json_ok({ success = true, healed = false, platform = "windows",
-        note = "No SLSsteam/Linux state to self-heal on Windows." })
+    local ok, res = pcall(setup_assistant.self_heal)
+    if not ok then return json_err(res) end
+    return json_ok(res)
 end
 
 -- ── Live activation flow (Windows: hand steam://install to the OS) ───────────

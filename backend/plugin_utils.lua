@@ -119,8 +119,21 @@ function utils.parse_version(version)
     for part in string.gmatch(tostring(version), "%d+") do
         table.insert(parts, tonumber(part))
     end
-    if #parts == 0 then return {0} end
-    return parts
+    while #parts < 3 do table.insert(parts, 0) end
+    if #parts == 0 then return {0, 0, 0} end
+    return { parts[1] or 0, parts[2] or 0, parts[3] or 0 }
+end
+
+function utils.is_newer_version(latest, current)
+    local s = tostring(latest or ""):match("^%s*(.-)%s*$")
+    if s == "" or not s:match("%d") then return false end
+    local la = utils.parse_version(latest)
+    local cu = utils.parse_version(current)
+    for i = 1, 3 do
+        if (la[i] or 0) > (cu[i] or 0) then return true end
+        if (la[i] or 0) < (cu[i] or 0) then return false end
+    end
+    return false
 end
 
 function utils.get_plugin_version()

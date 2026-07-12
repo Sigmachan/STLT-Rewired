@@ -77,7 +77,7 @@ function auto_update.check_for_updates_now()
         return 0
     end
 
-    if compare_versions(latest_version, current_version) <= 0 then
+    if not utils.is_newer_version(latest_version, current_version) then
         return { success = true, message = "Up-to-date (current " .. current_version .. ")" }
     end
     

@@ -1,7 +1,8 @@
 {
+  "_comment": "Auto-update checks Sigmachan/STLT releases. Downgrade-proof: only updates when GitHub release version is strictly newer than the running build AND asset STLT.zip is attached. Blank owner/repo to disable.",
   "github": {
-    "owner": "piqseu",
-    "repo": "ltsteamplugin",
-    "asset_name": "ltsteamplugin.zip"
+    "owner": "Sigmachan",
+    "repo": "STLT",
+    "asset_name": "STLT.zip"
   }
 }

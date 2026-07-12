@@ -164,6 +164,34 @@ if (Test-Path $bundleScript) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to rebuild .millennium\Dist\webkit.js" }
 }
 
+# Duplicate-plugin dedup (from Sigmachan/STLT install.ps1): two folders with the same
+# plugin.json "name" crash Millennium on enable.
+$pluginName = "luatools"
+$cand30 = Join-Path $SteamPath "millennium\plugins"
+$candOld = Join-Path $SteamPath "plugins"
+$dupes = @()
+foreach ($root in @($cand30, $candOld)) {
+    if (-not (Test-Path $root)) { continue }
+    foreach ($d in (Get-ChildItem -LiteralPath $root -Directory -Force -ErrorAction SilentlyContinue)) {
+        $pj = Join-Path $d.FullName "plugin.json"
+        if (-not (Test-Path -LiteralPath $pj)) { continue }
+        try {
+            $name = (Get-Content -Raw -LiteralPath $pj | ConvertFrom-Json).name
+            if ($name -eq $pluginName) { $dupes += $d.FullName }
+        } catch { }
+    }
+}
+$dupes = @($dupes | Select-Object -Unique)
+if ($dupes.Count -gt 1) {
+    Write-Host "Found $($dupes.Count) '$pluginName' plugin folders — removing duplicates (keeping $dst)..." -ForegroundColor Yellow
+    foreach ($d in $dupes) {
+        if ($d -ieq $dst) { continue }
+        try { Remove-Item -Recurse -Force -LiteralPath $d } catch {
+            Write-Warning "Could not remove duplicate plugin folder: $d"
+        }
+    }
+}
+
 # 1) back up the current deployment (if any) -> OUTSIDE plugins/ (see note above)
 $preservedData = $null
 if (Test-Path $dst) {

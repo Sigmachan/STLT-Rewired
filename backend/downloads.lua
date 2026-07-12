@@ -275,6 +275,44 @@ function downloads.start_add_via_luatools(appid)
     return { success = true }
 end
 
+local function _morrenus_stats_string(api_key)
+    if not api_key or api_key == "" then return nil end
+    local endpoint = "https://hubcapmanifest.com/api/v1/user/stats?api_key=" .. api_key
+    local resp = http_client.get(endpoint, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
+    if not (resp and resp.status == 200 and resp.body and resp.body ~= "") then return nil end
+    local ok, data = pcall(cjson.decode, resp.body)
+    if not ok or type(data) ~= "table" then return nil end
+    local used = data.daily_downloads or data.downloads_today or data.used or data.downloads_used
+    local limit = data.daily_limit or data.limit or data.downloads_limit
+    if used ~= nil and limit ~= nil then
+        return tostring(used) .. "/" .. tostring(limit)
+    end
+    return nil
+end
+
+local function _build_picker_sources(appid, check_results, morrenus_stats)
+    local sources = {}
+    for _, r in ipairs(check_results or {}) do
+        local entry = {
+            name = r.name,
+            displayName = r.displayName or r.name,
+            available = r.available == true,
+            needsKey = r.needsKey == true,
+            locked = r.locked == true,
+            canDownload = r.canDownload == true,
+            url = r.url,
+            downloading = false,
+            progress = 0,
+            stats = nil,
+        }
+        if string.lower(entry.name) == "morrenus" and morrenus_stats then
+            entry.stats = morrenus_stats
+        end
+        table.insert(sources, entry)
+    end
+    return sources
+end
+
 function downloads.check_apis_for_app(appid)
     if type(appid) == "string" then appid = tonumber(appid) end
     if not appid then return { success = false, error = "Invalid appid" } end
@@ -291,16 +329,18 @@ function downloads.check_apis_for_app(appid)
         local name = api.name or "Unknown"
         local template = api.url or ""
         local success_code = tonumber(api.success_code) or 200
+        local needs_mo_key = string.find(template, "<moapikey>") ~= nil
+        local needs_api_key = string.find(template, "<apikey>") ~= nil
         local usable = true
 
-        if string.find(template, "<moapikey>") then
+        if needs_mo_key then
             if not morrenus_api_key or morrenus_api_key == "" then
                 usable = false
             else
                 template = template:gsub("<moapikey>", morrenus_api_key)
             end
         end
-        if usable and string.find(template, "<apikey>") then
+        if usable and needs_api_key then
             if not api.api_key or api.api_key == "" then
                 usable = false
             else
@@ -308,7 +348,19 @@ function downloads.check_apis_for_app(appid)
             end
         end
 
-        if usable then
+        if not usable then
+            if needs_mo_key or needs_api_key then
+                table.insert(results, {
+                    name = name,
+                    displayName = name,
+                    available = false,
+                    needsKey = true,
+                    locked = true,
+                    canDownload = false,
+                    url = nil,
+                })
+            end
+        else
             local url = template:gsub("<appid>", tostring(appid))
             local available = false
 
@@ -327,7 +379,6 @@ function downloads.check_apis_for_app(appid)
                 if resp and resp.status == success_code then
                     success = true
                 else
-                    -- Fallback to GET if HEAD fails
                     local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
                     if get_resp and get_resp.status == success_code then
                         success = true
@@ -341,13 +392,152 @@ function downloads.check_apis_for_app(appid)
 
             table.insert(results, {
                 name = name,
+                displayName = name,
                 available = available,
-                url = available and url or nil
+                needsKey = false,
+                locked = false,
+                canDownload = available,
+                url = available and url or nil,
             })
         end
     end
 
     return { success = true, results = results }
+end
+
+function downloads.begin_add_with_picker(appid, game_name)
+    if type(appid) == "string" then appid = tonumber(appid) end
+    if not appid then return { success = false, error = "Invalid appid" } end
+
+    local existing = DOWNLOAD_STATE[appid]
+    if existing and (existing.status == "downloading" or existing.status == "processing" or existing.status == "installing") then
+        return { success = false, error = "already_in_progress" }
+    end
+
+    logger.log("LuaTools: StartLuaToolsAdd appid=" .. tostring(appid) .. " name=" .. tostring(game_name or ""))
+    _set_download_state(appid, {
+        status = "checking",
+        mode = "picker",
+        gameName = tostring(game_name or ""),
+        sources = nil,
+        sourcesLoaded = false,
+        checking = true,
+        pickedSource = nil,
+        error = nil,
+        bytesRead = 0,
+        totalBytes = 0,
+    })
+    return { success = true }
+end
+
+function downloads._maybe_run_source_check(appid)
+    if type(appid) == "string" then appid = tonumber(appid) end
+    local state = DOWNLOAD_STATE[appid]
+    if not state or state.mode ~= "picker" or state.sourcesLoaded then return end
+
+    local check = downloads.check_apis_for_app(appid)
+    if not check or check.success ~= true then
+        _set_download_state(appid, {
+            checking = false,
+            sourcesLoaded = true,
+            sources = {},
+            status = "failed",
+            error = (check and check.error) or "Source check failed",
+        })
+        return
+    end
+
+    local morrenus_key = settings_manager.get_morrenus_api_key()
+    local morrenus_stats = _morrenus_stats_string(morrenus_key)
+    local sources = _build_picker_sources(appid, check.results, morrenus_stats)
+    local has_downloadable = false
+    for _, s in ipairs(sources) do
+        if s.canDownload then has_downloadable = true break end
+    end
+
+    _set_download_state(appid, {
+        sources = sources,
+        sourcesLoaded = true,
+        checking = false,
+        status = has_downloadable and "picking" or "failed",
+        error = has_downloadable and nil or "Not available on any API",
+    })
+end
+
+function downloads.pick_add_source(appid, source_name)
+    if type(appid) == "string" then appid = tonumber(appid) end
+    if not appid then return { success = false, error = "Invalid appid" } end
+    source_name = tostring(source_name or "")
+
+    downloads._maybe_run_source_check(appid)
+    local state = _get_download_state(appid)
+    if not state.sources then
+        return { success = false, error = "Sources not ready" }
+    end
+
+    for _, s in ipairs(state.sources) do
+        if s.name == source_name and s.canDownload and s.url then
+            _set_download_state(appid, { pickedSource = source_name, status = "downloading", currentApi = source_name })
+            return downloads.start_add_via_luatools_from_url(appid, s.url, source_name)
+        end
+    end
+    return { success = false, error = "Source not available: " .. source_name }
+end
+
+function downloads.get_lua_tools_add_status(appid)
+    if type(appid) == "string" then appid = tonumber(appid) end
+    if not appid then return { error = "Invalid appid" } end
+
+    downloads.get_add_status(appid)
+    downloads._maybe_run_source_check(appid)
+
+    local state = _get_download_state(appid)
+    if not state or state.mode ~= "picker" then
+        local legacy = _get_download_state(appid)
+        return {
+            checking = legacy.status == "checking",
+            sourcesLoaded = legacy.status ~= "checking",
+            sources = {},
+            error = legacy.status == "failed" and (legacy.error or "Failed") or nil,
+            installed = legacy.status == "done",
+            installStatus = legacy.status == "done" and "The game has been added successfully." or nil,
+            fastFetch = false,
+        }
+    end
+
+    local sources = {}
+    for _, s in ipairs(state.sources or {}) do
+        local copy = {}
+        for k, v in pairs(s) do copy[k] = v end
+        if state.currentApi and copy.name == state.currentApi and (state.status == "downloading" or state.status == "processing" or state.status == "installing") then
+            copy.downloading = true
+            local total = tonumber(state.totalBytes) or 0
+            local read = tonumber(state.bytesRead) or 0
+            if total > 0 then
+                copy.progress = math.max(0, math.min(100, math.floor((read / total) * 100)))
+            else
+                copy.indeterminate = true
+            end
+        end
+        table.insert(sources, copy)
+    end
+
+    local response = {
+        checking = state.checking == true,
+        sourcesLoaded = state.sourcesLoaded == true,
+        sources = sources,
+        error = state.error,
+        installed = state.status == "done",
+        installStatus = state.status == "done" and "The game has been added successfully." or nil,
+        fastFetch = false,
+        gameName = state.gameName,
+    }
+
+    if state.status == "failed" and not response.error then
+        response.error = "Failed"
+    end
+
+    return response
 end
 
 return downloads
