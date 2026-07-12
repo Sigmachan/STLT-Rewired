@@ -34,24 +34,24 @@ local function classify(report)
     local auto_fixable = {}
     local blockers = {}
     for _, c in ipairs(report.checks or {}) do
-        if c.status ~= "fail" then goto continue end
-        local fix = c.fix
-        if fix and fix.ipc and SAFE_FIX_IPCS[fix.ipc] then
-            table.insert(auto_fixable, {
-                id = c.id,
-                label = c.label,
-                ipc = fix.ipc,
-                args = fix.args or {},
-            })
-        else
-            table.insert(blockers, {
-                id = c.id,
-                label = c.label,
-                detail = c.detail or "",
-                command = fix and fix.args and fix.args.command or nil,
-            })
+        if c.status == "fail" then
+            local fix = c.fix
+            if fix and fix.ipc and SAFE_FIX_IPCS[fix.ipc] then
+                table.insert(auto_fixable, {
+                    id = c.id,
+                    label = c.label,
+                    ipc = fix.ipc,
+                    args = fix.args or {},
+                })
+            else
+                table.insert(blockers, {
+                    id = c.id,
+                    label = c.label,
+                    detail = c.detail or "",
+                    command = fix and fix.args and fix.args.command or nil,
+                })
+            end
         end
-        ::continue::
     end
     return auto_fixable, blockers
 end

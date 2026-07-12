@@ -261,7 +261,7 @@ function M.run_health_check(appid, quick)
                     seen[key] = true
                     local fx = {}
                     for k, v in pairs(c.fix) do fx[k] = v end
-                    fx.for = c.id
+                    fx["for"] = c.id
                     table.insert(fixes, fx)
                 end
             end
