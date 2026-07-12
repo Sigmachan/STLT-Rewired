@@ -204,8 +204,6 @@ Future option: split the WPF shell to its own repo once scaffolded.
 - redacted support bundle;
 - explicit CloudRedirect launcher/guide.
 
-## Messaging
+## Positioning
 
-Do not frame this as begging upstream to accept patches. Frame it as:
-
-> STLT-Rewired ships the Millennium plugin and **Rewired Manager**, our Windows desktop app for setup, source health, deploy, and diagnostics.
+STLT-Rewired ships the Millennium plugin and **Rewired Manager** — our Windows desktop app for setup, source health, deploy, and diagnostics. Standalone product; no external gatekeepers.

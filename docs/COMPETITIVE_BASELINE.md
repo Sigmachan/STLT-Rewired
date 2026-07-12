@@ -69,8 +69,8 @@ F:\STLT-Rewired
 
 Role in our strategy:
 
-- independent Windows-first power-user fork;
-- integration lab for features that are awkward in the official product;
+- independent Windows-first power-user product;
+- ships features power users want without waiting on anyone else;
 - Ryuu-first source/fixes workflow;
 - safer fixes/deploy behavior;
 - future base for a companion app.
@@ -164,8 +164,8 @@ Gen2 shows the value of a native app. Rewired should adopt the shape, not the ba
 
 ## Things to avoid
 
-- Do not chase Discord approval as a product requirement.
-- Do not copy closed/binary implementation details from Gen2.
+- Treating official community channels as a product dependency or support path.
+- Copying closed/binary implementation details from Gen2.
 - Do not introduce a Python HTTP bridge into the plugin runtime.
 - Do not print or commit Ryuu/Morrenus/GitHub secrets.
 - Do not silently patch SteamTools, OpenSteamTools, CloudRedirect, Steamless, or Steam Cloud layers.

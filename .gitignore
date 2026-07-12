@@ -100,6 +100,6 @@ backend/data/secrets.local.json
 backend/data/*.cookies.txt
 backend/data/cookies*.txt
 
-# local release zips (build with scripts/build_release.ps1)
+# local release zips (build with scripts/build_release.ps1 and manager/scripts/publish-manager.ps1)
 releases/*.zip
 NUL

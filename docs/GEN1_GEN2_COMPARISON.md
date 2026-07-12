@@ -1,6 +1,6 @@
 # Gen1 / Gen2 / STLT-Rewired comparison
 
-This document records what was inspected from the upstream-ish inputs and how they should influence STLT-Rewired.
+This document records what was inspected from reference inputs (Gen 1 plugin archive, Gen 2 portable app) and how they inform STLT-Rewired.
 
 ## Inputs inspected
 

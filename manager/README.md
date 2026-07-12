@@ -1,38 +1,61 @@
 # Rewired Manager
 
-Windows desktop companion for [STLT-Rewired](https://github.com/Sigmachan/STLT-Rewired). Optional — the Millennium plugin works standalone.
+Windows desktop companion for **STLT-Rewired** (the `luatools` Millennium plugin).  
+Lives in this repo under `manager/` — same product, one GitHub repo, one release page.
+
+The plugin works standalone. The manager helps with plugin discovery, source health probes, and (later) deploy/rollback and secrets UX.
 
 ## Requirements
 
-- .NET 8 SDK (`dotnet --version` ≥ 8.0)
+- .NET 8 SDK
 - Windows 10/11
-- Steam + Rewired plugin deployed to `millennium/plugins/luatools`
+- Steam + Rewired deployed to `{Steam}\millennium\plugins\luatools`
 
-## Build
-
-```powershell
-cd manager
-dotnet build RewiredManager.sln -c Release
-dotnet run --project src/RewiredManager/RewiredManager.csproj -c Release
-```
-
-Published exe:
+## Build & run (dev)
 
 ```powershell
-dotnet publish src/RewiredManager/RewiredManager.csproj -c Release -r win-x64 --self-contained false -o ../../releases/RewiredManager
+cd F:\STLT-Rewired\manager
+F:\dotnet-sdk\dotnet.exe build RewiredManager.sln -c Release
+F:\dotnet-sdk\dotnet.exe run --project RewiredManager.App -c Release
 ```
 
-## MVP (current)
+Or if `dotnet` is on PATH:
 
-- Detect Steam + live plugin (`PluginLocator`)
-- Show plugin version / secrets configured badges (`SecretsStore`)
-- Test + save ManifestHub API key (`ManifestHubClient`)
+```powershell
+dotnet run --project RewiredManager.App -c Release
+```
 
-## Next
+## Publish release zip
 
-- Ryuu session probe + catalog smoke
-- Source health grid
-- Invoke `deploy.ps1` with backup/restore
-- Redacted diagnostics export
+Output: `releases/RewiredManager-win-x64-framework-dependent.zip` (needs [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) on the target PC).
 
-See [docs/REWIRED_MANAGER_ARCHITECTURE.md](docs/REWIRED_MANAGER_ARCHITECTURE.md).
+```powershell
+pwsh -NoProfile -File F:\STLT-Rewired\manager\scripts\publish-manager.ps1
+```
+
+Ship both artifacts on the same GitHub release as the plugin:
+
+| Asset | Purpose |
+|-------|---------|
+| `STLT-Rewired.zip` | Millennium plugin (`scripts/build_release.ps1`) |
+| `RewiredManager-win-x64-framework-dependent.zip` | Desktop manager |
+
+## Current features
+
+- Inspect live plugin path (version, backend, webkit bundle, secrets present/missing)
+- Probe Ryuu catalog/fixes, LuaTools fixes index, GitHub reachability
+- Never prints cookie or API key values
+
+## Layout
+
+```text
+manager/
+  RewiredManager.sln
+  RewiredManager.App/     WPF shell + services
+  scripts/publish-manager.ps1
+  docs/REWIRED_MANAGER_ARCHITECTURE.md
+```
+
+## Deprecated external repos
+
+`Sigmachan/Rewired-Manager` and `Sigmachan/Rewired-Manager-Binaries` are superseded by this tree. Archive or delete them after cutting a combined STLT-Rewired release that includes the manager zip.

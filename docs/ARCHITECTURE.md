@@ -34,7 +34,7 @@ public/themes/               theme assets
 .millennium/Dist/webkit.js   built/embedded frontend bundle
 scripts/                     build/validation helpers
 deploy.ps1                   Windows deploy/restore/runtime update script
-docs/                        project documentation and collaboration notes
+docs/                        project documentation
 ```
 
 ## Backend modules
