@@ -314,6 +314,10 @@ function CheckApisForApp(appid)
 end
 
 function GetMorrenusStats(api_key, force_refresh)
+    return GetManifestHubStats(api_key, force_refresh)
+end
+
+function GetManifestHubStats(api_key, force_refresh)
     if type(api_key) == "table" then
         force_refresh = api_key.force_refresh
         api_key = api_key.api_key

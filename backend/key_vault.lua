@@ -15,22 +15,21 @@ local st      = require("st_util")
 local M = {}
 
 local VAULT_FIELDS = {
-    { "morrenusApiKey",   "Morrenus API Key" },
+    { "morrenusApiKey",   "ManifestHub API Key" },
     { "ryuuSession",      "Ryuu Session" },
     { "depotboxSid",      "DepotBox SID" },
-    { "manifestHubApiKey", "ManifestHub API Key" },
     { "steamGridDbKey",   "SteamGridDB Key" },
     { "githubToken",      "GitHub Token" },
 }
 
 local FIELD_GROUPS = {
     morrenusApiKey = "general", ryuuSession = "general", depotboxSid = "general",
-    manifestHubApiKey = "steamtools", steamGridDbKey = "steamtools", githubToken = "steamtools",
+    steamGridDbKey = "steamtools", githubToken = "steamtools",
 }
 
 local GETTERS = {
     morrenusApiKey = "get_morrenus_api_key", ryuuSession = "get_ryuu_session",
-    depotboxSid = "get_depotbox_sid", manifestHubApiKey = "get_manifesthub_api_key",
+    depotboxSid = "get_depotbox_sid",
     steamGridDbKey = "get_steamgriddb_key", githubToken = "get_github_token",
 }
 

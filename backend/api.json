@@ -1,7 +1,7 @@
 {
     "api_list": [
         {
-            "name": "Morrenus",
+            "name": "ManifestHub",
             "url": "https://hubcapmanifest.com/api/v1/manifest/<appid>?api_key=<moapikey>",
             "success_code": 200,
             "unavailable_code": 404,

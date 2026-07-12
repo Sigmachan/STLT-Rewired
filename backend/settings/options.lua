@@ -48,26 +48,11 @@ options.SETTINGS_GROUPS = {
             },
             {
                 key = "morrenusApiKey",
-                label = "Morrenus API Key",
-                option_type = "text",
-                description = "API Key required to use Sadie Source. Get from hubcapmanifest.com",
-                default = "",
-                metadata = {placeholder = "Enter your API key..."}
-            }
-        }
-    },
-    {
-        key = "steamtools",
-        label = "SteamTools",
-        description = "Manifest sources and depotcache maintenance.",
-        options = {
-            {
-                key = "manifestHubApiKey",
                 label = "ManifestHub API Key",
                 option_type = "text",
-                description = "For direct ManifestHub manifest downloads. Get yours at manifesthub.filegear-sg.me",
+                description = "API key for ManifestHub (formerly Morrenus / Hubcap). Get yours at manifesthub.filegear-sg.me or hubcapmanifest.com.",
                 default = "",
-                metadata = {placeholder = "mh_xxxxxxxxxx"}
+                metadata = {placeholder = "Enter your ManifestHub API key..."}
             }
         }
     }

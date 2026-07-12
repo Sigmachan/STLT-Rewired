@@ -236,7 +236,7 @@ function downloads.start_add_via_luatools(appid)
                 local url = template:gsub("<appid>", tostring(appid))
 
                 local success = false
-                if string.lower(name) == "morrenus" then
+                if _is_manifesthub_source(name) then
                     local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
                     local s_resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
                     if s_resp and s_resp.status == success_code then
@@ -279,7 +279,12 @@ function downloads.start_add_via_luatools(appid)
     return { success = true }
 end
 
-local function _morrenus_stats_string(api_key)
+local function _is_manifesthub_source(name)
+    local n = string.lower(tostring(name or ""))
+    return n == "morrenus" or n == "manifesthub"
+end
+
+local function _manifesthub_stats_string(api_key)
     if not api_key or api_key == "" then return nil end
     local endpoint = "https://hubcapmanifest.com/api/v1/user/stats?api_key=" .. api_key
     local resp = http_client.get(endpoint, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
@@ -294,7 +299,7 @@ local function _morrenus_stats_string(api_key)
     return nil
 end
 
-local function _build_picker_sources(appid, check_results, morrenus_stats)
+local function _build_picker_sources(appid, check_results, manifesthub_stats)
     local sources = {}
     for _, r in ipairs(check_results or {}) do
         local entry = {
@@ -309,8 +314,8 @@ local function _build_picker_sources(appid, check_results, morrenus_stats)
             progress = 0,
             stats = nil,
         }
-        if string.lower(entry.name) == "morrenus" and morrenus_stats then
-            entry.stats = morrenus_stats
+        if _is_manifesthub_source(entry.name) and manifesthub_stats then
+            entry.stats = manifesthub_stats
         end
         table.insert(sources, entry)
     end
@@ -451,9 +456,9 @@ function downloads._maybe_run_source_check(appid)
         return
     end
 
-    local morrenus_key = settings_manager.get_morrenus_api_key()
-    local morrenus_stats = _morrenus_stats_string(morrenus_key)
-    local sources = _build_picker_sources(appid, check.results, morrenus_stats)
+    local manifesthub_key = settings_manager.get_morrenus_api_key()
+    local manifesthub_stats = _manifesthub_stats_string(manifesthub_key)
+    local sources = _build_picker_sources(appid, check.results, manifesthub_stats)
     local has_downloadable = false
     for _, s in ipairs(sources) do
         if s.canDownload then has_downloadable = true break end

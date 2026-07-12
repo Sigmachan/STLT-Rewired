@@ -2347,13 +2347,13 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         });
     }
 
-    // ── API Key Vault (Ryuu / DepotBox / Morrenus / etc. profiles) ────
+    // ── API Key Vault (Ryuu / DepotBox / ManifestHub / etc. profiles) ────
     function showKeyVaultPanel() {
         _stOverlayShell('🔑 API Key Vault', function (body, ov, colors) {
             var intro = document.createElement('div');
             intro.style.cssText = 'font-size:12px;color:#aaa;line-height:1.6;margin-bottom:10px;padding:8px;background:rgba(102,192,244,0.05);border:1px solid rgba(102,192,244,0.2);border-radius:5px;';
             intro.innerHTML = '<i class="fa-solid fa-info-circle" style="color:#66c0f4;margin-right:5px;"></i>' +
-                'Save Ryuu / DepotBox / Morrenus / ManifestHub / SteamGridDB / GitHub keys as profiles. ' +
+                'Save Ryuu / DepotBox / ManifestHub / SteamGridDB / GitHub keys as profiles. ' +
                 'Switch sets in one click or export to a .ltkeys blob for another machine.';
             body.appendChild(intro);
 

@@ -137,7 +137,7 @@ function M.get_source_health()
         if enabled then
             if kind == "hubcap" and morrenus_key == "" then
                 status = "warn"
-                message = "Hubcap/Morrenus source needs an API key"
+                message = "ManifestHub source needs an API key"
             elseif kind == "ryuu" and ryuu_session == "" then
                 status = "warn"
                 message = "Ryuu source needs a local session cookie"

@@ -8,7 +8,7 @@ local options = require("settings.options")
 
 local SCHEMA_VERSION = 1
 local SETTINGS_FILE = paths.backend_path("data/settings.json")
--- Personal, machine-local secrets (Ryuu session cookie, hubcap/Morrenus key). Gitignored and kept
+-- Personal, machine-local secrets (Ryuu session cookie, ManifestHub key). Gitignored and kept
 -- out of settings.json so they survive plugin updates without being re-entered. When present these
 -- override the settings-stored values.
 local SECRETS_FILE = paths.backend_path("data/secrets.local.json")
@@ -212,12 +212,21 @@ function manager.get_current_language()
     return tostring(general.language or locales.DEFAULT_LOCALE)
 end
 
-function manager.get_morrenus_api_key()
-    local secret = _read_local_secret("morrenusApiKey")
-    if secret then return secret end
+local function _unified_manifesthub_key()
+    for _, secret_key in ipairs({ "morrenusApiKey", "manifestHubApiKey" }) do
+        local secret = _read_local_secret(secret_key)
+        if secret then return secret end
+    end
     local values = manager._get_values_locked()
     local general = values.general or {}
-    return tostring(general.morrenusApiKey or "")
+    local key = tostring(general.morrenusApiKey or "")
+    if key ~= "" then return key end
+    local steamtools = values.steamtools or {}
+    return tostring(steamtools.manifestHubApiKey or "")
+end
+
+function manager.get_morrenus_api_key()
+    return _unified_manifesthub_key()
 end
 
 function manager.get_ryuu_session()
@@ -229,11 +238,7 @@ function manager.get_ryuu_session()
 end
 
 function manager.get_manifesthub_api_key()
-    local secret = _read_local_secret("manifestHubApiKey")
-    if secret then return secret end
-    local values = manager._get_values_locked()
-    local steamtools = values.steamtools or {}
-    return tostring(steamtools.manifestHubApiKey or "")
+    return _unified_manifesthub_key()
 end
 
 function manager.get_available_locales()

@@ -1,9 +1,9 @@
 -- manifests.lua — depot manifest updater / staleness check / depotcache sync.
 --
 -- Faithful Lua port of steamtools.py update_manifests / check_manifest_staleness /
--- sync_depotcache. Manifest bytes are fetched from the GitHub mirror, then the
--- Morrenus and ManifestHub APIs (when a key is configured in settings). Steamcmd
--- (api.steamcmd.net) provides the authoritative public manifest gids.
+-- sync_depotcache. Manifest bytes are fetched from the GitHub mirror, then ManifestHub
+-- (hubcapmanifest.com generate API + manifesthub.filegear-sg.me depot API; same key).
+-- Steamcmd (api.steamcmd.net) provides the authoritative public manifest gids.
 
 local cjson       = require("json")
 local m_utils     = require("utils")
@@ -16,8 +16,8 @@ local M = {}
 
 local USER_AGENT = "STLT-Rewired/1.0"
 local MH_BACKUP_URL = "https://raw.githubusercontent.com/qwe213312/k25FCdfEOoEJ42S6/main"
-local MORRENUS_MANIFEST_URL = "https://hubcapmanifest.com/api/v1/generate/manifest"
-local MANIFESTHUB_API_URL = "https://api.manifesthub1.filegear-sg.me/manifest"
+local MANIFESTHUB_GENERATE_URL = "https://hubcapmanifest.com/api/v1/generate/manifest"
+local MANIFESTHUB_DEPOT_URL = "https://api.manifesthub1.filegear-sg.me/manifest"
 
 -- steamcmd app info, cached per process (single-threaded; no lock needed).
 local APP_INFO_CACHE = {}
@@ -39,11 +39,11 @@ local function fetch_app_info(appid)
     return APP_INFO_CACHE[appid]
 end
 
--- Best-effort API-key lookup from settings.manager (skipped if unsupported).
-local function get_key(fn_name)
+-- Best-effort ManifestHub API-key lookup from settings.manager (skipped if unsupported).
+local function get_manifesthub_key()
     local ok, sm = pcall(require, "settings.manager")
-    if ok and type(sm) == "table" and type(sm[fn_name]) == "function" then
-        local ok2, k = pcall(sm[fn_name])
+    if ok and type(sm) == "table" and type(sm.get_manifesthub_api_key) == "function" then
+        local ok2, k = pcall(sm.get_manifesthub_api_key)
         if ok2 and type(k) == "string" then return k end
     end
     return ""
@@ -57,13 +57,13 @@ local function try_fetch(url)
     return nil
 end
 
-local function fetch_manifest_bytes(depot_id, manifest_id, mo_key, mh_key)
+local function fetch_manifest_bytes(depot_id, manifest_id, api_key)
     local data = try_fetch(MH_BACKUP_URL .. "/" .. depot_id .. "_" .. manifest_id .. ".manifest")
-    if not data and mo_key ~= "" then
-        data = try_fetch(MORRENUS_MANIFEST_URL .. "?depot_id=" .. depot_id .. "&manifest_id=" .. manifest_id .. "&api_key=" .. mo_key)
+    if not data and api_key ~= "" then
+        data = try_fetch(MANIFESTHUB_GENERATE_URL .. "?depot_id=" .. depot_id .. "&manifest_id=" .. manifest_id .. "&api_key=" .. api_key)
     end
-    if not data and mh_key ~= "" then
-        data = try_fetch(MANIFESTHUB_API_URL .. "?apikey=" .. mh_key .. "&depotid=" .. depot_id .. "&manifestid=" .. manifest_id)
+    if not data and api_key ~= "" then
+        data = try_fetch(MANIFESTHUB_DEPOT_URL .. "?apikey=" .. api_key .. "&depotid=" .. depot_id .. "&manifestid=" .. manifest_id)
     end
     return data
 end
@@ -115,8 +115,7 @@ function M.update_manifests(appid)
     local dc = fs.join(base, "depotcache")
     pcall(fs.create_directories, dc)
 
-    local mo_key = get_key("get_morrenus_api_key")
-    local mh_key = get_key("get_manifesthub_api_key")
+    local api_key = get_manifesthub_key()
 
     local dl, sk, fl = {}, {}, {}
     for _, did in ipairs(depot_ids) do
@@ -124,16 +123,15 @@ function M.update_manifests(appid)
         if not mid or mid == "" then
             table.insert(fl, { depotId = did, reason = "No public manifest" })
         else
-            local dest = fs.join(dc, did .. "_" .. mid .. ".manifest")
             if st.find_manifest_file(base, did, mid) then
                 table.insert(sk, { depotId = did, manifestId = mid })
             else
-                local data = fetch_manifest_bytes(did, mid, mo_key, mh_key)
+                local data = fetch_manifest_bytes(did, mid, api_key)
                 if data and write_manifest_to_cache(base, did, mid, data) then
                     table.insert(dl, { depotId = did, manifestId = mid, sizeBytes = #data })
                 else
                     table.insert(fl, { depotId = did, manifestId = mid,
-                        reason = "All sources failed (GitHub / Morrenus / ManifestHub)" })
+                        reason = "All sources failed (GitHub mirror / ManifestHub API)" })
                 end
             end
         end
@@ -241,12 +239,11 @@ function M.sync_depotcache(appid)
     end
 
     local fetched, failed = 0, 0
-    local mo_key = get_key("get_morrenus_api_key")
-    local mh_key = get_key("get_manifesthub_api_key")
+    local api_key = get_manifesthub_key()
     if #missing > 0 then
         for i = 1, math.min(#missing, 100) do
             local item = missing[i]
-            local data = fetch_manifest_bytes(item.depot, item.manifest, mo_key, mh_key)
+            local data = fetch_manifest_bytes(item.depot, item.manifest, api_key)
             if data and write_manifest_to_cache(base, item.depot, item.manifest, data) then
                 fetched = fetched + 1
             else
@@ -264,8 +261,7 @@ function M.sync_depotcache(appid)
         fetched = fetched,
         failed = failed,
         still_missing = #missing - fetched,
-        manifesthub_available = mh_key ~= "",
-        morrenus_available = mo_key ~= "",
+        manifesthub_available = api_key ~= "",
     }
 end
 
