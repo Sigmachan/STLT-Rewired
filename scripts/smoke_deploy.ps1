@@ -32,6 +32,7 @@ $required = @(
     "backend\manifests.lua",
     "backend\manifest_auto_updater.lua",
     "backend\github_mirror.lua",
+    "backend\unlock_paths.lua",
     "backend\health.lua",
     "backend\setup_assistant.lua",
     "backend\ryuu.lua"
@@ -119,7 +120,9 @@ if (Test-Path -LiteralPath $mainLua) {
         "function WarmRyuuCatalogCache",
         "function RunManifestAutoUpdate",
         "function GetSetupState",
+        "function GetUnlockBackendStatus",
         "function SelfHeal",
+        "require\(""unlock_paths""\)",
         "require\(""manifesthub""\)"
     )) {
         if ($lua -match $fn) { Pass "main.lua has $fn" } else { Fail "main.lua missing $fn" }

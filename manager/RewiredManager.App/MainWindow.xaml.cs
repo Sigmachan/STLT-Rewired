@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly LuaGameInstallService _gameInstall = new();
     private readonly SteamProcessService _steamProcess = new();
     private readonly PluginDeployService _deploy = new();
+    private readonly SecretValidationService _secretValidation = new();
 
     private RewiredSharedConfig _config = new();
     private UnlockBackendStatus? _unlockStatus;
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
         LoadConfig();
         RefreshUnlockStatus();
         InspectPlugin();
+        LoadSecretsFields();
     }
 
     private void LoadConfig()
@@ -162,7 +164,7 @@ public partial class MainWindow : Window
             var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
             if (string.IsNullOrWhiteSpace(cookie))
             {
-                AddGameResultText.Text = "Ryuu session missing. Add ryuuSession to backend/data/secrets.local.json in the live plugin.";
+                AddGameResultText.Text = "Ryuu session missing. Open the Secrets tab and save ryuuSession first.";
                 return;
             }
 
@@ -177,6 +179,52 @@ public partial class MainWindow : Window
             AddGameResultText.Text = ex.Message;
             FooterText.Text = "Add game failed.";
         }
+    }
+
+    private void LoadSecretsFields()
+    {
+        var pluginPath = PluginPathBox.Text.Trim();
+        var secrets = _secrets.Load(pluginPath);
+        SecretsPathText.Text = secrets.SecretsPath;
+        RyuuSessionBox.Text = secrets.RyuuSession;
+        ManifestHubKeyBox.Text = secrets.ManifestHubKey;
+    }
+
+    private void LoadSecrets_Click(object sender, RoutedEventArgs e)
+    {
+        LoadSecretsFields();
+        SecretsResultText.Text = "Secrets loaded from disk.";
+        InspectPlugin();
+    }
+
+    private void SaveSecrets_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var pluginPath = PluginPathBox.Text.Trim();
+            _secrets.Save(pluginPath, RyuuSessionBox.Text, ManifestHubKeyBox.Text);
+            SecretsResultText.Text = "Secrets saved.";
+            FooterText.Text = "Secrets saved to plugin data directory.";
+            InspectPlugin();
+        }
+        catch (Exception ex)
+        {
+            SecretsResultText.Text = "Save failed: " + ex.Message;
+        }
+    }
+
+    private async void TestRyuu_Click(object sender, RoutedEventArgs e)
+    {
+        SecretsResultText.Text = "Testing Ryuu session…";
+        var result = await _secretValidation.ValidateRyuuAsync(RyuuSessionBox.Text);
+        SecretsResultText.Text = result.Message;
+    }
+
+    private async void TestManifestHub_Click(object sender, RoutedEventArgs e)
+    {
+        SecretsResultText.Text = "Testing ManifestHub key…";
+        var result = await _secretValidation.ValidateManifestHubAsync(ManifestHubKeyBox.Text);
+        SecretsResultText.Text = result.Message;
     }
 
     private void Inspect_Click(object sender, RoutedEventArgs e) => InspectPlugin();

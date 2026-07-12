@@ -76,6 +76,32 @@
                 </StackPanel>
             </TabItem>
 
+            <!-- Secrets -->
+            <TabItem Header="Secrets">
+                <StackPanel Margin="14">
+                    <TextBlock Text="Plugin secrets" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBlock Text="Stored in the live plugin tree (gitignored). Values stay on disk; they are not logged."
+                               Foreground="#9ca3af" TextWrapping="Wrap" Margin="0,0,0,12" />
+                    <TextBlock x:Name="SecretsPathText" Foreground="#9ca3af" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                    <TextBlock Text="Ryuu session cookie" Foreground="#cbd5e1" Margin="0,0,0,4" />
+                    <TextBox x:Name="RyuuSessionBox" Padding="8" Margin="0,0,0,12"
+                             Background="#0b0e14" Foreground="#f3f4f6" BorderBrush="#3b4557" />
+
+                    <TextBlock Text="ManifestHub API key" Foreground="#cbd5e1" Margin="0,0,0,4" />
+                    <TextBox x:Name="ManifestHubKeyBox" Padding="8" Margin="0,0,0,12"
+                             Background="#0b0e14" Foreground="#f3f4f6" BorderBrush="#3b4557" />
+
+                    <WrapPanel Margin="0,0,0,12">
+                        <Button Content="Load" Padding="14,8" Margin="0,0,8,8" Click="LoadSecrets_Click" />
+                        <Button Content="Save secrets" Padding="14,8" Margin="0,0,8,8" Click="SaveSecrets_Click" />
+                        <Button Content="Test Ryuu" Padding="14,8" Margin="0,0,8,8" Click="TestRyuu_Click" />
+                        <Button Content="Test ManifestHub" Padding="14,8" Margin="0,0,8,8" Click="TestManifestHub_Click" />
+                    </WrapPanel>
+                    <TextBlock x:Name="SecretsResultText" TextWrapping="Wrap" Foreground="#d1d5db" />
+                </StackPanel>
+            </TabItem>
+
             <!-- Plugin -->
             <TabItem Header="Plugin (optional)">
                 <Grid Margin="14">

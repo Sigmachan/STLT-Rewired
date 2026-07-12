@@ -18,9 +18,10 @@ Plugin and Manager both read it for unlock backend preference and Steam path.
 1. Build or download `RewiredManager-win-x64-framework-dependent.zip`.
 2. Open **Rewired Manager → System**.
 3. Set Steam path → **Install OpenSteamTool** (pulls latest [OpenSteam001/OpenSteamTool](https://github.com/OpenSteam001/OpenSteamTool) release).
-4. **Restart Steam** from Manager.
-5. **Add game** tab: enter AppID → Download & install (Ryuu session in plugin `secrets.local.json`).
-6. Optional: **Deploy** tab or `deploy.ps1` for in-Steam Rewired UI.
+4. **Secrets** tab → Ryuu session + ManifestHub key → Save → Test.
+5. **Restart Steam** from Manager.
+6. **Add game** tab: enter AppID → Download & install.
+7. Optional: **Deploy** tab or `deploy.ps1` for in-Steam Rewired UI.
 
 OpenSteamTool reads Lua from `Steam/config/lua/`. SteamTools and LumaCore use `config/stplug-in/`.  
 The plugin backend (`unlock_paths.lua`) picks the directory automatically.
