@@ -845,26 +845,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             shadow: 'rgba(102,192,244,0.4)',
             shadowHover: 'rgba(102,192,244,0.6)',
         },
-        ingria: {
-            name: 'Ingria',
-            bgPrimary: '#ffffff',
-            bgSecondary: '#eef4fc',
-            bgTertiary: 'rgba(255, 255, 255, 0.97)',
-            bgHover: 'rgba(0, 57, 166, 0.08)',
-            bgContainer: 'rgba(255, 255, 255, 0.9)',
-            bgContainerGradient: 'rgba(238, 244, 252, 0.95), #ffffff',
-            accent: '#0039a6',
-            accentLight: '#1f6fe0',
-            accentDark: '#002a7a',
-            border: 'rgba(0, 57, 166, 0.35)',
-            borderHover: 'rgba(0, 57, 166, 0.75)',
-            text: '#0a1a3a',
-            textSecondary: '#34517f',
-            gradient: 'linear-gradient(135deg, #ffffff 0%, #0039a6 100%)',
-            gradientLight: 'linear-gradient(135deg, #ffffff 0%, #1f6fe0 100%)',
-            shadow: 'rgba(0, 57, 166, 0.3)',
-            shadowHover: 'rgba(0, 57, 166, 0.5)',
-        }
     };
 
     // Runtime THEMES map - start with fallback, then hydrate from themes.json/backend.
@@ -968,9 +948,9 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         try {
             const settings = window.__LuaToolsSettings || {};
             const themeKey = (settings.values || {}).general || {};
-            return themeKey.theme || 'ingria';
+            return themeKey.theme || 'original';
         } catch (e) {
-            return 'ingria';
+            return 'original';
         }
     }
 
@@ -3661,64 +3641,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     }
 
 
-    function suggestIngriaTheme() {
-        // One-time non-modal suggestion when locale switches to ru.
-        // Tagline is brand-flavored regional identity, not political slogan.
-        var existing = document.getElementById('lt-ingria-suggest');
-        if (existing) existing.remove();
-
-        var card = document.createElement('div');
-        card.id = 'lt-ingria-suggest';
-        card.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;' +
-            'width:340px;padding:14px;border-radius:8px;' +
-            'background:linear-gradient(180deg,#ffffff 0%,#eef4fc 55%,#ffffff 100%);' +
-            'border:1px solid rgba(0,57,166,0.35);border-top:4px solid #0039a6;' +
-            'box-shadow:0 8px 24px rgba(0,57,166,0.22);' +
-            'font-family:system-ui,-apple-system,sans-serif;' +
-            'animation:lt-ingria-fadein 0.3s ease;';
-
-        card.innerHTML =
-            '<style>@keyframes lt-ingria-fadein{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}</style>' +
-            '<div style="font-size:14px;font-weight:600;color:#0a1a3a;margin-bottom:4px;">' +
-            'Тема Ingria · бело-сине-белый' +
-            '</div>' +
-            '<div style="font-size:10px;color:#0039a6;letter-spacing:0.5px;margin-bottom:8px;font-family:Georgia,serif;font-style:italic;">' +
-            'Made in Ingria by Free People' +
-            '</div>' +
-            '<div style="font-size:11px;color:#34517f;line-height:1.5;margin-bottom:10px;">' +
-            'Светлая тема: белый — синий — белый. Применить?' +
-            '</div>' +
-            '<div style="display:flex;gap:6px;">' +
-            '<button id="lt-ingria-apply" style="flex:1;padding:6px 10px;background:#0039a6;border:none;border-radius:4px;color:#ffffff;font-size:12px;font-weight:500;cursor:pointer;">Применить</button>' +
-            '<button id="lt-ingria-dismiss" style="padding:6px 10px;background:rgba(255,255,255,0.9);border:1px solid rgba(0,57,166,0.25);border-radius:4px;color:#34517f;font-size:12px;cursor:pointer;">Позже</button>' +
-            '</div>';
-        document.body.appendChild(card);
-
-        document.getElementById('lt-ingria-apply').onclick = function () {
-            Millennium.callServerMethod('luatools', 'ApplySettingsChanges', {
-                contentScriptQuery: '',
-                changesJson: JSON.stringify({ general: { theme: 'ingria' } })
-            }).then(function () {
-                try {
-                    if (window.__LuaToolsSettings && window.__LuaToolsSettings.values && window.__LuaToolsSettings.values.general) {
-                        window.__LuaToolsSettings.values.general.theme = 'ingria';
-                    }
-                } catch (_) {}
-                ensureLuaToolsStyles();
-                card.remove();
-            }).catch(function () { card.remove(); });
-        };
-        document.getElementById('lt-ingria-dismiss').onclick = function () { card.remove(); };
-
-        setTimeout(function () {
-            var c = document.getElementById('lt-ingria-suggest');
-            if (c) c.remove();
-        }, 30000);
-    }
-
-
-
-
     function showRepairDepotCachePanel() {
         _stOverlayShell('🔧 Repair Depot Cache', function (body, ov, colors) {
             // Config panel
@@ -5846,7 +5768,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             // If the active theme is light, make certain fix action texts/icons white for readability.
             try {
-                const currentThemeKey = (((window.__LuaToolsSettings || {}).values || {}).general || {}).theme || 'ingria';
+                const currentThemeKey = (((window.__LuaToolsSettings || {}).values || {}).general || {}).theme || 'original';
                 // Use localized labels so this works in other languages
                 const applyLabel = lt('Apply');
                 const onlineUnsteamLabel = lt('Online Fix (Unsteam)');
@@ -8065,16 +7987,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     invalidateThemeCache();
                     ensureLuaToolsStyles();
                 }
-
-                // Locale → Ingria theme one-time suggestion
-                try {
-                    var newLocale = response && response.language;
-                    var lastSuggested = (window.localStorage && window.localStorage.getItem('lt_ingria_suggested')) || '';
-                    if (newLocale === 'ru' && lastSuggested !== 'yes' && newTheme !== 'ingria') {
-                        suggestIngriaTheme();
-                        try { window.localStorage.setItem('lt_ingria_suggested', 'yes'); } catch (_) {}
-                    }
-                } catch (_) { /* localStorage may be blocked */ }
             }).catch(function (err) {
                 const message = err && err.message ? err.message : t('settings.saveError', 'Failed to save settings.');
                 setStatus(message, '#ff5c5c');

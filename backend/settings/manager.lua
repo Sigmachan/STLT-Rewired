@@ -62,6 +62,17 @@ local function _ensure_language_valid(values)
     return changed
 end
 
+local function _sanitize_theme(values)
+    local general = values.general
+    if type(general) ~= "table" then return false end
+    local theme = tostring(general.theme or "")
+    if theme == "ingria" then
+        general.theme = "original"
+        return true
+    end
+    return false
+end
+
 local function _available_theme_files()
     local themes = {}
     
@@ -102,7 +113,14 @@ local function _available_theme_files()
         }
     end
 
-    return themes
+    local filtered = {}
+    for _, t in ipairs(themes) do
+        if t.value ~= "ingria" then
+            table.insert(filtered, t)
+        end
+    end
+
+    return filtered
 end
 
 local function _inject_locale_choices(schema)
@@ -201,6 +219,9 @@ function manager._get_values_locked()
     local values = manager._load_settings_cache()
     if type(values) ~= "table" then values = {} end
     if _ensure_language_valid(values) then
+        _persist_values(values)
+    end
+    if _sanitize_theme(values) then
         _persist_values(values)
     end
     return values

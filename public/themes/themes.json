@@ -229,27 +229,5 @@
     "gradientLight": "linear-gradient(135deg, #fca5a5 0%, #dc2626 100%)",
     "shadow": "rgba(220, 38, 38, 0.4)",
     "shadowHover": "rgba(220, 38, 38, 0.6)"
-  },
-  {
-    "value": "ingria",
-    "name": "Ingria",
-    "label": "Ingria · бело-сине-белый",
-    "bgPrimary": "#ffffff",
-    "bgSecondary": "#eef4fc",
-    "bgTertiary": "rgba(255, 255, 255, 0.97)",
-    "bgHover": "rgba(0, 57, 166, 0.08)",
-    "bgContainer": "rgba(255, 255, 255, 0.9)",
-    "bgContainerGradient": "rgba(238, 244, 252, 0.95), #ffffff",
-    "accent": "#0039a6",
-    "accentLight": "#1f6fe0",
-    "accentDark": "#002a7a",
-    "border": "rgba(0, 57, 166, 0.35)",
-    "borderHover": "rgba(0, 57, 166, 0.75)",
-    "text": "#0a1a3a",
-    "textSecondary": "#34517f",
-    "gradient": "linear-gradient(135deg, #ffffff 0%, #0039a6 100%)",
-    "gradientLight": "linear-gradient(135deg, #ffffff 0%, #1f6fe0 100%)",
-    "shadow": "rgba(0, 57, 166, 0.3)",
-    "shadowHover": "rgba(0, 57, 166, 0.5)"
   }
 ]
