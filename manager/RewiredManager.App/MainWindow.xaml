@@ -12,7 +12,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="Rewired" FontSize="26" FontWeight="Bold" />
-            <TextBlock Text="One app — install unlock + in-Steam UI, add games, secrets. (Gen2-style control plane.)"
+            <TextBlock Text="One app — install unlock, add games, launch Steam (ACCELA-style control plane on Windows)."
                        Foreground="#9ca3af" Margin="0,4,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
@@ -45,10 +45,11 @@
                         <TextBlock x:Name="UnlockStatusText" TextWrapping="Wrap" Foreground="#d1d5db" Margin="0,8,0,12" />
 
                         <WrapPanel Margin="0,0,0,12">
-                            <Button Content="Set up Rewired" Padding="14,8" Margin="0,0,8,8" FontWeight="SemiBold" Click="SetupWizard_Click" />
+                            <Button Content="Launch Steam" Padding="14,8" Margin="0,0,8,8" FontWeight="SemiBold" Click="LaunchSteam_Click"
+                                    ToolTip="Start Steam with the Rewired stack loaded (like ACCELA + SLSsteam on Linux)." />
+                            <Button Content="Set up Rewired" Padding="14,8" Margin="0,0,8,8" Click="SetupWizard_Click" />
                             <Button Content="Refresh status" Padding="14,8" Margin="0,0,8,8" Click="RefreshUnlock_Click" />
                             <Button Content="Install OpenSteamTool" Padding="14,8" Margin="0,0,8,8" Click="InstallOst_Click" />
-                            <Button Content="Restart Steam" Padding="14,8" Margin="0,0,8,8" Click="RestartSteam_Click" />
                             <Button Content="Check for updates" Padding="14,8" Margin="0,0,8,8" Click="CheckUpdates_Click" />
                         </WrapPanel>
                         <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" Foreground="#9ca3af" Margin="0,0,0,8" />

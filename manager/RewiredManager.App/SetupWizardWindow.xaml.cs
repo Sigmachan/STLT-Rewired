@@ -95,7 +95,11 @@ public partial class SetupWizardWindow : Window
 
         if (result.Success)
         {
-            MessageBox.Show(this, result.Summary, "Rewired", MessageBoxButton.OK, MessageBoxImage.Information);
+            LaunchSteamButton.Visibility = Visibility.Visible;
+            MessageBox.Show(this,
+                result.Summary + Environment.NewLine + Environment.NewLine +
+                "Use Launch Steam below (like ACCELA on Linux — start Steam from this app, not the desktop icon).",
+                "Rewired", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         else
         {
@@ -110,4 +114,36 @@ public partial class SetupWizardWindow : Window
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void LaunchSteam_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var steam = SteamInstallService.TryDetectSteamPath();
+            if (string.IsNullOrWhiteSpace(SteamPathBox.Text.Trim()))
+                SteamPathBox.Text = steam ?? "";
+            steam = new SteamInstallService().ResolveSteamPath(SteamPathBox.Text.Trim());
+
+            if (_steamProcess.IsSteamRunning())
+            {
+                var restart = MessageBox.Show(this,
+                    "Steam is already running. Restart it so OpenSteamTool and the in-Steam UI load?",
+                    "Launch Steam",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (restart != MessageBoxResult.Yes) return;
+                _ = _steamProcess.RestartSteamAsync(steam);
+                AppendLog("Restarting Steam…");
+            }
+            else
+            {
+                _steamProcess.StartSteam(steam);
+                AppendLog("Steam launched.");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Launch Steam", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }

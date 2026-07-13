@@ -223,20 +223,41 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void RestartSteam_Click(object sender, RoutedEventArgs e)
+    private async void LaunchSteam_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             SaveConfigSilently();
             var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath()
                 ?? throw new InvalidOperationException("Set Steam path first.");
-            FooterText.Text = "Restarting Steam…";
-            await _steamProcess.RestartSteamAsync(steam);
-            FooterText.Text = "Steam restarted.";
+
+            if (_steamProcess.IsSteamRunning())
+            {
+                var restart = MessageBox.Show(this,
+                    "Steam is already running. Restart it so OpenSteamTool and the in-Steam UI load?",
+                    "Launch Steam",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (restart != MessageBoxResult.Yes)
+                {
+                    FooterText.Text = "Steam left running.";
+                    return;
+                }
+                FooterText.Text = "Restarting Steam…";
+                await _steamProcess.RestartSteamAsync(steam);
+                FooterText.Text = "Steam restarted with Rewired stack.";
+            }
+            else
+            {
+                FooterText.Text = "Launching Steam…";
+                _steamProcess.StartSteam(steam);
+                FooterText.Text = "Steam launched — use this app to start Steam (ACCELA-style).";
+            }
         }
         catch (Exception ex)
         {
-            FooterText.Text = "Restart failed: " + ex.Message;
+            FooterText.Text = "Launch failed: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "Launch Steam", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -60,7 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh | bash
 ```
 
-Linux unlock (SLSsteam / ACCELA) is **not** bundled — see [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) and [SLSsteam](https://github.com/AceSLS/SLSsteam).
+Linux unlock (SLSsteam / ACCELA) is **not** bundled in Rewired.exe — use [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) then `install.sh`. See [ACCELA_STYLE.md](ACCELA_STYLE.md).
 
 Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
 

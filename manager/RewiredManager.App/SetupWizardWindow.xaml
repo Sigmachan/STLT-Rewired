@@ -14,7 +14,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock Text="Set up Rewired" FontSize="24" FontWeight="Bold" />
-            <TextBlock Text="One app installs unlock, in-Steam UI, and plugin — like LuaTools Gen2, clean-room."
+            <TextBlock Text="One app — install unlock, add games, then launch Steam from here (ACCELA-style on Windows)."
                        Foreground="#9ca3af" TextWrapping="Wrap" Margin="0,6,0,0" />
         </StackPanel>
 
@@ -45,6 +45,8 @@
         </Border>
 
         <WrapPanel Grid.Row="3" Margin="0,14,0,0" HorizontalAlignment="Right">
+            <Button x:Name="LaunchSteamButton" Content="Launch Steam" Padding="14,8" Margin="0,0,8,0"
+                    FontWeight="SemiBold" Visibility="Collapsed" Click="LaunchSteam_Click" />
             <Button Content="Close" Padding="14,8" Margin="0,0,8,0" Click="Close_Click" />
             <Button x:Name="RunButton" Content="Install Rewired" Padding="14,8" FontWeight="SemiBold" Click="RunSetup_Click" />
         </WrapPanel>
