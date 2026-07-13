@@ -4,11 +4,13 @@ namespace RewiredManager.App.Services;
 
 public sealed class SteamProcessService
 {
-    public bool IsSteamRunning()
-    {
-        return Process.GetProcessesByName("steam").Length > 0
-            || Process.GetProcessesByName("steamwebhelper").Length > 0;
-    }
+    public bool IsSteamRunning() => IsSteamRunningStatic();
+
+    public static bool IsSteamRunningStatic() =>
+        Process.GetProcessesByName("steam").Length > 0
+        || Process.GetProcessesByName("steamwebhelper").Length > 0;
+
+    public bool IsSteamRunningInstance() => IsSteamRunningStatic();
 
     public async Task StopSteamAsync(CancellationToken ct = default)
     {
@@ -39,7 +41,7 @@ public sealed class SteamProcessService
         for (var i = 0; i < 20; i++)
         {
             ct.ThrowIfCancellationRequested();
-            if (!IsSteamRunning()) return;
+            if (!IsSteamRunningStatic()) return;
             await Task.Delay(250, ct);
         }
     }

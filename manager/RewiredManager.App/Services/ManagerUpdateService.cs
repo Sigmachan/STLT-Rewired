@@ -85,8 +85,10 @@ public sealed class ManagerUpdateService
                 Directory.Delete(dest, recursive: true);
 
             ZipFile.ExtractToDirectory(zipPath, dest);
-            var exe = Path.Combine(dest, "RewiredManager.App.exe");
-            return new ManagerUpdateResult(true, $"Updated Manager to {status.LatestVersion}. Restart Manager.", exe);
+            var exe = Path.Combine(dest, "Rewired.exe");
+            if (!File.Exists(exe))
+                exe = Path.Combine(dest, "RewiredManager.App.exe");
+            return new ManagerUpdateResult(true, $"Updated Manager to {status.LatestVersion}. Restart Rewired.", exe);
         }
         catch (Exception ex)
         {
@@ -172,21 +174,46 @@ public sealed class ManagerUpdateService
 
     private async Task<ReleaseInfo> FetchLatestReleaseAsync(CancellationToken ct)
     {
-        var json = await Http.GetStringAsync($"https://api.github.com/repos/{Owner}/{Repo}/releases/latest", ct);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-        var tag = root.GetProperty("tag_name").GetString() ?? "";
-        var html = root.GetProperty("html_url").GetString() ?? "";
-        string? plugin = null;
-        string? manager = null;
-        foreach (var asset in root.GetProperty("assets").EnumerateArray())
+        try
         {
-            var name = asset.GetProperty("name").GetString() ?? "";
-            var url = asset.GetProperty("browser_download_url").GetString();
-            if (name == PluginAsset) plugin = url;
-            if (name == ManagerAsset) manager = url;
+            var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN")
+                ?? Environment.GetEnvironmentVariable("GH_TOKEN");
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"https://api.github.com/repos/{Owner}/{Repo}/releases/latest");
+            request.Headers.UserAgent.ParseAdd("Rewired/1.0");
+            request.Headers.Accept.ParseAdd("application/vnd.github+json");
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            using var response = await Http.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException(body);
+
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            var tag = root.GetProperty("tag_name").GetString() ?? "";
+            var html = root.GetProperty("html_url").GetString() ?? "";
+            string? plugin = null;
+            string? manager = null;
+            foreach (var asset in root.GetProperty("assets").EnumerateArray())
+            {
+                var name = asset.GetProperty("name").GetString() ?? "";
+                var url = asset.GetProperty("browser_download_url").GetString();
+                if (name == PluginAsset) plugin = url;
+                if (name == ManagerAsset) manager = url;
+            }
+            return new ReleaseInfo(tag, html, plugin, manager);
         }
-        return new ReleaseInfo(tag, html, plugin, manager);
+        catch
+        {
+            var baseUrl = $"https://github.com/{Owner}/{Repo}/releases/latest/download";
+            return new ReleaseInfo(
+                "latest",
+                $"https://github.com/{Owner}/{Repo}/releases/latest",
+                $"{baseUrl}/{PluginAsset}",
+                $"{baseUrl}/{ManagerAsset}");
+        }
     }
 
     private static string StripTagPrefix(string tag)

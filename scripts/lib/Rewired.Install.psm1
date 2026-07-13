@@ -282,7 +282,11 @@ function Install-RewiredManagerFromUrl {
         Invoke-WebRequest -Uri $ZipUrl -OutFile $zipPath -UseBasicParsing
         if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
         Expand-Archive -Path $zipPath -DestinationPath $dest -Force
-        return Join-Path $dest 'RewiredManager.App.exe'
+        $exe = Join-Path $dest 'Rewired.exe'
+        if (-not (Test-Path -LiteralPath $exe)) {
+            $exe = Join-Path $dest 'RewiredManager.App.exe'
+        }
+        return $exe
     }
     finally {
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue

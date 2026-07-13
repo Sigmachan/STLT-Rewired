@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private readonly PluginDeployService _deploy = new();
     private readonly SecretValidationService _secretValidation = new();
     private readonly ManagerUpdateService _managerUpdate = new();
+    private readonly RewiredSetupService _setup = new();
 
     private RewiredSharedConfig _config = new();
     private UnlockBackendStatus? _unlockStatus;
@@ -32,6 +33,43 @@ public partial class MainWindow : Window
         InspectPlugin();
         LoadSecretsFields();
         _ = RefreshUpdateStatusAsync();
+        Loaded += MainWindow_Loaded;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var readiness = _setup.Assess(_config.SteamPath);
+            if (readiness.NeedsSetup)
+            {
+                var wizard = new SetupWizardWindow { Owner = this };
+                wizard.ShowDialog();
+                if (wizard.SetupSucceeded)
+                {
+                    LoadConfig();
+                    RefreshUnlockStatus();
+                    InspectPlugin();
+                }
+            }
+        }
+        catch
+        {
+            // non-fatal on startup
+        }
+    }
+
+    private void SetupWizard_Click(object sender, RoutedEventArgs e)
+    {
+        var wizard = new SetupWizardWindow { Owner = this };
+        wizard.ShowDialog();
+        if (wizard.SetupSucceeded)
+        {
+            LoadConfig();
+            RefreshUnlockStatus();
+            InspectPlugin();
+            FooterText.Text = "Setup finished.";
+        }
     }
 
     private async Task RefreshUpdateStatusAsync()
