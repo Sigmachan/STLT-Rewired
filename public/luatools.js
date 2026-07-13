@@ -2101,7 +2101,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var appidWrap = document.createElement('div');
             appidWrap.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
             appidWrap.innerHTML = '<span style="font-size:12px;color:#aaa;">AppID:</span>' +
-                '<input type="number" id="lt-acct-appid" placeholder="e.g. 2050650" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:13px;">' +
+                '<input type="number" id="lt-acct-appid" placeholder="e.g. 2050650" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '13px', br: '3px' }) + '">' +
                 '<button id="lt-acct-inspect" style="padding:5px 12px;background:rgba(102,192,244,0.2);border:1px solid rgba(102,192,244,0.4);border-radius:4px;color:#66c0f4;font-size:12px;cursor:pointer;">🔍 Inspect</button>';
             body.appendChild(appidWrap);
 
@@ -2414,7 +2414,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             var saveRow = document.createElement('div');
             saveRow.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
-            saveRow.innerHTML = '<input id="lt-kv-name" type="text" placeholder="profile name (e.g. main, work)" value="main" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;">' +
+            saveRow.innerHTML = '<input id="lt-kv-name" type="text" placeholder="profile name (e.g. main, work)" value="main" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '">' +
                 '<button id="lt-kv-save" style="padding:5px 12px;background:rgba(76,175,80,0.2);border:1px solid rgba(76,175,80,0.4);border-radius:4px;color:#4caf50;font-size:12px;cursor:pointer;">💾 Save current as profile</button>';
             body.appendChild(saveRow);
 
@@ -2425,7 +2425,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var ioRow = document.createElement('div');
             ioRow.style.cssText = 'display:flex;gap:6px;';
             ioRow.innerHTML =
-                '<input id="lt-kv-blob" type="text" placeholder="paste .ltkeys blob to import…" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:11px;font-family:monospace;">' +
+                '<input id="lt-kv-blob" type="text" placeholder="paste .ltkeys blob to import…" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '11px', br: '3px' }) + 'font-family:monospace;">' +
                 '<button id="lt-kv-import" style="padding:5px 10px;background:rgba(102,192,244,0.15);border:1px solid rgba(102,192,244,0.4);border-radius:4px;color:#66c0f4;font-size:11px;cursor:pointer;">📥 Import</button>';
             body.appendChild(ioRow);
 
@@ -2666,14 +2666,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var accountRow = document.createElement('div');
             accountRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
             accountRow.innerHTML = '<span style="font-size:12px;color:#aaa;">Target account:</span>' +
-                '<select id="lt-tk-account" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;"><option value="0">— loading —</option></select>';
+                '<select id="lt-tk-account" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '"><option value="0">— loading —</option></select>';
             body.appendChild(accountRow);
 
             // Filter row
             var filterRow = document.createElement('div');
             filterRow.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;';
             filterRow.innerHTML =
-                '<input id="lt-tk-search" type="text" placeholder="filter by name…" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;">' +
+                '<input id="lt-tk-search" type="text" placeholder="filter by name…" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '">' +
                 '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;padding:0 8px;cursor:pointer;"><input type="checkbox" id="lt-tk-installed-only" style="accent-color:#66c0f4;"> installed only</label>';
             body.appendChild(filterRow);
 
@@ -2865,16 +2865,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 if (currentBackend === 'git') {
                     formArea.innerHTML =
                         '<div style="font-size:11px;color:#aaa;margin-bottom:4px;">Remote URL (git@... or https://...)</div>' +
-                        '<input id="lt-sync-url" type="text" value="' + (g.remote_url || '').replace(/"/g, '&quot;') + '" placeholder="https://github.com/you/luatools-sync.git" style="width:100%;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;font-family:monospace;margin-bottom:8px;">' +
+                        '<input id="lt-sync-url" type="text" value="' + (g.remote_url || '').replace(/"/g, '&quot;') + '" placeholder="https://github.com/you/luatools-sync.git" style="width:100%;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + 'font-family:monospace;margin-bottom:8px;">' +
                         '<div style="display:flex;gap:8px;margin-bottom:6px;">' +
-                        '<div style="flex:1;"><div style="font-size:11px;color:#aaa;margin-bottom:4px;">Branch</div><input id="lt-sync-branch" type="text" value="' + (g.branch || 'main') + '" style="width:100%;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;"></div>' +
+                        '<div style="flex:1;"><div style="font-size:11px;color:#aaa;margin-bottom:4px;">Branch</div><input id="lt-sync-branch" type="text" value="' + (g.branch || 'main') + '" style="width:100%;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '"></div>' +
                         '</div>' +
                         '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;margin-bottom:3px;"><input id="lt-sync-incl-lua" type="checkbox" ' + (g.include_lua_scripts !== false ? 'checked' : '') + ' style="accent-color:#66c0f4;"> Include .lua scripts (recommended)</label>' +
                         '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;"><input id="lt-sync-incl-hist" type="checkbox" ' + (g.include_history_db ? 'checked' : '') + ' style="accent-color:#66c0f4;"> Include history.db (large file)</label>';
                 } else {
                     formArea.innerHTML =
                         '<div style="font-size:11px;color:#aaa;margin-bottom:4px;">Folder path (local, mapped drive, or Syncthing-watched)</div>' +
-                        '<input id="lt-sync-path" type="text" value="' + (fld.path || '').replace(/"/g, '&quot;') + '" placeholder="D:\\\\Sync\\\\LuaTools" style="width:100%;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;font-family:monospace;margin-bottom:8px;">' +
+                        '<input id="lt-sync-path" type="text" value="' + (fld.path || '').replace(/"/g, '&quot;') + '" placeholder="D:\\\\Sync\\\\LuaTools" style="width:100%;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + 'font-family:monospace;margin-bottom:8px;">' +
                         '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;margin-bottom:3px;"><input id="lt-sync-incl-lua" type="checkbox" ' + (fld.include_lua_scripts !== false ? 'checked' : '') + ' style="accent-color:#66c0f4;"> Include .lua scripts</label>' +
                         '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;"><input id="lt-sync-incl-hist" type="checkbox" ' + (fld.include_history_db ? 'checked' : '') + ' style="accent-color:#66c0f4;"> Include history.db</label>';
                 }
@@ -3073,7 +3073,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var filterRow = document.createElement('div');
             filterRow.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;';
             filterRow.innerHTML =
-                '<input id="lt-cm-search" type="text" placeholder="filter by name…" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;">' +
+                '<input id="lt-cm-search" type="text" placeholder="filter by name…" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '">' +
                 '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;padding:0 8px;cursor:pointer;"><input type="checkbox" id="lt-cm-cracked-only" checked style="accent-color:#66c0f4;"> cracked only</label>' +
                 '<button id="lt-cm-rescan" style="padding:5px 10px;background:rgba(102,192,244,0.15);border:1px solid rgba(102,192,244,0.4);border-radius:4px;color:#66c0f4;font-size:11px;cursor:pointer;">🔄 Rescan</button>';
             body.appendChild(filterRow);
@@ -3393,7 +3393,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         function render(p, accId) {
             var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;">';
             html += '<div style="font-weight:600;color:#66c0f4;">📦 Workshop: AppID ' + appid + '</div>';
-            html += '<select id="lt-ws-acct" style="background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:3px 8px;font-size:11px;">';
+            var wsColors = getThemeColors();
+            html += '<select id="lt-ws-acct" style="' + _stInputCss(wsColors, { pad: '3px 8px', fs: '11px', br: '3px' }) + '">';
             accounts.forEach(function (a) {
                 var sel = a.accountId32 === accId ? ' selected' : '';
                 html += '<option value="' + a.accountId32 + '"' + sel + '>' + (a.personaName || a.username || a.accountId32) + (a.mostRecent ? ' (active)' : '') + '</option>';
@@ -3507,7 +3508,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var accountRow = document.createElement('div');
             accountRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
             accountRow.innerHTML = '<span style="font-size:12px;color:#aaa;">Account:</span>' +
-                '<select id="lt-aw-acct" style="flex:1;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:5px 8px;font-size:12px;"><option value="0">— loading —</option></select>';
+                '<select id="lt-aw-acct" style="flex:1;' + _stInputCss(colors, { pad: '5px 8px', fs: '12px', br: '3px' }) + '"><option value="0">— loading —</option></select>';
             body.appendChild(accountRow);
 
             var statsBar = document.createElement('div');
@@ -3672,7 +3673,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             var agePicker = document.createElement('div');
             agePicker.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#aaa;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:5px;';
-            agePicker.innerHTML = 'Orphan age: <input type="number" id="lt-repair-age" value="30" min="1" max="365" style="width:50px;background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;padding:2px 4px;font-size:12px;"> days';
+            agePicker.innerHTML = 'Orphan age: <input type="number" id="lt-repair-age" value="30" min="1" max="365" style="width:50px;' + _stInputCss(colors, { pad: '2px 4px', fs: '12px', br: '3px' }) + '"> days';
             cfg.appendChild(agePicker);
 
             body.appendChild(cfg);
@@ -5499,13 +5500,13 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
         const loadingItem = document.createElement('div');
         loadingItem.style.cssText = `text-align:center;padding:10px;color:${colors.textSecondary};font-size:13px;`;
-        loadingItem.textContent = lt('Checking availability…');
+        loadingItem.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i>' + lt('Loading APIs...');
         apiListContainer.appendChild(loadingItem);
 
         const body = document.createElement('div');
         body.style.cssText = `font-size:12px;line-height:1.3;margin-bottom:8px;color:${colors.textSecondary};`;
         body.className = 'luatools-status';
-        body.textContent = lt('Checking availability…');
+        body.textContent = '';
 
         const progressWrap = document.createElement('div');
         progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:16px;border-radius:3px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:8px;`;
@@ -6116,7 +6117,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const body = document.createElement('div');
         const bodyColorsLoading = getThemeColors();
         body.style.cssText = `font-size:14px;line-height:1.35;margin-bottom:16px;color:${bodyColorsLoading.textSecondary};`;
-        body.textContent = lt('Checking availability…');
+        body.textContent = lt('Loading fixes...');
 
         const progressWrap = document.createElement('div');
         const progressColorsLoading = getThemeColors();
