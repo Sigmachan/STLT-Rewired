@@ -1,10 +1,9 @@
 {
-  "_comment": "GitHub release auto-update for plugin (in-Steam + boot) and install script URLs for Manager/scripts.",
+  "_comment": "GitHub release auto-update for plugin (in-Steam + boot) and install script URLs.",
   "github": {
     "owner": "Sigmachan",
     "repo": "STLT-Rewired",
     "asset_name": "STLT-Rewired.zip",
-    "manager_asset_name": "RewiredManager-win-x64-framework-dependent.zip",
     "tag_prefix": "v"
   },
   "install": {

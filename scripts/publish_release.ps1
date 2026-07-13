@@ -14,12 +14,10 @@ if (-not $Tag) { $Tag = "v$Version" }
 
 if (-not $SkipBuild) {
     & pwsh -NoProfile -File (Join-Path $repoRoot "scripts\build_release.ps1")
-    & pwsh -NoProfile -File (Join-Path $repoRoot "manager\scripts\publish-manager.ps1")
 }
 
 $pluginZip = Join-Path $repoRoot "releases\STLT-Rewired.zip"
-$managerZip = Join-Path $repoRoot "releases\RewiredManager-win-x64-framework-dependent.zip"
-foreach ($f in @($pluginZip, $managerZip)) {
+foreach ($f in @($pluginZip)) {
     if (-not (Test-Path -LiteralPath $f)) { throw "Missing release asset: $f" }
 }
 
@@ -42,9 +40,9 @@ Set-Content -Path $bodyFile -Value $notes -Encoding UTF8
 
 try {
     if ($Draft) {
-        gh release create $Tag $pluginZip $managerZip --title "STLT-Rewired $Version" --notes-file $bodyFile --draft
+        gh release create $Tag $pluginZip --title "STLT-Rewired $Version" --notes-file $bodyFile --draft
     } else {
-        gh release create $Tag $pluginZip $managerZip --title "STLT-Rewired $Version" --notes-file $bodyFile
+        gh release create $Tag $pluginZip --title "STLT-Rewired $Version" --notes-file $bodyFile
     }
     Write-Host "Release $Tag published." -ForegroundColor Green
 }

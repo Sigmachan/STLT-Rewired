@@ -34,8 +34,8 @@ Local reference only (`E:\LuaTools-win-Portable` or similar). WPF/.NET app — *
 - Target: Millennium 3.x (`v3.4.0-beta.8` tested)
 - No Python HTTP bridge; native `callServerMethod` only
 - Plugin: `backend/`, `public/`, `.millennium/`
-- Manager: `manager/RewiredManager.App/` (WPF companion)
-- Releases: `releases/STLT-Rewired.zip` + `RewiredManager-win-x64-framework-dependent.zip`
+- Manager: optional “10th line” recovery tool (distributed separately / private)
+- Releases: `releases/STLT-Rewired.zip`
 
 ## Why Rewired exists
 

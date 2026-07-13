@@ -1,5 +1,5 @@
 -- opensteamtool_install.lua — download and install OpenSteamTool into the Steam folder.
--- Mirrors manager/RewiredManager.App/Services/OpenSteamToolInstallService.cs.
+-- Mirrors the private Rewired Manager installer flow.
 
 local cjson = require("json")
 local fs = require("fs")

@@ -6,19 +6,19 @@ Rewired on **Windows** mirrors the **ACCELA + SLSsteam** workflow on **Linux** �
 
 | Linux (enter-the-wired) | Windows (Rewired) |
 |-------------------------|-------------------|
-| **ACCELA** — desktop app, add games, settings | **Rewired.exe** — setup wizard, secrets, add game |
+| **ACCELA** — desktop app, add games, settings | Rewired plugin UI (default) / Rewired Manager (`Rewired.exe`, optional “10th line”) |
 | **SLSsteam** — `LD_AUDIT` unlock at Steam load | **OpenSteamTool** — DLLs in Steam root, `config/lua` |
 | **cyberia / Millennium** (optional) — in-Steam UI | **Millennium + luatools plugin** — store “Add via Rewired” |
-| Start Steam **after** stack is installed | **Launch Steam** in Rewired (not the plain Steam shortcut) |
+| Start Steam **after** stack is installed | Restart Steam after setup (plugin-first) |
 
 ## How to use (Windows, ACCELA-like)
 
-1. Run **Rewired.exe** → **Set up Rewired** (OST + in-Steam UI once).
-2. **Secrets** → Ryuu + ManifestHub.
-3. **Add game** → AppID.
-4. **Launch Steam** from Rewired (primary button) — same idea as “restart Steam through SLSsteam” on Linux.
+1. Install plugin + unlock backend (OpenSteamTool) via `docs/INSTALL.md`.
+2. In Steam: Rewired UI → Health/Setup → apply fixes (OST install, Lua dir).
+3. Restart Steam.
+4. Add game from in-Steam UI (AppID).
 
-Do not pin the raw Steam icon for daily use after setup; OpenSteamTool only loads when Steam starts with the stack in place.
+OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-run Setup/Health fixes or use Manager (private) as a recovery tool.
 
 ## Linux today
 

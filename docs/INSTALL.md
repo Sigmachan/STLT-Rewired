@@ -2,25 +2,26 @@
 
 ## Windows (recommended)
 
-**Download `Rewired.exe`** from the latest [GitHub release](https://github.com/Sigmachan/STLT-Rewired/releases) (`RewiredManager-win-x64-framework-dependent.zip` — contains `Rewired.exe`).
+### Plugin-first install (default)
 
-1. Run **Rewired.exe**
-2. First-run wizard: **Set up Rewired** (Steam path → Install OpenSteamTool + in-Steam UI)
-3. **Secrets** tab → Ryuu + ManifestHub → Save
-4. **Add game** → AppID → Download & install
-5. Restart Steam when prompted
-
-Legacy one-liner (scripts; needs published release zips):
+1. Install Millennium + plugin:
 
 ```powershell
 irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
 ```
 
-**Update only** (plugin + Manager from latest GitHub release):
+2. Restart Steam fully (Exit, then relaunch).
+3. In Steam: open Rewired UI → run Health/Setup fixes when prompted.
+
+### Update
 
 ```powershell
 irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1 | iex
 ```
+
+### Optional “10th line” (Rewired Manager)
+
+Rewired Manager (`Rewired.exe`) is distributed **separately (private)** and is only needed for recovery/edge cases.
 
 ### Options (local script)
 
@@ -33,7 +34,6 @@ pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
 | Switch | Effect |
 |--------|--------|
 | `-SkipMillennium` | Do not install Millennium runtime |
-| `-SkipManager` | Plugin only |
 | `-SkipOpenSteamTool` | Do not install OpenSteamTool DLLs |
 | `-SkipShortcut` | No desktop shortcut |
 
@@ -69,7 +69,6 @@ Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
 | Component | Mechanism |
 |-----------|-----------|
 | **Plugin (in Steam)** | `CheckForUpdatesNow` RPC + throttled boot check every 2h via `backend/update.json` → GitHub release `STLT-Rewired.zip` |
-| **Manager (Windows)** | System tab → **Check for updates** (GitHub `RewiredManager-*.zip` + live plugin) |
 | **Script** | Re-run `update.ps1` / `update.sh` one-liners above |
 
 Install URLs are also embedded in `backend/update.json` under `install.*` for in-plugin display via `GetUpdateStatus`.
@@ -80,8 +79,7 @@ Publish a GitHub release before one-liner installs work:
 
 ```powershell
 pwsh -NoProfile -File scripts/build_release.ps1
-pwsh -NoProfile -File manager/scripts/publish-manager.ps1
-gh release create v0.1.5 releases/STLT-Rewired.zip releases/RewiredManager-win-x64-framework-dependent.zip --title "STLT-Rewired v0.1.5"
+gh release create v0.1.5 releases/STLT-Rewired.zip --title "STLT-Rewired v0.1.5"
 ```
 
 ## Dev / git checkout

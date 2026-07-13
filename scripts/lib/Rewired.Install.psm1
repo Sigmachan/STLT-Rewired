@@ -6,15 +6,10 @@ $ErrorActionPreference = 'Stop'
 $script:RewiredGitHubOwner = 'Sigmachan'
 $script:RewiredGitHubRepo  = 'STLT-Rewired'
 $script:RewiredPluginAsset = 'STLT-Rewired.zip'
-$script:RewiredManagerAsset = 'RewiredManager-win-x64-framework-dependent.zip'
 $script:RewiredTagPrefix = 'v'
 
 function Get-RewiredConfigDir {
     Join-Path $env:LOCALAPPDATA 'Rewired'
-}
-
-function Get-RewiredManagerInstallDir {
-    Join-Path (Get-RewiredConfigDir) 'Manager'
 }
 
 function Get-SteamInstallPath {
@@ -93,7 +88,6 @@ function Get-RewiredReleaseDirectUrls {
         Tag        = $Tag
         Version    = $version
         PluginUrl  = "$base/$($script:RewiredPluginAsset)"
-        ManagerUrl = "$base/$($script:RewiredManagerAsset)"
         HtmlUrl    = "https://github.com/$($script:RewiredGitHubOwner)/$($script:RewiredGitHubRepo)/releases/latest"
     }
 }
@@ -107,17 +101,14 @@ function Get-RewiredLatestRelease {
             $version = $version.Substring($script:RewiredTagPrefix.Length)
         }
         $pluginUrl = $null
-        $managerUrl = $null
         foreach ($asset in $json.assets) {
             if ($asset.name -eq $script:RewiredPluginAsset) { $pluginUrl = $asset.browser_download_url }
-            if ($asset.name -eq $script:RewiredManagerAsset) { $managerUrl = $asset.browser_download_url }
         }
         if (-not $pluginUrl) { throw "Release $($json.tag_name) has no asset $($script:RewiredPluginAsset)." }
         return [pscustomobject]@{
             Tag        = $json.tag_name
             Version    = $version
             PluginUrl  = $pluginUrl
-            ManagerUrl = $managerUrl
             HtmlUrl    = $json.html_url
         }
     } catch {
@@ -180,7 +171,6 @@ function Save-RewiredSharedConfig {
         unlockBackend      = $UnlockBackend
         millenniumOptional = $true
         pluginPath         = $PluginPath
-        managerPath        = (Get-RewiredManagerInstallDir)
         repoRoot           = ''
     }
     $path = Join-Path $dir 'rewired.json'
@@ -207,15 +197,6 @@ function Install-RewiredPluginFromLocalRepo {
     & pwsh -NoProfile -File $deploy -SteamPath $SteamPath
     if ($LASTEXITCODE -ne 0) { throw "deploy.ps1 failed with exit code $LASTEXITCODE" }
     return Join-Path $SteamPath 'millennium\plugins\luatools'
-}
-
-function Install-RewiredManagerFromPath {
-    param([Parameter(Mandatory)][string]$ZipPath)
-    if (-not (Test-Path -LiteralPath $ZipPath)) { throw "Manager zip not found: $ZipPath" }
-    $dest = Get-RewiredManagerInstallDir
-    if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
-    Expand-Archive -Path $ZipPath -DestinationPath $dest -Force
-    return Join-Path $dest 'RewiredManager.App.exe'
 }
 
 function Install-RewiredPluginFromUrl {
@@ -266,27 +247,6 @@ function Install-RewiredPluginFromUrl {
         }
 
         return $pluginRoot
-    }
-    finally {
-        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-function Install-RewiredManagerFromUrl {
-    param([Parameter(Mandatory)][string]$ZipUrl)
-    $dest = Get-RewiredManagerInstallDir
-    $work = Join-Path $env:TEMP ('rewired-manager-' + [guid]::NewGuid().ToString('N'))
-    $zipPath = Join-Path $work 'manager.zip'
-    New-Item -ItemType Directory -Force -Path $work | Out-Null
-    try {
-        Invoke-WebRequest -Uri $ZipUrl -OutFile $zipPath -UseBasicParsing
-        if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
-        Expand-Archive -Path $zipPath -DestinationPath $dest -Force
-        $exe = Join-Path $dest 'Rewired.exe'
-        if (-not (Test-Path -LiteralPath $exe)) {
-            $exe = Join-Path $dest 'RewiredManager.App.exe'
-        }
-        return $exe
     }
     finally {
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
@@ -364,7 +324,6 @@ function Invoke-RewiredInstall {
     param(
         [string]$SteamPath = '',
         [switch]$SkipMillennium,
-        [switch]$SkipManager,
         [switch]$SkipOpenSteamTool,
         [switch]$SkipShortcut,
         [switch]$FromRepo
@@ -372,7 +331,6 @@ function Invoke-RewiredInstall {
     $steam = Get-SteamInstallPath -Override $SteamPath
     $repoRoot = Get-RewiredLocalRepoRoot
     $pluginPath = $null
-    $managerExe = $null
 
     if ($FromRepo) {
         if (-not $repoRoot) {
@@ -408,26 +366,6 @@ function Invoke-RewiredInstall {
     }
     Write-Host "Plugin -> $pluginPath" -ForegroundColor Green
 
-    if (-not $SkipManager) {
-        if ($FromRepo) {
-            $mgrZip = Join-Path $repoRoot "releases\$($script:RewiredManagerAsset)"
-            if (Test-Path -LiteralPath $mgrZip) {
-                Write-Host 'Installing Rewired Manager (local zip)...' -ForegroundColor Cyan
-                $managerExe = Install-RewiredManagerFromPath -ZipPath $mgrZip
-                Write-Host "Manager -> $managerExe" -ForegroundColor Green
-            } else {
-                Write-Warning "Manager zip missing at $mgrZip"
-                Write-Warning 'Build it: pwsh -NoProfile -File manager/scripts/publish-manager.ps1'
-            }
-        } elseif ($release.ManagerUrl) {
-            Write-Host 'Installing Rewired Manager...' -ForegroundColor Cyan
-            $managerExe = Install-RewiredManagerFromUrl -ZipUrl $release.ManagerUrl
-            Write-Host "Manager -> $managerExe" -ForegroundColor Green
-        } else {
-            Write-Warning 'Release has no Manager zip; skipping Manager install.'
-        }
-    }
-
     if (-not $SkipOpenSteamTool) {
         Write-Host 'Installing OpenSteamTool...' -ForegroundColor Cyan
         Install-RewiredOpenSteamTool -SteamPath $steam | Out-Null
@@ -436,15 +374,10 @@ function Invoke-RewiredInstall {
         Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath | Out-Null
     }
 
-    if ($managerExe -and -not $SkipShortcut) {
-        New-RewiredDesktopShortcut -ManagerExe $managerExe
-    }
-
     Write-Host ''
     Write-Host 'Install complete.' -ForegroundColor Green
     Write-Host '  1. Restart Steam fully (Exit, then relaunch).'
     Write-Host '  2. Enable luatools (Rewired) in Millennium -> Plugins if needed.'
-    Write-Host '  3. Open Rewired Manager from Desktop or Start menu shortcut.'
     Write-Host ''
     Write-Host "Update later: irm https://raw.githubusercontent.com/$($script:RewiredGitHubOwner)/$($script:RewiredGitHubRepo)/main/scripts/update.ps1 | iex" -ForegroundColor DarkGray
 }
@@ -464,11 +397,6 @@ function Invoke-RewiredUpdate {
     } else {
         Write-Host "Updating plugin $current -> $($release.Version)..." -ForegroundColor Cyan
         Install-RewiredPluginFromUrl -ZipUrl $release.PluginUrl -SteamPath $steam | Out-Null
-    }
-
-    if (-not $SkipManager -and $release.ManagerUrl) {
-        Write-Host 'Updating Rewired Manager...' -ForegroundColor Cyan
-        Install-RewiredManagerFromUrl -ZipUrl $release.ManagerUrl | Out-Null
     }
 
     Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath | Out-Null

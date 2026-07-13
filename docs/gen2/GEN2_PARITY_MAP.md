@@ -8,18 +8,18 @@ Local-only decompile: `docs/gen2/decompiled/` (gitignored). Hermes references: `
 
 | Gen2 (`LuaToolsGui`) | Rewired equivalent | Status |
 | --- | --- | --- |
-| WPF desktop shell | `Rewired.exe` (`manager/`) | **Done** — Material You sidebar IA (Home/Add/Manage/Mode/Fixes/Plugin/Settings) |
+| WPF desktop shell | Rewired Manager (`Rewired.exe`, private) | Optional (“10th line”) |
 | `PluginInstallerService` | `PluginDeployService` + `deploy.ps1` + backup restore | Done |
 | `CefInjectorService` | Millennium native `webkit.js` | Intentional skip |
-| `HttpServerService` (:8080 bridge) | In-Steam Ryuu add + Manager | Done (no localhost bridge) |
+| `HttpServerService` (:8080 bridge) | In-Steam UI + native Millennium IPC | Done (no localhost bridge) |
 | `UnlockerService` | `UnlockBackendService` + Mode tab | Done |
-| `CloudRedirectService` | `CloudRedirectAssistantService` | Done — explicit launch |
-| `HubcapService` | Plugin settings + Manager Hubcap stats + source probe | Done |
-| `LuaToolsApiClient` | `backend/ryuu.lua` + Manager `RyuuCatalogService` | Done (Ryuu-first; Gen2 used `167.235.229.108`) |
+| `CloudRedirectService` | In-Steam guide + explicit launch | Done — explicit launch |
+| `HubcapService` | Plugin settings + source probe | Done |
+| `LuaToolsApiClient` | `backend/ryuu.lua` + in-Steam catalog UI | Done (Ryuu-first; Gen2 used `167.235.229.108`) |
 | `SteamAppInfoCache` | Steam store search in catalog | Partial |
 | `AuthService` | Local secrets only | N/A |
 | `SteamlessService` | Guide / policy only | Guide only |
-| Velopack updater | `ManagerUpdateService` | Done |
+| Velopack updater | N/A (manager private) | N/A |
 
 ## Manager feature matrix
 
