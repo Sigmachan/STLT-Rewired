@@ -121,6 +121,7 @@ if (Test-Path -LiteralPath $mainLua) {
         "function RunManifestAutoUpdate",
         "function GetSetupState",
         "function GetUnlockBackendStatus",
+        "function GetUpdateStatus",
         "function SelfHeal",
         "require\(""unlock_paths""\)",
         "require\(""manifesthub""\)"

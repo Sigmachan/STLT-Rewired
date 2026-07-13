@@ -35,6 +35,28 @@ The plugin backend (`unlock_paths.lua`) picks the directory automatically.
 | LumaCore | `config/stplug-in` | SteaMidra Auto LC Setup or manual |
 | Linux (future) | `config/stplug-in` | SLSsteam + enter-the-wired |
 
+## Auto-update
+
+| Channel | How |
+|---------|-----|
+| Plugin in Steam | `GetUpdateStatus` / `CheckForUpdatesNow`; boot check every 2h (`auto_update.maybe_check_on_boot`) |
+| Rewired Manager | **System → Check for updates** (GitHub latest release) |
+| Script | `update.ps1` / `update.sh` one-liners — see `docs/INSTALL.md` |
+
+One-liner **install URLs** (also in `backend/update.json`):
+
+```powershell
+# Windows full install
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+```
+
+```bash
+# Linux plugin + Millennium
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+```
+
+Publish releases with both zips attached (`scripts/publish_release.ps1`) before one-liners work for end users.
+
 ## Build & release
 
 ```powershell

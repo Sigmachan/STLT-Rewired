@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly SteamProcessService _steamProcess = new();
     private readonly PluginDeployService _deploy = new();
     private readonly SecretValidationService _secretValidation = new();
+    private readonly ManagerUpdateService _managerUpdate = new();
 
     private RewiredSharedConfig _config = new();
     private UnlockBackendStatus? _unlockStatus;
@@ -30,6 +31,65 @@ public partial class MainWindow : Window
         RefreshUnlockStatus();
         InspectPlugin();
         LoadSecretsFields();
+        _ = RefreshUpdateStatusAsync();
+    }
+
+    private async Task RefreshUpdateStatusAsync()
+    {
+        try
+        {
+            var status = await _managerUpdate.CheckAsync();
+            UpdateStatusText.Text = $"Manager {status.CurrentVersion} | Latest {status.LatestVersion}" +
+                (status.UpdateAvailable ? " (update available)" : " (up to date)");
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText.Text = "Update check failed: " + ex.Message;
+        }
+    }
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            FooterText.Text = "Checking GitHub releases…";
+            var status = await _managerUpdate.CheckAsync();
+            await RefreshUpdateStatusAsync();
+
+            if (!status.UpdateAvailable)
+            {
+                FooterText.Text = "Already up to date.";
+                MessageBox.Show(this, $"Rewired {status.LatestVersion} is current.", "Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath() ?? "";
+            var msg = $"Update to {status.LatestVersion}?\n\nApplies Manager + live plugin (preserves secrets). Restart Steam after.";
+            if (MessageBox.Show(this, msg, "Rewired update", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                FooterText.Text = "Update cancelled.";
+                return;
+            }
+
+            var mgr = await _managerUpdate.ApplyManagerUpdateAsync();
+            if (!string.IsNullOrEmpty(steam))
+            {
+                var plug = await _managerUpdate.ApplyPluginUpdateAsync(steam);
+                FooterText.Text = mgr.Message + " " + plug.Message;
+                MessageBox.Show(this, mgr.Message + Environment.NewLine + plug.Message, "Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                FooterText.Text = mgr.Message;
+                MessageBox.Show(this, mgr.Message, "Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            FooterText.Text = "Update failed.";
+            MessageBox.Show(this, ex.Message, "Updates", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void LoadConfig()

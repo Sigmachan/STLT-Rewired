@@ -5228,6 +5228,21 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     let settingsMenuPending = false;
 
+    // Serialize heavy backend scans (library ACF walk, stplug-in listing, manifest sweep).
+    // Parallel RPC here has triggered millennium.dll ACCESS_VIOLATION on beta.8 when Settings opens.
+    let _ltHeavyRpcChain = Promise.resolve();
+    function _ltHeavyRpc(method, args) {
+        _ltHeavyRpcChain = _ltHeavyRpcChain
+            .catch(function () { return null; })
+            .then(function () { return _ltServer(method, args); });
+        return _ltHeavyRpcChain;
+    }
+
+    function isRewiredSettingsOpen() {
+        return !!(document.querySelector('.luatools-settings-manager-overlay')
+            || document.querySelector('.luatools-settings-overlay'));
+    }
+
     function parseRpcPayload(res) {
         let payload = (res && (res.result || res.value)) || res;
         if (typeof payload === 'string') {
@@ -7348,11 +7363,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 contentWrap.appendChild(groupEl);
             }
 
-            // Render Installed Fixes section
-            renderInstalledFixesSection();
-
-            // Render Installed Lua Scripts section
-            renderInstalledLuaSection();
+            // Defer heavy installed-game scans so Settings UI paints first and RPC does not
+            // stack with boot manifest auto-update (known to crash Millennium beta.8).
+            setTimeout(function () {
+                if (!overlay.isConnected) return;
+                renderInstalledFixesSection();
+            }, 800);
+            setTimeout(function () {
+                if (!overlay.isConnected) return;
+                renderInstalledLuaSection();
+            }, 1800);
 
             updateSaveState();
             refreshDependencies();
@@ -7402,11 +7422,10 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             const loadingColors = getThemeColors();
             container.innerHTML = `<div style="padding:10px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
 
-            Millennium.callServerMethod('luatools', 'GetInstalledFixes', {
+            _ltHeavyRpc('GetInstalledFixes', {
                 contentScriptQuery: ''
             })
-                .then(function (res) {
-                    const response = typeof res === 'string' ? JSON.parse(res) : res;
+                .then(function (response) {
                     if (!response || !response.success) {
                         const errColors = getThemeColors();
                         container.innerHTML = `<div style="padding:10px;background:${errColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
@@ -7675,11 +7694,10 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         function loadInstalledLuaScripts(container) {
             container.innerHTML = '<div style="padding:10px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
 
-            Millennium.callServerMethod('luatools', 'GetInstalledLuaScripts', {
+            _ltHeavyRpc('GetInstalledLuaScripts', {
                 contentScriptQuery: ''
             })
-                .then(function (res) {
-                    const response = typeof res === 'string' ? JSON.parse(res) : res;
+                .then(function (response) {
                     if (!response || !response.success) {
                         const errLuaColors = getThemeColors();
                         container.innerHTML = `<div style="padding:10px;background:${errLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
@@ -9172,15 +9190,20 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         var autoManifests = !(cfg && cfg.values && cfg.values.general
                             && cfg.values.general.autoUpdateManifests === false);
                         if (autoManifests) {
-                            setTimeout(function () {
-                                _ltServer('RunManifestAutoUpdate', { contentScriptQuery: '' })
+                            function runManifestAutoUpdateWhenIdle() {
+                                if (isRewiredSettingsOpen()) {
+                                    setTimeout(runManifestAutoUpdateWhenIdle, 5000);
+                                    return;
+                                }
+                                _ltHeavyRpc('RunManifestAutoUpdate', { contentScriptQuery: '' })
                                     .then(function (p) {
                                         if (p && p.success && !p.skipped && (p.downloaded || 0) > 0) {
                                             showLuaToolsToast('📦 Updated ' + p.downloaded + ' depot manifest(s) automatically', 4500, 'info');
                                         }
                                     })
                                     .catch(function () { });
-                            }, 4000);
+                            }
+                            setTimeout(runManifestAutoUpdateWhenIdle, 15000);
                         }
                     }
                 } catch (_) { }

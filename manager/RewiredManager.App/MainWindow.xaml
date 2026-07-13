@@ -48,7 +48,9 @@
                             <Button Content="Refresh status" Padding="14,8" Margin="0,0,8,8" Click="RefreshUnlock_Click" />
                             <Button Content="Install OpenSteamTool" Padding="14,8" Margin="0,0,8,8" Click="InstallOst_Click" />
                             <Button Content="Restart Steam" Padding="14,8" Margin="0,0,8,8" Click="RestartSteam_Click" />
+                            <Button Content="Check for updates" Padding="14,8" Margin="0,0,8,8" Click="CheckUpdates_Click" />
                         </WrapPanel>
+                        <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" Foreground="#9ca3af" Margin="0,0,0,8" />
 
                         <TextBlock Text="Shared config" FontSize="14" Foreground="#9ca3af" TextWrapping="Wrap"
                                    x:Name="SharedConfigPathText" />
