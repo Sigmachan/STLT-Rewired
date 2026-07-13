@@ -34,7 +34,7 @@ Local-only decompile: `docs/gen2/decompiled/` (gitignored). Hermes references: `
 | Settings: secrets, Hubcap stats, diagnostics export | Done |
 | Footer: Rewired + Millennium version | Done |
 | Desktop fix browser / apply | Deferred — in-Steam Fixes panel |
-| `cloud_log.txt` parser | Next |
+| `cloud_log.txt` parser | **Done** — Manager Mode tab scan |
 | SteamTools silent install | Will not port |
 
 ## In-Steam plugin
@@ -45,7 +45,7 @@ Local-only decompile: `docs/gen2/decompiled/` (gitignored). Hermes references: `
 | Ryuu catalog panel | Done |
 | Config import/export (Settings) | Done |
 | ManifestHub usage stats button | Done |
-| Menu locale keys (en/ru) | Done — uk/de/be debt remains |
+| Menu locale keys (en/ru) | Done — uk/de/be filled this round |
 | Theme-token sweep (hardcoded grays) | Next |
 | Denuvo in-app browser | Ryuu fixes fallback only |
 

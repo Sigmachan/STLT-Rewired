@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly ManagerUpdateService _managerUpdate = new();
     private readonly RewiredSetupService _setup = new();
     private readonly CloudRedirectAssistantService _cloudRedirect = new();
+    private readonly CloudLogAssistantService _cloudLog = new();
     private readonly InstalledInventoryService _inventory = new();
     private readonly RyuuCatalogService _catalog = new();
     private readonly HubcapStatsService _hubcapStats = new();
@@ -616,6 +617,42 @@ public partial class MainWindow : Window
         {
             FooterText.Text = "CloudRedirect error.";
             MessageBox.Show(this, ex.Message, "CloudRedirect", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ScanCloudLog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath();
+            var result = _cloudLog.Scan(steam);
+            if (!result.Success)
+            {
+                ModeCloudLogText.Text = result.Message;
+                return;
+            }
+
+            if (result.Issues.Count == 0)
+            {
+                ModeCloudLogText.Text = result.Message;
+                return;
+            }
+
+            var lines = new List<string> { result.Message };
+            foreach (var issue in result.Issues.Take(8))
+            {
+                var app = string.IsNullOrWhiteSpace(issue.AppId) ? "?" : issue.AppId;
+                lines.Add($"• [{issue.Kind}] appid {app}: {issue.Line}");
+            }
+            if (result.Issues.Count > 8)
+                lines.Add($"… и ещё {result.Issues.Count - 8}");
+            ModeCloudLogText.Text = string.Join(Environment.NewLine, lines);
+            FooterText.Text = "cloud_log.txt просканирован.";
+        }
+        catch (Exception ex)
+        {
+            ModeCloudLogText.Text = ex.Message;
         }
     }
 
