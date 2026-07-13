@@ -1,168 +1,502 @@
 ﻿<Window x:Class="RewiredManager.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Rewired" Height="720" Width="1040" MinWidth="900" MinHeight="600">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Rewired" Height="760" Width="1120" MinWidth="960" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource SteamBgPrimary}"
+        FontFamily="{materialDesign:MaterialDesignFont}"
+        TextElement.Foreground="{StaticResource SteamTextPrimary}"
+        TextElement.FontSize="14">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource SteamBgDeep}" BorderBrush="{StaticResource SteamBorder}"
-                BorderThickness="0,0,0,1" Padding="0,0,0,12" Margin="0,0,0,12">
-            <StackPanel>
-                <TextBlock Text="Rewired" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SteamAccent}" />
-                <TextBlock Style="{StaticResource RewiredSubtitle}"
-                           Text="Unlock stack · add games · launch Steam — Rewired desktop control plane."
-                           Margin="0,4,0,0" />
-            </StackPanel>
+        <!-- Sidebar (Material You navigation rail) -->
+        <Border Grid.Column="0" Style="{StaticResource RewiredSidebar}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="24,32,24,16">
+                    <TextBlock Text="REWIRED" Style="{StaticResource RewiredBrandTitle}" />
+                    <TextBlock Text="Steam control plane" FontSize="12"
+                               Foreground="{StaticResource SteamTextMuted}" Margin="4,6,0,0" />
+                </StackPanel>
+
+                <Border DockPanel.Dock="Bottom" Padding="22,16" BorderBrush="{StaticResource SteamBorderSubtle}"
+                        BorderThickness="0,1,0,0">
+                    <TextBlock x:Name="SidebarStatusText" Text="Ready"
+                               Foreground="{StaticResource SteamTextMuted}" FontSize="11"
+                               TextWrapping="Wrap" />
+                </Border>
+
+                <ListBox x:Name="NavList" Style="{StaticResource RewiredNavList}"
+                         SelectionChanged="NavList_SelectionChanged">
+                    <ListBoxItem Tag="home">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Home" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Home" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="add">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="PlusCircle" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Add" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="manage">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ViewList" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Manage" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="mode">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Tune" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Mode" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="fixes">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Wrench" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Fixes" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="plugin">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Puzzle" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Plugin" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="settings">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Cog" Width="18" Height="18" Margin="0,0,14,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Settings" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+            </DockPanel>
         </Border>
 
-        <TabControl Grid.Row="1">
-            <TabItem Header="System">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="14">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Steam &amp; unlock" />
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Steam path" VerticalAlignment="Center" Foreground="{StaticResource SteamTextSecondary}" />
-                            <TextBox Grid.Column="1" x:Name="SteamPathBox" Margin="8,0" />
-                            <Button Grid.Column="2" Content="Save" Click="SaveConfig_Click" />
-                        </Grid>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Unlock backend" VerticalAlignment="Center" Foreground="{StaticResource SteamTextSecondary}" />
-                            <ComboBox Grid.Column="1" x:Name="BackendCombo" Margin="8,0" />
-                        </Grid>
-                        <TextBlock x:Name="UnlockStatusText" TextWrapping="Wrap" Foreground="{StaticResource SteamTextSecondary}" Margin="0,8,0,12" />
+        <!-- Content shell -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                        <WrapPanel Margin="0,0,0,12">
-                            <Button Style="{StaticResource RewiredPrimaryButton}" Content="Launch Steam" Margin="0,0,8,8"
-                                    Click="LaunchSteam_Click"
-                                    ToolTip="Start Steam with the Rewired stack loaded." />
-                            <Button Content="Set up Rewired" Margin="0,0,8,8" Click="SetupWizard_Click" />
-                            <Button Content="Refresh status" Margin="0,0,8,8" Click="RefreshUnlock_Click" />
-                            <Button Content="Install OpenSteamTool" Margin="0,0,8,8" Click="InstallOst_Click" />
-                            <Button Content="Check for updates" Margin="0,0,8,8" Click="CheckUpdates_Click" />
+            <ScrollViewer x:Name="ContentScroll" VerticalScrollBarVisibility="Auto" Padding="32,28,32,20">
+                <Grid MaxWidth="820" HorizontalAlignment="Left">
+
+                    <!-- HOME -->
+                    <StackPanel x:Name="PageHome" Visibility="Visible">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Home" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Launch Steam with your unlock stack and in-Steam Rewired UI loaded." />
+
+                        <UniformGrid Columns="3" Margin="0,0,0,24">
+                            <Border Style="{StaticResource RewiredCard}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RewiredStatLabel}" Text="UNLOCK" />
+                                    <TextBlock x:Name="HomeUnlockBadge" Style="{StaticResource RewiredStatValue}" Text="—" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource RewiredCard}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RewiredStatLabel}" Text="PLUGIN" />
+                                    <TextBlock x:Name="HomePluginBadge" Style="{StaticResource RewiredStatValue}" Text="—" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource RewiredCard}" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RewiredStatLabel}" Text="RYUU" />
+                                    <TextBlock x:Name="HomeRyuuBadge" Style="{StaticResource RewiredStatValue}" Text="—" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <Button Style="{StaticResource RewiredPrimaryButton}" Content="Launch Steam"
+                                HorizontalAlignment="Left" MinWidth="200" Margin="0,0,0,20"
+                                Click="LaunchSteam_Click" />
+
+                        <WrapPanel Margin="0,0,0,16">
+                            <Button Style="{StaticResource RewiredGhostButton}" Content="Set up Rewired"
+                                    Margin="0,0,10,10" Click="SetupWizard_Click" />
+                            <Button Style="{StaticResource RewiredGhostButton}" Content="Refresh status"
+                                    Margin="0,0,10,10" Click="RefreshUnlock_Click" />
+                            <Button Style="{StaticResource RewiredGhostButton}" Content="Check for updates"
+                                    Margin="0,0,10,10" Click="CheckUpdates_Click" />
                         </WrapPanel>
-                        <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" Foreground="{StaticResource SteamTextMuted}" Margin="0,0,0,8" />
-                        <TextBlock Style="{StaticResource RewiredSubtitle}" x:Name="SharedConfigPathText" />
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
 
-            <TabItem Header="Add game">
-                <StackPanel Margin="14">
-                    <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Add via Ryuu" />
-                    <TextBlock Style="{StaticResource RewiredSubtitle}"
-                               Text="Writes .lua to the unlock directory and manifests to depotcache. Requires Ryuu session in Secrets."
-                               Margin="0,0,0,12" />
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="200" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="AppID" VerticalAlignment="Center" Foreground="{StaticResource SteamTextSecondary}" />
-                        <TextBox Grid.Column="1" x:Name="AppIdBox" />
-                        <Button Grid.Column="2" Style="{StaticResource RewiredPrimaryButton}"
-                                Content="Download &amp; install" Margin="12,0,0,0" Click="AddGame_Click" />
-                    </Grid>
-                    <TextBlock x:Name="AddGameResultText" TextWrapping="Wrap" Foreground="{StaticResource SteamTextSecondary}" />
-                </StackPanel>
-            </TabItem>
-
-            <TabItem Header="Secrets">
-                <StackPanel Margin="14">
-                    <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Plugin secrets" />
-                    <TextBlock Style="{StaticResource RewiredSubtitle}"
-                               Text="Stored in the live plugin tree (gitignored). Values stay on disk; they are not logged."
-                               Margin="0,0,0,12" />
-                    <TextBlock x:Name="SecretsPathText" Foreground="{StaticResource SteamTextMuted}" TextWrapping="Wrap" Margin="0,0,0,12" />
-
-                    <TextBlock Text="Ryuu session cookie" Foreground="{StaticResource SteamTextSecondary}" Margin="0,0,0,4" />
-                    <TextBox x:Name="RyuuSessionBox" Margin="0,0,0,12" />
-
-                    <TextBlock Text="ManifestHub API key" Foreground="{StaticResource SteamTextSecondary}" Margin="0,0,0,4" />
-                    <TextBox x:Name="ManifestHubKeyBox" Margin="0,0,0,12" />
-
-                    <WrapPanel Margin="0,0,0,12">
-                        <Button Content="Load" Margin="0,0,8,8" Click="LoadSecrets_Click" />
-                        <Button Style="{StaticResource RewiredPrimaryButton}" Content="Save secrets" Margin="0,0,8,8" Click="SaveSecrets_Click" />
-                        <Button Content="Test Ryuu" Margin="0,0,8,8" Click="TestRyuu_Click" />
-                        <Button Content="Test ManifestHub" Margin="0,0,8,8" Click="TestManifestHub_Click" />
-                    </WrapPanel>
-                    <TextBlock x:Name="SecretsResultText" TextWrapping="Wrap" Foreground="{StaticResource SteamTextSecondary}" />
-                </StackPanel>
-            </TabItem>
-
-            <TabItem Header="Plugin">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Plugin path" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{StaticResource SteamTextSecondary}" />
-                        <TextBox Grid.Column="1" x:Name="PluginPathBox" />
-                        <Button Grid.Column="2" Content="Inspect" Margin="10,0,0,0" Click="Inspect_Click" />
-                        <Button Grid.Column="3" Content="Probe sources" Margin="10,0,0,0" Click="Probe_Click" />
-                    </Grid>
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="340" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource RewiredPanel}" Margin="0,0,12,0">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <TextBlock x:Name="PluginStatusText" Text="Not inspected." TextWrapping="Wrap" Foreground="{StaticResource SteamTextSecondary}" />
-                            </ScrollViewer>
+                        <Border Style="{StaticResource RewiredPanel}">
+                            <StackPanel>
+                                <TextBlock Text="Stack status" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,10" />
+                                <TextBlock x:Name="UnlockStatusText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextSecondary}" LineHeight="20" />
+                                <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextMuted}" Margin="0,12,0,0" />
+                            </StackPanel>
                         </Border>
-                        <Border Grid.Column="1" Style="{StaticResource RewiredPanel}">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Source health" FontWeight="SemiBold" Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
-                                <ListBox x:Name="ProbeResultsList" />
+                    </StackPanel>
+
+                    <!-- ADD -->
+                    <StackPanel x:Name="PageAdd" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Add game" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Search the Ryuu catalog, enter an AppID, or install from local files." />
+
+                        <Border Style="{StaticResource RewiredPanel}" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Catalog search" />
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="CatalogSearchBox" />
+                                    <Button Grid.Column="1" Style="{StaticResource RewiredGhostButton}"
+                                            Content="Search" Margin="12,0,0,0" Click="SearchCatalog_Click" />
+                                    <Button Grid.Column="2" Style="{StaticResource RewiredGhostButton}"
+                                            Content="Warm cache" Margin="8,0,0,0" Click="WarmCatalog_Click" />
+                                </Grid>
+                                <TextBlock x:Name="CatalogSearchStatusText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextMuted}" FontSize="11" Margin="0,0,0,8" />
+                                <ListBox x:Name="CatalogResultsList" MinHeight="180" MaxHeight="280"
+                                         SelectionChanged="CatalogResultsList_SelectionChanged"
+                                         Background="{StaticResource SteamBgDeep}" />
+                                <Button Style="{StaticResource RewiredPrimaryButton}" Content="Install selected"
+                                        HorizontalAlignment="Left" Margin="0,12,0,0" Click="InstallSelectedCatalog_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="520" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Steam AppID" />
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="AppIdBox" />
+                                    <Button Grid.Column="1" Style="{StaticResource RewiredPrimaryButton}"
+                                            Content="Download &amp; install" Margin="12,0,0,0" Click="AddGame_Click" />
+                                </Grid>
+                                <TextBlock x:Name="AddGameResultText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextSecondary}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="520">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Local file" />
+                                <TextBlock Style="{StaticResource RewiredSubtitle}"
+                                           Text="Install a .lua, .manifest, or .zip archive from disk."
+                                           Margin="0,0,0,12" />
+                                <Button Style="{StaticResource RewiredGhostButton}" Content="Browse and install…"
+                                        HorizontalAlignment="Left" Click="InstallLocalFile_Click" />
+                                <TextBlock x:Name="LocalFileResultText" TextWrapping="Wrap" Margin="0,12,0,0"
+                                           Foreground="{StaticResource SteamTextSecondary}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- MANAGE -->
+                    <StackPanel x:Name="PageManage" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Manage" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Installed unlock scripts and depot manifests on disk." />
+
+                        <UniformGrid Columns="2" Margin="0,0,0,16">
+                            <Border Style="{StaticResource RewiredCard}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RewiredStatLabel}" Text="LUA SCRIPTS" />
+                                    <TextBlock x:Name="ManageLuaCountText" Style="{StaticResource RewiredStatValue}" Text="0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource RewiredCard}" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource RewiredStatLabel}" Text="MANIFESTS" />
+                                    <TextBlock x:Name="ManageManifestCountText" Style="{StaticResource RewiredStatValue}" Text="0" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock x:Name="ManagePathsText" TextWrapping="Wrap"
+                                   Foreground="{StaticResource SteamTextMuted}" FontSize="11" Margin="0,0,0,12" />
+
+                        <Border Style="{StaticResource RewiredPanel}">
+                            <DockPanel MinHeight="280">
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Refresh list"
+                                            Margin="0,0,10,10" Click="RefreshManage_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Open lua folder"
+                                            Margin="0,0,10,10" Click="OpenLuaFolder_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Open depot folder"
+                                            Margin="0,0,10,10" Click="OpenDepotFolder_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Remove selected"
+                                            Margin="0,0,10,10" Click="RemoveScript_Click" />
+                                </WrapPanel>
+                                <ListBox x:Name="InstalledScriptsList" MinHeight="220"
+                                         Background="{StaticResource SteamBgDeep}" />
                             </DockPanel>
                         </Border>
-                    </Grid>
+                    </StackPanel>
+
+                    <!-- MODE -->
+                    <StackPanel x:Name="PageMode" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Mode" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Choose unlock backend and optional cloud-save tools. Rewired never patches Steam silently." />
+
+                        <StackPanel Margin="0,0,0,20">
+                            <Border Style="{StaticResource RewiredPanel}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="OpenSteamTool" FontWeight="SemiBold" Foreground="{StaticResource SteamAccent}" />
+                                    <TextBlock x:Name="ModeOstStatusText" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               Foreground="{StaticResource SteamTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource RewiredPanel}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="SteamTools" FontWeight="SemiBold" Foreground="{StaticResource SteamAccent}" />
+                                    <TextBlock x:Name="ModeSteamToolsStatusText" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               Foreground="{StaticResource SteamTextSecondary}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource RewiredPanel}">
+                                <StackPanel>
+                                    <TextBlock Text="CloudRedirect" FontWeight="SemiBold" Foreground="{StaticResource SteamAccent}" />
+                                    <TextBlock x:Name="ModeCloudRedirectStatusText" TextWrapping="Wrap" Margin="0,6,0,0"
+                                               Foreground="{StaticResource SteamTextSecondary}" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Launch CloudRedirect"
+                                            HorizontalAlignment="Left" Margin="0,12,0,0" Click="LaunchCloudRedirect_Click" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="560">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Unlock backend preference" />
+                                <ComboBox x:Name="BackendCombo" Margin="0,0,0,16" />
+                                <Button Style="{StaticResource RewiredPrimaryButton}" Content="Install OpenSteamTool"
+                                        HorizontalAlignment="Left" Click="InstallOst_Click" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- FIXES -->
+                    <StackPanel x:Name="PageFixes" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Fixes" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Game fixes and Denuvo patches live in the in-Steam Rewired menu. Manager can validate your Ryuu fixes access." />
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="560" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="In-Steam fixes panel" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
+                                <TextBlock Style="{StaticResource RewiredSubtitle}"
+                                           Text="Launch Steam, open any game library view, then use the Rewired menu → Fixes. That panel uses the same safe pipeline as the plugin (preview, attribution, unfix)."
+                                           Margin="0,0,0,16" />
+                                <Button Style="{StaticResource RewiredPrimaryButton}" Content="Launch Steam"
+                                        HorizontalAlignment="Left" Click="LaunchSteam_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="560">
+                            <StackPanel>
+                                <TextBlock Text="Ryuu fixes API" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
+                                <TextBlock Style="{StaticResource RewiredSubtitle}"
+                                           Text="Checks generator.ryuu.lol/fixes with your saved session (Settings tab)."
+                                           Margin="0,0,0,12" />
+                                <Button Style="{StaticResource RewiredGhostButton}" Content="Test Ryuu fixes endpoint"
+                                        HorizontalAlignment="Left" Click="TestRyuuFixes_Click" />
+                                <TextBlock x:Name="FixesResultText" TextWrapping="Wrap" Margin="0,12,0,0"
+                                           Foreground="{StaticResource SteamTextSecondary}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- PLUGIN -->
+                    <StackPanel x:Name="PagePlugin" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Plugin" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Millennium in-Steam UI, source health, and deploy from your dev repo." />
+
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Plugin path" VerticalAlignment="Center" Margin="0,0,12,0"
+                                       Foreground="{StaticResource SteamTextSecondary}" />
+                            <TextBox Grid.Column="1" x:Name="PluginPathBox" />
+                            <Button Grid.Column="2" Style="{StaticResource RewiredGhostButton}" Content="Inspect"
+                                    Margin="10,0,0,0" Click="Inspect_Click" />
+                            <Button Grid.Column="3" Style="{StaticResource RewiredGhostButton}" Content="Probe sources"
+                                    Margin="10,0,0,0" Click="Probe_Click" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource RewiredPanel}" Margin="0,0,10,0" MinHeight="220">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <TextBlock x:Name="PluginStatusText" Text="Not inspected."
+                                               TextWrapping="Wrap" Foreground="{StaticResource SteamTextSecondary}" />
+                                </ScrollViewer>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource RewiredPanel}" MinHeight="220">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="Source health" FontWeight="SemiBold"
+                                               Foreground="{StaticResource SteamAccent}" Margin="0,0,0,10" />
+                                    <ListBox x:Name="ProbeResultsList"
+                                             Background="{StaticResource SteamBgDeep}" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Text="Deploy from repo" FontWeight="SemiBold"
+                                   Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
+                        <TextBlock Style="{StaticResource RewiredSubtitle}"
+                                   Text="Runs deploy.ps1 with backup. Close Steam first for Millennium runtime updates."
+                                   Margin="0,0,0,12" />
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Repo root" VerticalAlignment="Center"
+                                       Foreground="{StaticResource SteamTextSecondary}" />
+                            <TextBox Grid.Column="1" x:Name="RepoRootBox" />
+                            <Button Grid.Column="2" Style="{StaticResource RewiredPrimaryButton}"
+                                    Content="Deploy" Margin="12,0,0,0" Click="Deploy_Click" />
+                            <Button Grid.Column="3" Style="{StaticResource RewiredGhostButton}"
+                                    Content="Restore backup" Margin="8,0,0,0" Click="RestorePlugin_Click" />
+                        </Grid>
+                        <Border Style="{StaticResource RewiredPanel}" Margin="0,0,0,12">
+                            <DockPanel MinHeight="100">
+                                <TextBlock DockPanel.Dock="Top" Text="Plugin backups" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Refresh backups"
+                                            Click="RefreshBackups_Click" />
+                                </WrapPanel>
+                                <ListBox x:Name="PluginBackupsList" MinHeight="80"
+                                         Background="{StaticResource SteamBgDeep}" />
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource RewiredPanel}" Padding="0">
+                            <TextBox x:Name="DeployLogBox" Style="{StaticResource RewiredLogBox}"
+                                     MinHeight="160" Padding="12" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- SETTINGS -->
+                    <StackPanel x:Name="PageSettings" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Settings" />
+                        <TextBlock Style="{StaticResource RewiredPageSubtitle}"
+                                   Text="Paths and API secrets for Ryuu and ManifestHub." />
+
+                        <Border Style="{StaticResource RewiredPanel}" Margin="0,0,0,16" MaxWidth="560">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Steam install folder" />
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SteamPathBox" />
+                                    <Button Grid.Column="1" Style="{StaticResource RewiredPrimaryButton}"
+                                            Content="Save" Margin="12,0,0,0" Click="SaveConfig_Click" />
+                                </Grid>
+                                <TextBlock x:Name="SharedConfigPathText" Foreground="{StaticResource SteamTextMuted}"
+                                           FontSize="11" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="560">
+                            <StackPanel>
+                                <TextBlock Text="Secrets" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,6" />
+                                <TextBlock x:Name="SecretsPathText" Foreground="{StaticResource SteamTextMuted}"
+                                           TextWrapping="Wrap" Margin="0,0,0,16" />
+
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="Ryuu session cookie" />
+                                <TextBox x:Name="RyuuSessionBox" Margin="0,0,0,14" />
+
+                                <TextBlock Style="{StaticResource RewiredFieldLabel}" Text="ManifestHub API key" />
+                                <TextBox x:Name="ManifestHubKeyBox" Margin="0,0,0,16" />
+
+                                <WrapPanel>
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Load"
+                                            Margin="0,0,10,10" Click="LoadSecrets_Click" />
+                                    <Button Style="{StaticResource RewiredPrimaryButton}" Content="Save secrets"
+                                            Margin="0,0,10,10" Click="SaveSecrets_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Test Ryuu"
+                                            Margin="0,0,10,10" Click="TestRyuu_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Test ManifestHub"
+                                            Margin="0,0,10,10" Click="TestManifestHub_Click" />
+                                    <Button Style="{StaticResource RewiredGhostButton}" Content="Load Hubcap stats"
+                                            Margin="0,0,10,10" Click="LoadHubcapStats_Click" />
+                                </WrapPanel>
+                                <TextBlock x:Name="HubcapStatsText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextSecondary}" Margin="0,4,0,12" />
+                                <TextBlock x:Name="SecretsResultText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextSecondary}" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource RewiredPanel}" MaxWidth="560" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Diagnostics" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SteamAccent}" Margin="0,0,0,8" />
+                                <TextBlock Style="{StaticResource RewiredSubtitle}"
+                                           Text="Export a redacted support bundle (paths, health, log tail). Secrets are masked."
+                                           Margin="0,0,0,12" />
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Optional AppID" VerticalAlignment="Center" Margin="0,0,12,0"
+                                               Foreground="{StaticResource SteamTextSecondary}" />
+                                    <TextBox Grid.Column="1" x:Name="DiagnosticsAppIdBox" />
+                                    <Button Grid.Column="2" Style="{StaticResource RewiredPrimaryButton}"
+                                            Content="Export bundle" Margin="12,0,0,0" Click="ExportDiagnostics_Click" />
+                                </Grid>
+                                <TextBlock x:Name="DiagnosticsResultText" TextWrapping="Wrap"
+                                           Foreground="{StaticResource SteamTextSecondary}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
                 </Grid>
-            </TabItem>
+            </ScrollViewer>
 
-            <TabItem Header="Deploy">
-                <StackPanel Margin="14">
-                    <TextBlock Style="{StaticResource RewiredSectionTitle}" Text="Deploy plugin from repo" />
-                    <TextBlock Style="{StaticResource RewiredSubtitle}"
-                               Text="Runs deploy.ps1 (backup-preserving). Steam should be closed for Millennium runtime updates."
-                               Margin="0,0,0,12" />
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Repo root" VerticalAlignment="Center" Foreground="{StaticResource SteamTextSecondary}" />
-                        <TextBox Grid.Column="1" x:Name="RepoRootBox" />
-                    </Grid>
-                    <Button Style="{StaticResource RewiredPrimaryButton}" Content="Deploy Rewired plugin" HorizontalAlignment="Left" Click="Deploy_Click" />
-                    <TextBox x:Name="DeployLogBox" Margin="0,12,0,0" MinHeight="200" TextWrapping="Wrap" AcceptsReturn="True"
-                             VerticalScrollBarVisibility="Auto" IsReadOnly="True" Padding="8" />
-                </StackPanel>
-            </TabItem>
-        </TabControl>
-
-        <TextBlock Grid.Row="2" x:Name="FooterText" Text="Ready." Foreground="{StaticResource SteamTextMuted}" Margin="0,10,0,0" />
+            <Border Grid.Row="1" Background="{StaticResource SteamBgDeep}"
+                    BorderBrush="{StaticResource SteamBorderSubtle}" BorderThickness="0,1,0,0" Padding="32,10">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="FooterMillenniumText"
+                                   Foreground="{StaticResource SteamTextMuted}" FontSize="11"
+                                   Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="FooterVersionText"
+                                   Foreground="{StaticResource SteamTextMuted}" FontSize="11"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="FooterText" Text="Ready."
+                               Foreground="{StaticResource SteamTextMuted}" FontSize="12" />
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

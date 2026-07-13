@@ -104,4 +104,7 @@ backend/data/cookies*.txt
 
 # local release zips (build with scripts/build_release.ps1 and manager/scripts/publish-manager.ps1)
 releases/*.zip
+
+# Private reverse-engineering artifacts (local ilspycmd output)
+docs/gen2/decompiled/
 NUL

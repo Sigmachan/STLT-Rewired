@@ -1,5 +1,8 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using Microsoft.Win32;
 using RewiredManager.App.Models;
 using RewiredManager.App.Services;
 
@@ -19,10 +22,21 @@ public partial class MainWindow : Window
     private readonly SecretValidationService _secretValidation = new();
     private readonly ManagerUpdateService _managerUpdate = new();
     private readonly RewiredSetupService _setup = new();
+    private readonly CloudRedirectAssistantService _cloudRedirect = new();
+    private readonly InstalledInventoryService _inventory = new();
+    private readonly RyuuCatalogService _catalog = new();
+    private readonly HubcapStatsService _hubcapStats = new();
+    private readonly DiagnosticsBundleService _diagnostics = new();
+    private readonly PluginBackupService _pluginBackups = new();
+    private readonly LocalFileInstallService _localInstall = new();
+    private readonly MillenniumInfoService _millenniumInfo = new();
 
     private RewiredSharedConfig _config = new();
     private UnlockBackendStatus? _unlockStatus;
     private PluginDiscoveryResult? _lastDiscovery;
+    private IReadOnlyList<RyuuCatalogEntry> _catalogResults = Array.Empty<RyuuCatalogEntry>();
+
+    private bool _navReady;
 
     public MainWindow()
     {
@@ -34,6 +48,35 @@ public partial class MainWindow : Window
         LoadSecretsFields();
         _ = RefreshUpdateStatusAsync();
         Loaded += MainWindow_Loaded;
+        _navReady = true;
+        FooterVersionText.Text = "Rewired " + typeof(MainWindow).Assembly.GetName().Version?.ToString(3);
+        RefreshMillenniumFooter();
+        NavList.SelectedIndex = 0;
+        ShowPage("home");
+    }
+
+    private void NavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_navReady) return;
+        if (NavList.SelectedItem is ListBoxItem item && item.Tag is string tag)
+            ShowPage(tag);
+    }
+
+    private void ShowPage(string tag)
+    {
+        if (PageHome == null) return;
+        PageHome.Visibility = tag == "home" ? Visibility.Visible : Visibility.Collapsed;
+        PageAdd.Visibility = tag == "add" ? Visibility.Visible : Visibility.Collapsed;
+        PageManage.Visibility = tag == "manage" ? Visibility.Visible : Visibility.Collapsed;
+        PageMode.Visibility = tag == "mode" ? Visibility.Visible : Visibility.Collapsed;
+        PageFixes.Visibility = tag == "fixes" ? Visibility.Visible : Visibility.Collapsed;
+        PagePlugin.Visibility = tag == "plugin" ? Visibility.Visible : Visibility.Collapsed;
+        PageSettings.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
+        ContentScroll.ScrollToVerticalOffset(0);
+        if (tag == "manage")
+            RefreshManageList();
+        if (tag == "plugin")
+            RefreshBackupList();
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -168,6 +211,11 @@ public partial class MainWindow : Window
                 $"LumaCore: {YesNo(s.LumaCoreDll)}",
                 $"Ready to add games: {YesNo(s.ReadyForAdd)}",
             });
+            RefreshCloudRedirectStatus(s.SteamPath);
+            RefreshModeCards(s);
+            RefreshHomeBadges();
+            RefreshMillenniumFooter();
+            SidebarStatusText.Text = s.ReadyForAdd ? "Stack ready" : "Setup needed";
             FooterText.Text = s.ReadyForAdd
                 ? "Unlock stack looks ready."
                 : "Install OpenSteamTool or SteamTools, then restart Steam.";
@@ -183,6 +231,392 @@ public partial class MainWindow : Window
     {
         SaveConfigSilently();
         RefreshUnlockStatus();
+    }
+
+    private void RefreshManage_Click(object sender, RoutedEventArgs e)
+    {
+        SaveConfigSilently();
+        RefreshUnlockStatus();
+        RefreshManageList();
+    }
+
+    private void RefreshCloudRedirectStatus(string? steamPath)
+    {
+        var detect = _cloudRedirect.Detect(steamPath);
+        var text = detect.Detected
+            ? "Detected on disk:\n" + string.Join(Environment.NewLine, detect.Paths)
+            : "Not detected. Launch downloads to %LOCALAPPDATA%\\Rewired\\cloudredirect\\.";
+        ModeCloudRedirectStatusText.Text = text;
+    }
+
+    private void RefreshModeCards(UnlockBackendStatus s)
+    {
+        var ostActive = s.Resolved == UnlockBackendKind.OpenSteamTool;
+        ModeOstStatusText.Text = s.OpenSteamToolDll
+            ? (ostActive ? "Active — OpenSteamTool.dll present." : "Installed — switch preference to OpenSteamTool to use it.")
+            : "Not installed — use Install OpenSteamTool below.";
+
+        var stActive = s.Resolved == UnlockBackendKind.SteamTools;
+        ModeSteamToolsStatusText.Text = s.SteamToolsMarkers
+            ? (stActive ? "Active — SteamTools markers found." : "Detected — set preference to SteamTools if intentional.")
+            : "Not detected — install SteamTools manually if you need that stack.";
+    }
+
+    private void RefreshManageList()
+    {
+        InstalledScriptsList.Items.Clear();
+        if (_unlockStatus == null)
+        {
+            ManageLuaCountText.Text = "—";
+            ManageManifestCountText.Text = "—";
+            ManagePathsText.Text = "";
+            InstalledScriptsList.Items.Add("Refresh status on Home first.");
+            return;
+        }
+
+        var summary = _inventory.Scan(_unlockStatus);
+        ManageLuaCountText.Text = summary.LuaScripts.Count.ToString();
+        ManageManifestCountText.Text = summary.Manifests.Count.ToString();
+        ManagePathsText.Text = $"Lua: {summary.LuaDirectory}{Environment.NewLine}Depot: {summary.DepotCacheDirectory}";
+
+        if (summary.LuaScripts.Count == 0)
+        {
+            InstalledScriptsList.Items.Add("No .lua scripts installed yet.");
+            return;
+        }
+
+        foreach (var file in summary.LuaScripts)
+            InstalledScriptsList.Items.Add(file);
+    }
+
+    private void RefreshMillenniumFooter()
+    {
+        var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath() ?? "";
+        var mil = _millenniumInfo.Inspect(steam);
+        FooterMillenniumText.Text = mil.Installed
+            ? $"Millennium {mil.Version}" + (mil.VersionCompatible ? "" : " (update recommended)")
+            : "Millennium not detected";
+    }
+
+    private void RefreshBackupList()
+    {
+        PluginBackupsList.Items.Clear();
+        var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath();
+        if (string.IsNullOrWhiteSpace(steam))
+        {
+            PluginBackupsList.Items.Add("Set Steam path first.");
+            return;
+        }
+
+        var backups = _pluginBackups.ListBackups(steam);
+        if (backups.Count == 0)
+        {
+            PluginBackupsList.Items.Add("No plugin backups yet (deploy creates one).");
+            return;
+        }
+
+        foreach (var backup in backups)
+            PluginBackupsList.Items.Add($"{backup.Name} ({backup.CreatedUtc:yyyy-MM-dd HH:mm} UTC)");
+    }
+
+    private async void SearchCatalog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CatalogSearchStatusText.Text = "Searching…";
+            CatalogResultsList.Items.Clear();
+            _catalogResults = Array.Empty<RyuuCatalogEntry>();
+
+            var query = CatalogSearchBox.Text.Trim();
+            var pluginPath = PluginPathBox.Text.Trim();
+            var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
+            if (string.IsNullOrWhiteSpace(cookie))
+                cookie = RyuuSessionBox.Text;
+
+            var result = await _catalog.SearchAsync(query, cookie);
+            _catalogResults = result.Results;
+            CatalogSearchStatusText.Text = result.Message;
+
+            foreach (var entry in result.Results)
+                CatalogResultsList.Items.Add($"{entry.AppId} — {entry.Name} ({entry.Source})");
+
+            if (result.Results.Count == 0 && !result.Success)
+                CatalogSearchStatusText.Text = result.Message;
+        }
+        catch (Exception ex)
+        {
+            CatalogSearchStatusText.Text = ex.Message;
+        }
+    }
+
+    private async void WarmCatalog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            CatalogSearchStatusText.Text = "Downloading Ryuu catalog (~40 MB, first run may take a minute)…";
+            var pluginPath = PluginPathBox.Text.Trim();
+            var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
+            if (string.IsNullOrWhiteSpace(cookie))
+                cookie = RyuuSessionBox.Text;
+
+            var warm = await _catalog.WarmCacheAsync(cookie);
+            CatalogSearchStatusText.Text = warm.Message;
+            FooterText.Text = warm.Success ? "Catalog cache ready." : "Catalog cache failed.";
+        }
+        catch (Exception ex)
+        {
+            CatalogSearchStatusText.Text = ex.Message;
+        }
+    }
+
+    private void CatalogResultsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CatalogResultsList.SelectedIndex < 0 || CatalogResultsList.SelectedIndex >= _catalogResults.Count)
+            return;
+        AppIdBox.Text = _catalogResults[CatalogResultsList.SelectedIndex].AppId.ToString();
+    }
+
+    private void InstallSelectedCatalog_Click(object sender, RoutedEventArgs e)
+    {
+        if (CatalogResultsList.SelectedIndex < 0 || CatalogResultsList.SelectedIndex >= _catalogResults.Count)
+        {
+            AddGameResultText.Text = "Select a game from the catalog first.";
+            return;
+        }
+
+        AppIdBox.Text = _catalogResults[CatalogResultsList.SelectedIndex].AppId.ToString();
+        AddGame_Click(sender, e);
+    }
+
+    private async void InstallLocalFile_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            RefreshUnlockStatus();
+            if (_unlockStatus == null)
+            {
+                LocalFileResultText.Text = "Unlock status unavailable.";
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Unlock files|*.lua;*.manifest;*.zip|All files|*.*",
+                Title = "Select unlock file"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+
+            FooterText.Text = "Installing local file…";
+            LocalFileResultText.Text = "Installing…";
+            var result = await _localInstall.InstallFromFileAsync(dialog.FileName, _unlockStatus);
+            LocalFileResultText.Text = result.Message;
+            FooterText.Text = result.Success ? "Local file installed." : "Local install failed.";
+            if (result.Success)
+                RefreshManageList();
+        }
+        catch (Exception ex)
+        {
+            LocalFileResultText.Text = ex.Message;
+            FooterText.Text = "Local install failed.";
+        }
+    }
+
+    private void OpenLuaFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_unlockStatus == null) throw new InvalidOperationException("Refresh unlock status first.");
+            InstalledInventoryService.OpenFolder(_unlockStatus.LuaScriptDir);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Open folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void OpenDepotFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_unlockStatus == null) throw new InvalidOperationException("Refresh unlock status first.");
+            InstalledInventoryService.OpenFolder(_unlockStatus.DepotCacheDir);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Open folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void RemoveScript_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_unlockStatus == null)
+            {
+                MessageBox.Show(this, "Refresh unlock status first.", "Remove script", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (InstalledScriptsList.SelectedItem is not string fileName)
+            {
+                MessageBox.Show(this, "Select a script to remove.", "Remove script", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (MessageBox.Show(this, $"Remove {fileName}?", "Remove script", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            var result = _inventory.RemoveLuaScript(_unlockStatus, fileName);
+            FooterText.Text = result.Message;
+            if (!result.Success)
+                MessageBox.Show(this, result.Message, "Remove script", MessageBoxButton.OK, MessageBoxImage.Warning);
+            RefreshManageList();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Remove script", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void LoadHubcapStats_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            HubcapStatsText.Text = "Loading ManifestHub stats…";
+            var stats = await _hubcapStats.FetchAsync(ManifestHubKeyBox.Text);
+            HubcapStatsText.Text = stats.Message;
+        }
+        catch (Exception ex)
+        {
+            HubcapStatsText.Text = ex.Message;
+        }
+    }
+
+    private async void ExportDiagnostics_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            DiagnosticsResultText.Text = "Building support bundle…";
+            var pluginPath = PluginPathBox.Text.Trim();
+            var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
+            if (string.IsNullOrWhiteSpace(cookie))
+                cookie = RyuuSessionBox.Text;
+
+            _ = int.TryParse(DiagnosticsAppIdBox.Text.Trim(), out var appId);
+
+            var result = await _diagnostics.ExportAsync(_config, pluginPath, cookie, appId);
+            DiagnosticsResultText.Text = result.Success
+                ? result.Message + Environment.NewLine + result.Path
+                : result.Message;
+            FooterText.Text = result.Success ? "Diagnostics exported." : "Diagnostics export failed.";
+
+            if (result.Success && !string.IsNullOrWhiteSpace(result.Path))
+            {
+                var open = MessageBox.Show(this, "Open the diagnostics folder?", "Diagnostics",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (open == MessageBoxResult.Yes)
+                    InstalledInventoryService.OpenFolder(Path.GetDirectoryName(result.Path)!);
+            }
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsResultText.Text = ex.Message;
+        }
+    }
+
+    private void RefreshBackups_Click(object sender, RoutedEventArgs e) => RefreshBackupList();
+
+    private async void RestorePlugin_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            var repo = RepoRootBox.Text.Trim();
+            var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath()
+                ?? throw new InvalidOperationException("Set Steam path first.");
+
+            if (MessageBox.Show(this,
+                    "Restore the latest plugin backup? Close Steam first if Millennium is running.",
+                    "Restore plugin",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            DeployLogBox.Text = "Running deploy.ps1 -Restore…";
+            FooterText.Text = "Restoring plugin backup…";
+            var (ok, output) = await _deploy.RestoreAsync(repo, steam);
+            DeployLogBox.Text = output;
+            FooterText.Text = ok ? "Plugin restored." : "Restore failed.";
+            InspectPlugin();
+            RefreshBackupList();
+        }
+        catch (Exception ex)
+        {
+            DeployLogBox.Text = ex.ToString();
+            FooterText.Text = "Restore error.";
+        }
+    }
+
+    private void RefreshHomeBadges()
+    {
+        var unlockOk = _unlockStatus?.ReadyForAdd == true;
+        SetBadge(HomeUnlockBadge, unlockOk ? "Ready" : "Setup", unlockOk);
+
+        var pluginOk = _lastDiscovery?.LooksUsable == true;
+        SetBadge(HomePluginBadge, pluginOk ? "OK" : "Missing", pluginOk);
+
+        var pluginPath = PluginPathBox.Text.Trim();
+        var hasRyuu = !string.IsNullOrWhiteSpace(_secrets.Load(pluginPath).RyuuSession);
+        SetBadge(HomeRyuuBadge, hasRyuu ? "Set" : "Empty", hasRyuu);
+    }
+
+    private void SetBadge(TextBlock block, string text, bool ok)
+    {
+        block.Text = text;
+        block.Foreground = ok
+            ? (Brush)FindResource("SteamSuccess")
+            : (Brush)FindResource("SteamWarn");
+    }
+
+    private async void TestRyuuFixes_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            FixesResultText.Text = "Testing Ryuu fixes endpoint…";
+            var pluginPath = PluginPathBox.Text.Trim();
+            var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
+            if (string.IsNullOrWhiteSpace(cookie))
+                cookie = RyuuSessionBox.Text;
+
+            var result = await _secretValidation.ValidateRyuuFixesAsync(cookie);
+            FixesResultText.Text = result.Message;
+        }
+        catch (Exception ex)
+        {
+            FixesResultText.Text = ex.Message;
+        }
+    }
+
+    private async void LaunchCloudRedirect_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SaveConfigSilently();
+            FooterText.Text = "Preparing CloudRedirect…";
+            var result = await _cloudRedirect.LaunchAsync();
+            RefreshCloudRedirectStatus(_config.SteamPath);
+            FooterText.Text = result.Success ? "CloudRedirect launched." : "CloudRedirect failed.";
+            if (!result.Success)
+                MessageBox.Show(this, result.Message, "CloudRedirect", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            FooterText.Text = "CloudRedirect error.";
+            MessageBox.Show(this, ex.Message, "CloudRedirect", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void InstallOst_Click(object sender, RoutedEventArgs e)
@@ -325,6 +759,7 @@ public partial class MainWindow : Window
             SecretsResultText.Text = "Secrets saved.";
             FooterText.Text = "Secrets saved to plugin data directory.";
             InspectPlugin();
+            RefreshHomeBadges();
         }
         catch (Exception ex)
         {
@@ -344,6 +779,11 @@ public partial class MainWindow : Window
         SecretsResultText.Text = "Testing ManifestHub key…";
         var result = await _secretValidation.ValidateManifestHubAsync(ManifestHubKeyBox.Text);
         SecretsResultText.Text = result.Message;
+        if (result.Success)
+        {
+            var stats = await _hubcapStats.FetchAsync(ManifestHubKeyBox.Text);
+            HubcapStatsText.Text = stats.Message;
+        }
     }
 
     private void Inspect_Click(object sender, RoutedEventArgs e) => InspectPlugin();
@@ -355,10 +795,14 @@ public partial class MainWindow : Window
             InspectPlugin();
             var pluginPath = _lastDiscovery?.PluginPath ?? PluginPathBox.Text;
             var cookie = _secrets.ReadRyuuCookieHeader(pluginPath);
+            var hubKey = _secrets.Load(pluginPath).ManifestHubKey;
+            if (string.IsNullOrWhiteSpace(hubKey))
+                hubKey = ManifestHubKeyBox.Text;
+
             FooterText.Text = "Probing sources…";
             ProbeResultsList.Items.Clear();
 
-            var results = await _sourceHealth.ProbeAsync(cookie);
+            var results = await _sourceHealth.ProbeAsync(cookie, hubKey);
             foreach (var result in results)
             {
                 var marker = result.Success ? "OK" : "FAIL";
@@ -383,6 +827,20 @@ public partial class MainWindow : Window
             var repo = RepoRootBox.Text.Trim();
             var steam = _config.SteamPath ?? SteamInstallService.TryDetectSteamPath()
                 ?? throw new InvalidOperationException("Set Steam path first.");
+
+            if (_steamProcess.IsSteamRunning())
+            {
+                var proceed = MessageBox.Show(this,
+                    "Steam всё ещё запущен. Для обновления Millennium runtime лучше полностью закрыть Steam.\n\nПродолжить deploy?",
+                    "Deploy plugin",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (proceed != MessageBoxResult.Yes)
+                {
+                    FooterText.Text = "Deploy отменён — закройте Steam и повторите.";
+                    return;
+                }
+            }
 
             DeployLogBox.Text = "Running deploy.ps1…";
             FooterText.Text = "Deploying plugin…";
@@ -417,6 +875,7 @@ public partial class MainWindow : Window
             "",
             "Millennium plugin is optional when Manager + OpenSteamTool are used.",
         });
+        RefreshHomeBadges();
     }
 
     private void SaveConfigSilently()

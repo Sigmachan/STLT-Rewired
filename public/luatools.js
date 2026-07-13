@@ -4084,7 +4084,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         _stOverlayShell('🎮 Game Tools — AppID ' + appid, function (body, ov, colors) {
             function makeBtn(label, icon, onClick) {
                 var a = document.createElement('a');
-                a.href = '#'; a.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid ' + colors.borderRgba + ';border-radius:8px;color:${colors||c}.text;font-size:13px;text-decoration:none;cursor:pointer;transition:all 0.2s;';
+                a.href = '#'; a.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid ' + colors.borderRgba + ';border-radius:8px;color:' + colors.text + ';font-size:13px;text-decoration:none;cursor:pointer;transition:all 0.2s;';
                 a.innerHTML = '<i class="fa-solid ' + icon + '" style="width:20px;text-align:center;color:' + colors.accent + ';"></i><span>' + label + '</span>';
                 a.onmouseover = function () { this.style.background = 'rgba(255,255,255,0.08)'; this.style.borderColor = colors.accent; };
                 a.onmouseout = function () { this.style.background = 'rgba(255,255,255,0.04)'; this.style.borderColor = colors.borderRgba; };
@@ -6730,6 +6730,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         const rightButtons = document.createElement('div');
         rightButtons.style.cssText = 'display:flex;gap:8px;';
         const refreshBtn = createSettingsButton('refresh', '<i class="fa-solid fa-arrow-rotate-right"></i>');
+        const exportConfigBtn = createSettingsButton('export-config', '<i class="fa-solid fa-file-export"></i>');
+        const importConfigBtn = createSettingsButton('import-config', '<i class="fa-solid fa-file-import"></i>');
         const saveBtn = createSettingsButton('save', '<i class="fa-solid fa-floppy-disk"></i>', true);
 
         modal.appendChild(header);
@@ -6907,6 +6909,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         function applyStaticTranslations() {
             title.textContent = t('settings.title', 'Rewired · Settings');
             refreshBtn.title = t('settings.refresh', 'Refresh');
+            exportConfigBtn.title = t('settings.config.export', 'Export config');
+            importConfigBtn.title = t('settings.config.import', 'Import config');
             saveBtn.title = t('settings.save', 'Save Settings');
             backBtn.title = t('Back', 'Back');
             discordIconBtn.title = t('menu.discord', 'Discord');
@@ -7271,6 +7275,39 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             testBtn.innerHTML = '<span>' + t('settings.manifestHub.testKey', 'Test ManifestHub key') + '</span>';
                             const testStatus = document.createElement('span');
                             testStatus.style.cssText = 'font-size:12px;color:' + textColors.textSecondary + ';';
+                            const statsBtn = document.createElement('a');
+                            statsBtn.className = 'btnv6_blue_hoverfade btn_small';
+                            statsBtn.href = '#';
+                            statsBtn.innerHTML = '<span>' + t('settings.manifestHub.stats', 'Load usage stats') + '</span>';
+                            const statsStatus = document.createElement('span');
+                            statsStatus.style.cssText = 'font-size:12px;color:' + textColors.textSecondary + ';';
+                            statsBtn.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                var key = (state.draft[group.key][option.key] || textInput.value || '').trim();
+                                if (!key) {
+                                    statsStatus.textContent = t('settings.manifestHub.enterKey', 'Enter a key first.');
+                                    statsStatus.style.color = '#ff9800';
+                                    return;
+                                }
+                                statsStatus.textContent = t('settings.manifestHub.statsLoading', 'Loading stats…');
+                                statsStatus.style.color = textColors.textSecondary;
+                                _ltServer('GetManifestHubStats', { api_key: key, force_refresh: true, contentScriptQuery: '' }).then(function (raw) {
+                                    var p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                    if (!p) {
+                                        statsStatus.textContent = t('settings.manifestHub.testFailed', 'Test failed');
+                                        statsStatus.style.color = '#f44336';
+                                        return;
+                                    }
+                                    var usage = (p.daily_usage != null && p.daily_limit != null)
+                                        ? p.daily_usage + '/' + p.daily_limit
+                                        : ((p.dailyUsage != null && p.dailyLimit != null) ? p.dailyUsage + '/' + p.dailyLimit : '');
+                                    statsStatus.textContent = (p.username ? p.username + ' · ' : '') + (usage || 'OK');
+                                    statsStatus.style.color = '#4caf50';
+                                }).catch(function (err) {
+                                    statsStatus.textContent = String(err || t('settings.manifestHub.testFailed', 'Test failed'));
+                                    statsStatus.style.color = '#f44336';
+                                });
+                            });
                             testBtn.addEventListener('click', function (e) {
                                 e.preventDefault();
                                 var key = (state.draft[group.key][option.key] || textInput.value || '').trim();
@@ -7304,6 +7341,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             });
                             testRow.appendChild(testBtn);
                             testRow.appendChild(testStatus);
+                            testRow.appendChild(statsBtn);
+                            testRow.appendChild(statsStatus);
                             controlWrap.appendChild(testRow);
                         }
                     } else {
@@ -7861,10 +7900,76 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
         });
 
+        rightButtons.appendChild(exportConfigBtn);
+        rightButtons.appendChild(importConfigBtn);
         rightButtons.appendChild(refreshBtn);
         rightButtons.appendChild(saveBtn);
         btnRow.appendChild(backBtn);
         btnRow.appendChild(rightButtons);
+
+        exportConfigBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (exportConfigBtn.dataset.busy === '1') return;
+            exportConfigBtn.dataset.busy = '1';
+            setStatus(t('common.status.loading', 'Loading...'), '#c7d5e0');
+            _ltServer('ExportConfig', { contentScriptQuery: '' }).then(function (payload) {
+                if (!payload || payload.success !== true || !payload.config) {
+                    setStatus((payload && payload.error) || t('settings.config.importFailed', 'Config import failed.'), '#ff5c5c');
+                    return;
+                }
+                try {
+                    var blob = new Blob([JSON.stringify(payload.config, null, 2)], { type: 'application/json' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'rewired-config-' + Date.now() + '.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    setStatus(t('settings.config.exportSuccess', 'Config exported.'), '#8bc34a');
+                } catch (err) {
+                    setStatus(String(err), '#ff5c5c');
+                }
+            }).catch(function (err) {
+                setStatus(String(err && err.message ? err.message : err), '#ff5c5c');
+            }).finally(function () {
+                exportConfigBtn.dataset.busy = '0';
+            });
+        });
+
+        importConfigBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.style.display = 'none';
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0];
+                input.remove();
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function () {
+                    setStatus(t('common.status.loading', 'Loading...'), '#c7d5e0');
+                    _ltServer('ImportConfig', { config_json: String(reader.result || ''), contentScriptQuery: '' }).then(function (payload) {
+                        if (!payload || payload.success !== true) {
+                            var errText = (payload && payload.errors && payload.errors.length)
+                                ? payload.errors.join('; ')
+                                : ((payload && payload.error) || t('settings.config.importFailed', 'Config import failed.'));
+                            setStatus(errText, '#ff5c5c');
+                            return;
+                        }
+                        setStatus(t('settings.config.importSuccess', 'Config imported.'), '#8bc34a');
+                        handleLoad(true);
+                    }).catch(function (err) {
+                        setStatus(String(err && err.message ? err.message : err), '#ff5c5c');
+                    });
+                };
+                reader.readAsText(file);
+            });
+            document.body.appendChild(input);
+            input.click();
+        });
 
         refreshBtn.addEventListener('click', function (e) {
             e.preventDefault();

@@ -80,4 +80,22 @@ public sealed class SecretValidationService
 
         return new SecretValidationResult(false, $"ManifestHub returned HTTP {(int)resp.StatusCode}.");
     }
+
+    public async Task<SecretValidationResult> ValidateRyuuFixesAsync(string cookie, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(cookie))
+            return new SecretValidationResult(false, "Ryuu session cookie is empty — save it in Settings first.");
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, "https://generator.ryuu.lol/fixes");
+        req.Headers.TryAddWithoutValidation("Cookie", cookie.Trim());
+        using var resp = await Http.SendAsync(req, ct);
+
+        if (resp.StatusCode is >= HttpStatusCode.OK and < HttpStatusCode.MultipleChoices)
+            return new SecretValidationResult(true, $"Ryuu fixes endpoint OK (HTTP {(int)resp.StatusCode}). Open Fixes in Steam for per-game patches.");
+
+        if (resp.StatusCode == HttpStatusCode.TooManyRequests)
+            return new SecretValidationResult(false, "Ryuu fixes rate-limited (429). Try again later.");
+
+        return new SecretValidationResult(false, $"Ryuu fixes check failed: HTTP {(int)resp.StatusCode}.");
+    }
 }
