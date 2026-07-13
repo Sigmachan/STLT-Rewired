@@ -18,6 +18,7 @@ irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update
 
 ```powershell
 pwsh -NoProfile -File scripts/install.ps1 -SkipMillennium -SkipOpenSteamTool
+pwsh -NoProfile -File scripts/install.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
 pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
 ```
 
@@ -27,6 +28,15 @@ pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
 | `-SkipManager` | Plugin only |
 | `-SkipOpenSteamTool` | Do not install OpenSteamTool DLLs |
 | `-SkipShortcut` | No desktop shortcut |
+
+**GitHub API rate limit:** If install fails with `API rate limit exceeded`, either wait an hour or set a token first:
+
+```powershell
+$env:GITHUB_TOKEN = 'ghp_...'   # or GH_TOKEN
+pwsh -NoProfile -File scripts/install.ps1
+```
+
+The installer falls back to direct `/releases/latest/download/` URLs when the API is exhausted (no token required).
 
 ## Linux
 

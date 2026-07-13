@@ -7,7 +7,8 @@ param(
     [switch]$SkipMillennium,
     [switch]$SkipManager,
     [switch]$SkipOpenSteamTool,
-    [switch]$SkipShortcut
+    [switch]$SkipShortcut,
+    [switch]$FromRepo
 )
 
 $ErrorActionPreference = 'Stop'

@@ -38,11 +38,18 @@ detect_steam() {
 }
 
 fetch_latest_release() {
-  curl -fsSL "https://api.github.com/repos/${REWIRED_OWNER}/${REWIRED_REPO}/releases/latest"
+  local headers=()
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    headers=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  elif [[ -n "${GH_TOKEN:-}" ]]; then
+    headers=(-H "Authorization: Bearer ${GH_TOKEN}")
+  fi
+  curl -fsSL "${headers[@]}" "https://api.github.com/repos/${REWIRED_OWNER}/${REWIRED_REPO}/releases/latest"
 }
 
 plugin_download_url() {
-  fetch_latest_release | python3 -c "
+  local url=""
+  if url="$(fetch_latest_release 2>/dev/null | python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 asset=os.environ.get('PLUGIN_ASSET','STLT-Rewired.zip')
@@ -50,17 +57,32 @@ for a in d.get('assets',[]):
     if a.get('name')==asset:
         print(a['browser_download_url'])
         break
-"
+" 2>/dev/null)"; then
+    if [[ -n "$url" ]]; then
+      echo "$url"
+      return
+    fi
+  fi
+  warn "GitHub API unavailable or rate limited; using direct download URL."
+  warn "Tip: export GITHUB_TOKEN for a higher API limit."
+  echo "https://github.com/${REWIRED_OWNER}/${REWIRED_REPO}/releases/latest/download/${PLUGIN_ASSET}"
 }
 
 release_version() {
-  fetch_latest_release | python3 -c "
+  local ver=""
+  if ver="$(fetch_latest_release 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 tag=d.get('tag_name','')
 prefix='${TAG_PREFIX}'
 print(tag[len(prefix):] if prefix and tag.startswith(prefix) else tag)
-"
+" 2>/dev/null)"; then
+    if [[ -n "$ver" ]]; then
+      echo "$ver"
+      return
+    fi
+  fi
+  echo "latest"
 }
 
 install_millennium_if_needed() {
