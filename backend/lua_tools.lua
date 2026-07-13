@@ -145,9 +145,15 @@ function C.toggle_lua_script(appid, enable)
     appid = tonumber(appid)
     if not appid then return { success = false, error = "Invalid appid" } end
     if enable == nil then enable = true end
-    local stplug = st.stplug_dir()
-    if stplug == "" then return { success = false, error = "Steam path not found" } end
-    local lp = fs.join(stplug, appid .. ".lua")
+    local ok, unlock_paths = pcall(require, "unlock_paths")
+    if not ok or type(unlock_paths) ~= "table" or type(unlock_paths.lua_script_dir) ~= "function" then
+        return { success = false, error = "unlock_paths unavailable" }
+    end
+    local dir = unlock_paths.lua_script_dir()
+    if dir == "" or not fs.is_directory(dir) then
+        return { success = false, error = "Lua script directory not found" }
+    end
+    local lp = fs.join(dir, appid .. ".lua")
     local dp = lp .. ".disabled"
     if enable then
         if fs.is_file(dp) then
