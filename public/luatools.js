@@ -13,6 +13,39 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 (function () {
     'use strict';
 
+    // Millennium beta.8 crashes when heavy luatools RPCs overlap. Only queue disk/network scans;
+    // keep menu, add-game polling, and settings reads on the fast path.
+    (function patchLuatoolsRpcQueue() {
+        if (window.__LUATOOLS_RPC_PATCHED__) return;
+        if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
+            setTimeout(patchLuatoolsRpcQueue, 25);
+            return;
+        }
+        window.__LUATOOLS_RPC_PATCHED__ = true;
+        var heavyChain = Promise.resolve();
+        var HEAVY_RPC = {
+            GetSettingsInstalledInventory: true,
+            GetInstalledFixes: true,
+            GetInstalledLuaScripts: true,
+            RunManifestAutoUpdate: true,
+            GetSourceHealth: true,
+            ScanAllLuaScripts: true,
+            RunHealthScanAll: true,
+            ExportSupportBundle: true
+        };
+        var orig = Millennium.callServerMethod.bind(Millennium);
+        Millennium.callServerMethod = function (plugin, method, args) {
+            if (plugin !== 'luatools' || !HEAVY_RPC[method]) {
+                return orig(plugin, method, args);
+            }
+            var call = heavyChain
+                .catch(function () { return null; })
+                .then(function () { return orig(plugin, method, args); });
+            heavyChain = call.catch(function () { return null; });
+            return call;
+        };
+    })();
+
     // Inject gamepad navigation CSS
     const gamepadCSS = document.createElement('style');
     gamepadCSS.id = 'gamepad-navigation-styles';
@@ -1184,11 +1217,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     function showSettingsPopup() {
         if (document.querySelector('.luatools-settings-overlay') || settingsMenuPending) return;
-        settingsMenuPending = true;
-        ensureTranslationsLoaded(false).catch(function () {
-            return null;
-        }).finally(function () {
-            settingsMenuPending = false;
+
+        function openMenu() {
             if (document.querySelector('.luatools-settings-overlay')) return;
 
             try {
@@ -1841,6 +1871,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     });
                 }
             } catch (_) { }
+        }
+
+        if (window.__LuaToolsI18n && window.__LuaToolsI18n.ready) {
+            openMenu();
+            return;
+        }
+        settingsMenuPending = true;
+        ensureTranslationsLoaded(false).catch(function () { return null; }).finally(function () {
+            settingsMenuPending = false;
+            openMenu();
         });
     }
 
@@ -5228,14 +5268,9 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     let settingsMenuPending = false;
 
-    // Serialize heavy backend scans (library ACF walk, stplug-in listing, manifest sweep).
-    // Parallel RPC here has triggered millennium.dll ACCESS_VIOLATION on beta.8 when Settings opens.
-    let _ltHeavyRpcChain = Promise.resolve();
+    // Heavy scans still go through _ltServer; luatools RPC is globally serialized via patchLuatoolsRpcQueue.
     function _ltHeavyRpc(method, args) {
-        _ltHeavyRpcChain = _ltHeavyRpcChain
-            .catch(function () { return null; })
-            .then(function () { return _ltServer(method, args); });
-        return _ltHeavyRpcChain;
+        return _ltServer(method, args);
     }
 
     function isRewiredSettingsOpen() {
@@ -7363,16 +7398,15 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 contentWrap.appendChild(groupEl);
             }
 
-            // Defer heavy installed-game scans so Settings UI paints first and RPC does not
-            // stack with boot manifest auto-update (known to crash Millennium beta.8).
+            // Defer installed inventory scan so Settings UI paints first (one combined backend RPC).
             setTimeout(function () {
                 if (!overlay.isConnected) return;
                 renderInstalledFixesSection();
-            }, 800);
-            setTimeout(function () {
-                if (!overlay.isConnected) return;
                 renderInstalledLuaSection();
-            }, 1800);
+                var fixesList = overlay.querySelector('#luatools-fixes-list');
+                var luaList = overlay.querySelector('#luatools-lua-list');
+                if (fixesList && luaList) loadSettingsInstalledInventory(fixesList, luaList);
+            }, 1200);
 
             updateSaveState();
             refreshDependencies();
@@ -7414,47 +7448,54 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             sectionEl.appendChild(listContainer);
 
             contentWrap.appendChild(sectionEl);
-
-            loadInstalledFixes(listContainer);
         }
 
-        function loadInstalledFixes(container) {
+        function loadSettingsInstalledInventory(fixesContainer, luaContainer) {
             const loadingColors = getThemeColors();
-            container.innerHTML = `<div style="padding:10px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
+            fixesContainer.innerHTML = `<div style="padding:10px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
+            luaContainer.innerHTML = '<div style="padding:10px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
 
-            _ltHeavyRpc('GetInstalledFixes', {
-                contentScriptQuery: ''
-            })
+            _ltHeavyRpc('GetSettingsInstalledInventory', { contentScriptQuery: '' })
                 .then(function (response) {
-                    if (!response || !response.success) {
-                        const errColors = getThemeColors();
-                        container.innerHTML = `<div style="padding:10px;background:${errColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
+                    if (!response || response.busy) {
+                        setTimeout(function () {
+                            if (overlay.isConnected) loadSettingsInstalledInventory(fixesContainer, luaContainer);
+                        }, 1500);
                         return;
                     }
-
-                    const fixes = Array.isArray(response.fixes) ? response.fixes : [];
-                    if (fixes.length === 0) {
-                        const emptyColors = getThemeColors();
-                        container.innerHTML = `<div style="padding:10px;background:${emptyColors.bgTertiary};border:1px solid ${emptyColors.border};border-radius:4px;color:${emptyColors.textSecondary};text-align:center;">${t('settings.installedFixes.empty', 'No fixes installed yet.')}</div>`;
-                        return;
-                    }
-
-                    container.innerHTML = '';
-                    for (let i = 0; i < fixes.length; i++) {
-                        const fix = fixes[i];
-                        const fixEl = createFixListItem(fix, container);
-                        container.appendChild(fixEl);
-                    }
-
-                    // Re-apply search filter after loading
-                    if (state.searchQuery) {
-                        setTimeout(applySearchFilter, 50);
-                    }
+                    applyInstalledFixesResponse(fixesContainer, response);
+                    applyInstalledLuaResponse(luaContainer, response);
                 })
-                .catch(function (err) {
-                    const catchColors = getThemeColors();
-                    container.innerHTML = `<div style="padding:10px;background:${catchColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
+                .catch(function () {
+                    applyInstalledFixesResponse(fixesContainer, { success: false });
+                    applyInstalledLuaResponse(luaContainer, { success: false });
                 });
+        }
+
+        function applyInstalledFixesResponse(container, response) {
+            if (!response || !response.success) {
+                const errColors = getThemeColors();
+                container.innerHTML = `<div style="padding:10px;background:${errColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
+                return;
+            }
+
+            const fixes = Array.isArray(response.fixes) ? response.fixes : [];
+            if (fixes.length === 0) {
+                const emptyColors = getThemeColors();
+                container.innerHTML = `<div style="padding:10px;background:${emptyColors.bgTertiary};border:1px solid ${emptyColors.border};border-radius:4px;color:${emptyColors.textSecondary};text-align:center;">${t('settings.installedFixes.empty', 'No fixes installed yet.')}</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            for (let i = 0; i < fixes.length; i++) {
+                const fix = fixes[i];
+                const fixEl = createFixListItem(fix, container);
+                container.appendChild(fixEl);
+            }
+
+            if (state.searchQuery) {
+                setTimeout(applySearchFilter, 50);
+            }
         }
 
         function createFixListItem(fix, container) {
@@ -7687,60 +7728,44 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             sectionEl.appendChild(listContainer);
 
             contentWrap.appendChild(sectionEl);
-
-            loadInstalledLuaScripts(listContainer);
         }
 
-        function loadInstalledLuaScripts(container) {
-            container.innerHTML = '<div style="padding:10px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
+        function applyInstalledLuaResponse(container, response) {
+            if (!response || !response.success) {
+                const errLuaColors = getThemeColors();
+                container.innerHTML = `<div style="padding:10px;background:${errLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
+                return;
+            }
 
-            _ltHeavyRpc('GetInstalledLuaScripts', {
-                contentScriptQuery: ''
-            })
-                .then(function (response) {
-                    if (!response || !response.success) {
-                        const errLuaColors = getThemeColors();
-                        container.innerHTML = `<div style="padding:10px;background:${errLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
-                        return;
-                    }
+            const scripts = Array.isArray(response.scripts) ? response.scripts : [];
+            if (scripts.length === 0) {
+                const emptyLuaColors = getThemeColors();
+                container.innerHTML = `<div style="padding:10px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
+                return;
+            }
 
-                    const scripts = Array.isArray(response.scripts) ? response.scripts : [];
-                    if (scripts.length === 0) {
-                        const emptyLuaColors = getThemeColors();
-                        container.innerHTML = `<div style="padding:10px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
-                        return;
-                    }
+            container.innerHTML = '';
 
-                    container.innerHTML = '';
+            const hasUnknownGames = scripts.some(function (s) {
+                return s.gameName && s.gameName.startsWith('Unknown Game');
+            });
 
-                    // Check if there are any unknown games
-                    const hasUnknownGames = scripts.some(function (s) {
-                        return s.gameName && s.gameName.startsWith('Unknown Game');
-                    });
+            if (hasUnknownGames) {
+                const infoBanner = document.createElement('div');
+                infoBanner.style.cssText = 'margin-bottom:10px;padding:8px 10px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:6px;color:#ffc107;font-size:13px;display:flex;align-items:center;gap:10px;';
+                infoBanner.innerHTML = '<i class="fa-solid fa-circle-info" style="font-size:16px;"></i><span>' + t('settings.installedLua.unknownInfo', 'Games showing \'Unknown Game\' were installed manually (not via LuaTools).') + '</span>';
+                container.appendChild(infoBanner);
+            }
 
-                    // Show info banner if there are unknown games
-                    if (hasUnknownGames) {
-                        const infoBanner = document.createElement('div');
-                        infoBanner.style.cssText = 'margin-bottom:10px;padding:8px 10px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:6px;color:#ffc107;font-size:13px;display:flex;align-items:center;gap:10px;';
-                        infoBanner.innerHTML = '<i class="fa-solid fa-circle-info" style="font-size:16px;"></i><span>' + t('settings.installedLua.unknownInfo', 'Games showing \'Unknown Game\' were installed manually (not via LuaTools).') + '</span>';
-                        container.appendChild(infoBanner);
-                    }
+            for (let i = 0; i < scripts.length; i++) {
+                const script = scripts[i];
+                const scriptEl = createLuaListItem(script, container);
+                container.appendChild(scriptEl);
+            }
 
-                    for (let i = 0; i < scripts.length; i++) {
-                        const script = scripts[i];
-                        const scriptEl = createLuaListItem(script, container);
-                        container.appendChild(scriptEl);
-                    }
-
-                    // Re-apply search filter after loading
-                    if (state.searchQuery) {
-                        setTimeout(applySearchFilter, 50);
-                    }
-                })
-                .catch(function (err) {
-                    const catchLuaColors = getThemeColors();
-                    container.innerHTML = `<div style="padding:10px;background:${catchLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
-                });
+            if (state.searchQuery) {
+                setTimeout(applySearchFilter, 50);
+            }
         }
 
         function createLuaListItem(script, container) {
@@ -9125,9 +9150,17 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     // Try to add the button immediately if DOM is ready
     function onFrontendReady() {
-        // Fetch settings + translations FIRST, then insert the button once in the correct language
         try {
-            fetchSettingsConfig(true).then(function (cfg) {
+            ensureLuaToolsStyles();
+        } catch (_) { }
+
+        // Paint the store button immediately when we already have translations cached.
+        if (window.__LuaToolsI18n && window.__LuaToolsI18n.ready) {
+            addLuaToolsButton();
+        }
+
+        try {
+            fetchSettingsConfig(false).then(function (cfg) {
                 try {
                     ensureLuaToolsStyles();
                 } catch (_) { }

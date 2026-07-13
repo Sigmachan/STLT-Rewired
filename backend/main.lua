@@ -49,6 +49,8 @@ local account         = require("account")
 local sentinel        = require("sentinel")
 local setup_assistant = require("setup_assistant")
 local unlock_paths    = require("unlock_paths")
+local st              = require("st_util")
+local stlt_migration  = require("stlt_migration")
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,6 +75,8 @@ local function on_load()
 
     local ok_s, err_s = pcall(settings_manager.init_settings)
     if not ok_s then logger.warn("settings init failed: " .. tostring(err_s)) end
+
+    pcall(stlt_migration.run_once)
 
     pcall(setup_assistant.self_heal)
 
@@ -561,45 +565,87 @@ function GetInstalledFixes()
     return json_ok(res)
 end
 
-function GetInstalledLuaScripts()
-    local ok, res = pcall(function()
-        local target_dir = unlock_paths.lua_script_dir()
-        if not target_dir or target_dir == "" then
-            logger.warn("GetInstalledLuaScripts: Steam install path not found")
-            return { success = false, error = "Steam install path not found", scripts = st.A({}) }
-        end
+local _settings_inventory_scan_in_flight = false
 
-        local ok2, files = pcall(fs.list, target_dir)
-        if not ok2 then
-            -- A read failure is a real error, not "no scripts installed" — surface it
-            -- so the UI shows the error state instead of a misleading empty list.
-            logger.warn("GetInstalledLuaScripts: cannot list " .. tostring(target_dir) .. " — " .. tostring(files))
-            return { success = false, error = "stplug-in not readable", scripts = st.A({}) }
-        end
+local function list_installed_lua_scripts()
+    local target_dir = unlock_paths.lua_script_dir()
+    if not target_dir or target_dir == "" then
+        logger.warn("GetInstalledLuaScripts: Steam install path not found")
+        return { success = false, error = "Steam install path not found", scripts = st.A({}) }
+    end
 
-        local scripts = {}
-        if files then
-            for _, entry in ipairs(files) do
-                local name = entry.name or ""
-                if name:match("%.lua$") or name:match("%.lua%.disabled$") then
-                    local aid = name:match("^(%d+)%.")
-                    if aid then
-                        table.insert(scripts, {
-                            appid      = tonumber(aid),
-                            gameName   = "Unknown Game (" .. aid .. ")",
-                            filename   = name,
-                            isDisabled = name:match("%.disabled$") ~= nil,
-                            path       = entry.path or ""
-                        })
-                    end
+    local ok2, files = pcall(fs.list, target_dir)
+    if not ok2 then
+        logger.warn("GetInstalledLuaScripts: cannot list " .. tostring(target_dir) .. " — " .. tostring(files))
+        return { success = false, error = "stplug-in not readable", scripts = st.A({}) }
+    end
+
+    local scripts = {}
+    if files then
+        for _, entry in ipairs(files) do
+            local name = entry.name or ""
+            if name:match("%.lua$") or name:match("%.lua%.disabled$") then
+                local aid = name:match("^(%d+)%.")
+                if aid then
+                    table.insert(scripts, {
+                        appid      = tonumber(aid),
+                        gameName   = "Unknown Game (" .. aid .. ")",
+                        filename   = name,
+                        isDisabled = name:match("%.disabled$") ~= nil,
+                        path       = entry.path or ""
+                    })
                 end
             end
         end
-        logger.log("GetInstalledLuaScripts: " .. tostring(#scripts) .. " script(s) in " .. tostring(target_dir))
-        -- st.A() pins array encoding so an empty list serializes as [] (not {} under
-        -- encode_empty_table_as_object), matching the frontend's Array.isArray check.
-        return { success = true, scripts = st.A(scripts), scannedPath = target_dir }
+    end
+    logger.log("GetInstalledLuaScripts: " .. tostring(#scripts) .. " script(s) in " .. tostring(target_dir))
+    return { success = true, scripts = st.A(scripts), scannedPath = target_dir }
+end
+
+function GetInstalledLuaScripts()
+    local ok, res = pcall(list_installed_lua_scripts)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
+--- Single Settings scan: library fix walk + lua script listing in one native RPC return.
+function GetSettingsInstalledInventory()
+    if _settings_inventory_scan_in_flight then
+        logger.warn("GetSettingsInstalledInventory: rejected re-entrant scan")
+        return json_ok({ success = false, error = "Settings inventory scan already in progress", busy = true })
+    end
+    _settings_inventory_scan_in_flight = true
+    local ok, res = pcall(function()
+        local fixes_ok, fixes_res = pcall(fixes.get_installed_fixes)
+        local lua_ok, lua_res = pcall(list_installed_lua_scripts)
+        local payload = {
+            success = true,
+            fixes = st.A({}),
+            scripts = st.A({}),
+            scannedPath = "",
+        }
+        if fixes_ok and type(fixes_res) == "table" then
+            payload.fixes = fixes_res.fixes or st.A({})
+        else
+            payload.fixesError = tostring(fixes_res)
+            logger.warn("GetSettingsInstalledInventory: fixes scan failed — " .. payload.fixesError)
+        end
+        if lua_ok and type(lua_res) == "table" then
+            payload.scripts = lua_res.scripts or st.A({})
+            payload.scannedPath = lua_res.scannedPath or ""
+        else
+            payload.scriptsError = tostring(lua_res)
+            logger.warn("GetSettingsInstalledInventory: lua scan failed — " .. payload.scriptsError)
+        end
+        if not fixes_ok and not lua_ok then
+            payload.success = false
+            payload.error = "Failed to scan installed fixes and lua scripts"
+        end
+        logger.log("GetSettingsInstalledInventory: " .. tostring(#payload.fixes) .. " fix(es), "
+            .. tostring(#payload.scripts) .. " lua script(s)")
+        return payload
     end)
+    _settings_inventory_scan_in_flight = false
     if not ok then return json_err(res) end
     return json_ok(res)
 end

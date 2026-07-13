@@ -14,6 +14,13 @@ public sealed class SecretStoreService
     public PluginSecrets Load(string pluginRoot)
     {
         var path = GetSecretsPath(pluginRoot);
+        var secrets = ReadSecretsFile(path);
+        secrets = MergeLegacySettingsSecrets(pluginRoot, secrets);
+        return secrets;
+    }
+
+    private static PluginSecrets ReadSecretsFile(string path)
+    {
         if (!File.Exists(path))
             return new PluginSecrets(path, "", "");
 
@@ -29,6 +36,51 @@ public sealed class SecretStoreService
         catch
         {
             return new PluginSecrets(path, "", "");
+        }
+    }
+
+    /// <summary>
+    /// STLT 10.x stored Ryuu/ManifestHub keys in backend/data/settings.json; Rewired prefers secrets.local.json.
+    /// </summary>
+    private PluginSecrets MergeLegacySettingsSecrets(string pluginRoot, PluginSecrets current)
+    {
+        var ryuu = current.RyuuSession;
+        var hub = current.ManifestHubKey;
+        if (!string.IsNullOrWhiteSpace(ryuu) && !string.IsNullOrWhiteSpace(hub))
+            return current;
+
+        var settingsPath = Path.Combine(pluginRoot, "backend", "data", "settings.json");
+        if (!File.Exists(settingsPath))
+            return current;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
+            if (!doc.RootElement.TryGetProperty("general", out var general))
+                return current;
+
+            if (string.IsNullOrWhiteSpace(ryuu))
+                ryuu = ReadString(general, "ryuuSession");
+            if (string.IsNullOrWhiteSpace(hub))
+            {
+                hub = ReadString(general, "morrenusApiKey");
+                if (hub == "") hub = ReadString(general, "manifestHubApiKey");
+            }
+
+            if (string.IsNullOrWhiteSpace(ryuu) && string.IsNullOrWhiteSpace(hub))
+                return current;
+
+            var merged = new PluginSecrets(current.SecretsPath, ryuu, hub);
+            var shouldPersist = !File.Exists(current.SecretsPath)
+                || (string.IsNullOrWhiteSpace(current.RyuuSession) && !string.IsNullOrWhiteSpace(ryuu))
+                || (string.IsNullOrWhiteSpace(current.ManifestHubKey) && !string.IsNullOrWhiteSpace(hub));
+            if (shouldPersist)
+                Save(pluginRoot, merged.RyuuSession, merged.ManifestHubKey);
+            return merged;
+        }
+        catch
+        {
+            return current;
         }
     }
 
