@@ -1943,28 +1943,40 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         return '#f44336';
     }
 
+    function _stMuted(colors) {
+        return (colors && colors.textSecondary) ? colors.textSecondary : '#9eb0c2';
+    }
+
+    function _stInputCss(colors, opts) {
+        opts = opts || {};
+        var pad = opts.pad || '8px 10px';
+        var fs = opts.fs || '13px';
+        var br = opts.br || '4px';
+        return 'background:' + colors.bgTertiary + ';border:1px solid ' + colors.border + ';border-radius:' + br + ';color:' + colors.text + ';padding:' + pad + ';font-size:' + fs + ';box-sizing:border-box;';
+    }
+
     function showSourceHealthPanel() {
         _stOverlayShell('🛰 Source Health', function (body, ov, colors) {
-            body.innerHTML = '<div style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Checking LuaTools/Ryuu/Hubcap/fixes sources…</div>';
+            body.innerHTML = '<div style="color:' + _stMuted(colors) + ';"><i class="fa-solid fa-spinner fa-spin"></i> Checking LuaTools/Ryuu/Hubcap/fixes sources…</div>';
             _ltServer('GetSourceHealth', { contentScriptQuery: '' }).then(function (p) {
                 if (!p || !p.success) {
                     body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
                     return;
                 }
                 var counts = p.counts || {};
-                var html = '<div style="font-size:12px;color:#aaa;margin-bottom:10px;">Gen2-style source dashboard with Rewired redaction/safety: no cookies or API keys are printed.</div>';
+                var html = '<div style="font-size:12px;color:' + _stMuted(colors) + ';margin-bottom:10px;">Gen2-style source dashboard with Rewired redaction/safety: no cookies or API keys are printed.</div>';
                 html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">';
                 ['ok', 'warn', 'error', 'skipped'].forEach(function (k) {
                     html += '<div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border:1px solid ' + colors.borderRgba + ';border-radius:6px;">'
                         + '<div style="font-size:18px;font-weight:700;color:' + _ltStatusColor(k) + ';">' + (counts[k] || 0) + '</div>'
-                        + '<div style="font-size:10px;color:#aaa;text-transform:uppercase;">' + k + '</div></div>';
+                        + '<div style="font-size:10px;color:' + _stMuted(colors) + ';text-transform:uppercase;">' + k + '</div></div>';
                 });
                 html += '</div><div style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">';
                 (p.sources || []).forEach(function (src) {
                     var c = _ltStatusColor(src.status);
                     html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-left:4px solid ' + c + ';border-radius:6px;background:rgba(0,0,0,0.18);">'
                         + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>' + _ltEscapeHtml(src.name) + '</b><span style="color:' + c + ';font-size:11px;text-transform:uppercase;">' + _ltEscapeHtml(src.status) + '</span></div>'
-                        + '<div style="font-size:11px;color:#aaa;margin-top:3px;">' + _ltEscapeHtml(src.kind) + ' · HTTP ' + _ltEscapeHtml(src.httpStatus || 0) + ' · ' + _ltEscapeHtml(src.message || '') + '</div>'
+                        + '<div style="font-size:11px;color:' + _stMuted(colors) + ';margin-top:3px;">' + _ltEscapeHtml(src.kind) + ' · HTTP ' + _ltEscapeHtml(src.httpStatus || 0) + ' · ' + _ltEscapeHtml(src.message || '') + '</div>'
                         + '<div style="font-size:10px;color:#777;word-break:break-all;margin-top:3px;">' + _ltEscapeHtml(src.url || '') + '</div></div>';
                 });
                 html += '</div>';
@@ -1976,28 +1988,28 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     function showCompanionParityPanel() {
         _stOverlayShell('🧰 Companion / Gen2 Parity', function (body, ov, colors) {
-            body.innerHTML = '<div style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Checking companion apps and explicit external workflows…</div>';
+            body.innerHTML = '<div style="color:' + _stMuted(colors) + ';"><i class="fa-solid fa-spinner fa-spin"></i> Checking companion apps and explicit external workflows…</div>';
             _ltServer('GetCompanionStatus', { contentScriptQuery: '' }).then(function (p) {
                 if (!p || !p.success) {
                     body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml((p && p.error) || 'unknown error') + '</div>';
                     return;
                 }
-                var html = '<div style="font-size:12px;color:#aaa;line-height:1.55;margin-bottom:10px;">Rewired now mirrors the useful Gen2 LuaTools product surfaces: plugin health, source health, companion detection, redacted diagnostics, and explicit CloudRedirect/Steamless/unlocker policy. It does <b>not</b> copy closed code or silently patch Steam.</div>';
-                html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-radius:6px;margin-bottom:8px;"><b>Live plugin</b><div style="font-size:11px;color:#aaa;word-break:break-all;">' + _ltEscapeHtml(p.livePluginDir || '') + '</div><div style="color:' + (p.livePluginPresent ? '#4caf50' : '#ff9800') + ';font-size:12px;">' + (p.livePluginPresent ? 'Detected' : 'Not found') + '</div></div>';
+                var html = '<div style="font-size:12px;color:' + _stMuted(colors) + ';line-height:1.55;margin-bottom:10px;">Rewired now mirrors the useful Gen2 LuaTools product surfaces: plugin health, source health, companion detection, redacted diagnostics, and explicit CloudRedirect/Steamless/unlocker policy. It does <b>not</b> copy closed code or silently patch Steam.</div>';
+                html += '<div style="padding:8px;border:1px solid ' + colors.borderRgba + ';border-radius:6px;margin-bottom:8px;"><b>Live plugin</b><div style="font-size:11px;color:' + _stMuted(colors) + ';word-break:break-all;">' + _ltEscapeHtml(p.livePluginDir || '') + '</div><div style="color:' + (p.livePluginPresent ? '#4caf50' : '#ff9800') + ';font-size:12px;">' + (p.livePluginPresent ? 'Detected' : 'Not found') + '</div></div>';
                 html += '<div style="font-weight:700;color:' + colors.accent + ';margin:8px 0 4px;">Official LuaTools / managers</div>';
                 if ((p.officialLuaTools || []).length) {
                     (p.officialLuaTools || []).forEach(function (x, idx) {
                         html += '<div style="padding:7px;border:1px solid ' + colors.borderRgba + ';border-radius:5px;margin-bottom:5px;">'
                             + '<div style="word-break:break-all;font-size:11px;">' + _ltEscapeHtml(x.path) + '</div>'
-                            + '<div style="font-size:10px;color:#aaa;">version ' + _ltEscapeHtml(x.version || '?') + '</div>'
-                            + '<button data-open-companion="' + idx + '" style="margin-top:5px;padding:5px 10px;background:rgba(102,192,244,0.18);border:1px solid rgba(102,192,244,0.45);border-radius:4px;color:#66c0f4;cursor:pointer;">Open</button></div>';
+                            + '<div style="font-size:10px;color:' + _stMuted(colors) + ';">version ' + _ltEscapeHtml(x.version || '?') + '</div>'
+                            + '<button data-open-companion="' + idx + '" style="margin-top:5px;padding:5px 10px;background:rgba(102,192,244,0.18);border:1px solid ' + colors.borderRgba + ';border-radius:4px;color:' + colors.accent + ';cursor:pointer;">Open</button></div>';
                     });
                 } else {
                     html += '<div style="color:#ff9800;font-size:12px;margin-bottom:8px;">No official/companion executable detected.</div>';
                 }
                 html += '<div style="font-weight:700;color:' + colors.accent + ';margin:8px 0 4px;">CloudRedirect</div>';
-                html += (p.cloudRedirectDetected ? '<div style="color:#4caf50;font-size:12px;">Detected: ' + (p.cloudRedirect || []).map(_ltEscapeHtml).join('<br>') + '</div>' : '<div style="color:#aaa;font-size:12px;">Not detected. Use the CloudRedirect Assistant for the safe workflow checklist.</div>');
-                html += '<div style="font-size:11px;color:#aaa;margin-top:10px;padding:8px;background:rgba(255,200,0,0.06);border:1px solid rgba(255,200,0,0.2);border-radius:5px;">' + _ltEscapeHtml(p.policy || '') + '</div>';
+                html += (p.cloudRedirectDetected ? '<div style="color:#4caf50;font-size:12px;">Detected: ' + (p.cloudRedirect || []).map(_ltEscapeHtml).join('<br>') + '</div>' : '<div style="color:' + _stMuted(colors) + ';font-size:12px;">Not detected. Use the CloudRedirect Assistant for the safe workflow checklist.</div>');
+                html += '<div style="font-size:11px;color:' + _stMuted(colors) + ';margin-top:10px;padding:8px;background:rgba(255,200,0,0.06);border:1px solid rgba(255,200,0,0.2);border-radius:5px;">' + _ltEscapeHtml(p.policy || '') + '</div>';
                 body.innerHTML = html;
                 Array.prototype.forEach.call(body.querySelectorAll('[data-open-companion]'), function (btn) {
                     btn.onclick = function () {
@@ -2016,8 +2028,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     function showSupportBundlePanel() {
         _stOverlayShell('🧾 Redacted Support Bundle', function (body, ov, colors) {
             var appid = _ltCurrentAppIdOrZero();
-            body.innerHTML = '<div style="font-size:12px;color:#aaa;line-height:1.6;margin-bottom:10px;">Exports a local text bundle with plugin/Millennium/source-health/app diagnostics. Cookies, API keys, tokens and sessions are redacted before writing.</div>'
-                + '<button id="lt-export-support" style="padding:8px 12px;background:rgba(102,192,244,0.2);border:1px solid rgba(102,192,244,0.45);border-radius:5px;color:#66c0f4;cursor:pointer;">Export bundle' + (appid ? ' for AppID ' + appid : '') + '</button>'
+            body.innerHTML = '<div style="font-size:12px;color:' + _stMuted(colors) + ';line-height:1.6;margin-bottom:10px;">Exports a local text bundle with plugin/Millennium/source-health/app diagnostics. Cookies, API keys, tokens and sessions are redacted before writing.</div>'
+                + '<button id="lt-export-support" style="padding:8px 12px;background:rgba(102,192,244,0.2);border:1px solid ' + colors.borderRgba + ';border-radius:5px;color:' + colors.accent + ';cursor:pointer;">Export bundle' + (appid ? ' for AppID ' + appid : '') + '</button>'
                 + '<div id="lt-support-out" style="margin-top:10px;font-size:12px;color:#aaa;"></div>';
             body.querySelector('#lt-export-support').onclick = function () {
                 var out = body.querySelector('#lt-support-out');
@@ -2259,11 +2271,11 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             var searchRow = document.createElement('div');
             searchRow.style.cssText = 'margin-bottom:10px;';
             searchRow.innerHTML = '<input id="lt-ryuu-search" type="text" placeholder="search Ryuu catalog by name…" ' +
-                'style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid #333;border-radius:4px;color:#ccc;padding:8px 10px;font-size:13px;">';
+                'style="width:100%;' + _stInputCss(colors) + '">';
             body.appendChild(searchRow);
 
             var status = document.createElement('div');
-            status.style.cssText = 'font-size:12px;color:#888;margin-bottom:8px;';
+            status.style.cssText = 'font-size:12px;color:' + _stMuted(colors) + ';margin-bottom:8px;';
             body.appendChild(status);
 
             var results = document.createElement('div');
@@ -2274,21 +2286,21 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             function render(list) {
                 results.innerHTML = '';
-                if (!list.length) { results.innerHTML = '<div style="color:#888;padding:10px;text-align:center;">No matches.</div>'; return; }
+                if (!list.length) { results.innerHTML = '<div style="color:' + _stMuted(colors) + ';padding:10px;text-align:center;">No matches.</div>'; return; }
                 list.slice(0, 60).forEach(function (g) {
                     var nsfw = g.nsfw ? ' <span style="color:#f44336;font-size:10px;">NSFW</span>' : '';
                     var drm = g.drm ? ' <span style="color:#ff9800;font-size:10px;">DRM</span>' : '';
                     var tags = (g.tags && g.tags.length) ? g.tags.slice(0, 3).join(', ') : '';
                     var row = document.createElement('div');
-                    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid #2a2a2a;border-radius:5px;';
+                    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid ' + colors.borderRgba + ';border-radius:5px;';
                     row.innerHTML =
-                        '<img src="' + (g.header_image || '') + '" style="width:92px;height:43px;object-fit:cover;border-radius:3px;flex:0 0 auto;background:#111;" onerror="this.style.visibility=\'hidden\';">' +
+                        '<img src="' + (g.header_image || '') + '" style="width:92px;height:43px;object-fit:cover;border-radius:3px;flex:0 0 auto;background:' + colors.bgTertiary + ';" onerror="this.style.visibility=\'hidden\';">' +
                         '<div style="flex:1;min-width:0;">' +
-                            '<div style="color:#eee;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (g.name || '?') + nsfw + drm + '</div>' +
-                            '<div style="color:#666;font-size:10px;font-family:monospace;">appid ' + g.appid + (tags ? ' · ' + tags : '') + '</div>' +
+                            '<div style="color:' + colors.text + ';font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (g.name || '?') + nsfw + drm + '</div>' +
+                            '<div style="color:' + _stMuted(colors) + ';font-size:10px;font-family:monospace;">appid ' + g.appid + (tags ? ' · ' + tags : '') + '</div>' +
                         '</div>' +
                         '<button class="lt-ryuu-add" data-appid="' + g.appid + '" data-name="' + String(g.name || '').replace(/"/g, '&quot;') + '" ' +
-                            'style="flex:0 0 auto;padding:5px 12px;background:rgba(0,167,230,0.15);border:1px solid rgba(0,167,230,0.4);border-radius:4px;color:#00a7e6;font-size:12px;cursor:pointer;">+ Add</button>';
+                            'style="flex:0 0 auto;padding:5px 12px;background:rgba(0,167,230,0.15);border:1px solid ' + colors.borderRgba + ';border-radius:4px;color:' + colors.accent + ';font-size:12px;cursor:pointer;">+ Add</button>';
                     results.appendChild(row);
                 });
                 results.querySelectorAll('.lt-ryuu-add').forEach(function (b) {
