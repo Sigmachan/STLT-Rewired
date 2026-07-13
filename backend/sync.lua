@@ -79,8 +79,8 @@ local function collect_data_files(include_history)
         if fs.is_file(src) then table.insert(out, { "data/" .. item[1], src }) end
     end
     if include_history then
-        local hist = st.data_path("download_history.db")
-        if fs.is_file(hist) then table.insert(out, { "data/download_history.db", hist }) end
+        local hist = st.data_path("download_history.json")
+        if fs.is_file(hist) then table.insert(out, { "data/download_history.json", hist }) end
     end
     return out
 end

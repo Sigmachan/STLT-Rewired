@@ -3,6 +3,7 @@
 local fs          = require("fs")
 local st          = require("st_util")
 local health      = require("health")
+local unlock_paths = require("unlock_paths")
 local logger      = require("plugin_logger")
 
 local M = {}
@@ -10,6 +11,8 @@ local M = {}
 local MARKER = ".setup_seen"
 local SAFE_FIX_IPCS = {
     EnsureStpluginDir = true,
+    EnsureLuaScriptDir = true,
+    InstallOpenSteamTool = true,
 }
 
 local function marker_path()
@@ -57,9 +60,15 @@ local function classify(report)
 end
 
 local function apply_safe_fix(ipc, args)
-    if ipc == "EnsureStpluginDir" then
-        local ok, res = pcall(health.ensure_stplugin_dir)
+    if ipc == "EnsureStpluginDir" or ipc == "EnsureLuaScriptDir" then
+        local ok, res = pcall(unlock_paths.ensure_lua_script_dir)
         return ok and res == true
+    end
+    if ipc == "InstallOpenSteamTool" then
+        local ok, ost = pcall(require, "opensteamtool_install")
+        if not ok or not ost or not ost.install_latest then return false end
+        local ok2, res = pcall(ost.install_latest)
+        return ok2 and type(res) == "table" and res.success == true
     end
     return false
 end
@@ -95,6 +104,7 @@ function M.run_setup()
             end
         end
     end
+    unlock_paths.invalidate_cache()
     local state = M.get_setup_state()
     state.applied = applied
     return state
@@ -105,9 +115,9 @@ function M.self_heal()
     if not M.has_seen_setup() then
         return { success = true, ran = false, healed = healed, platform = "windows" }
     end
-    local ok, res = pcall(health.ensure_stplugin_dir)
+    local ok, res = pcall(unlock_paths.ensure_lua_script_dir)
     if ok and res then
-        table.insert(healed, "Ensured stplug-in directory")
+        table.insert(healed, "Ensured unlock script directory")
     end
     return { success = true, ran = true, healed = healed, platform = "windows" }
 end

@@ -3,6 +3,7 @@ local cjson = require("json")
 local paths = require("paths")
 local logger = require("plugin_logger")
 local utils = require("plugin_utils")
+local steam_utils = require("steam_utils")
 local locales = require("locales.manager")
 local options = require("settings.options")
 
@@ -163,6 +164,54 @@ local function _write_settings_file(data)
     utils.write_json(SETTINGS_FILE, data)
 end
 
+local function _write_secrets_file(secrets)
+    if type(secrets) ~= "table" then return false end
+    local dir = fs.parent_path(SECRETS_FILE)
+    if not fs.exists(dir) then fs.create_directories(dir) end
+    utils.write_json(SECRETS_FILE, secrets)
+    return true
+end
+
+local function _persist_secrets_from_values(values)
+    local secrets = {}
+    local changed = false
+    if fs.exists(SECRETS_FILE) then
+        local ok, data = pcall(utils.read_json, SECRETS_FILE)
+        if ok and type(data) == "table" then secrets = data end
+    end
+    local general = type(values.general) == "table" and values.general or {}
+    local mh = tostring(general.morrenusApiKey or "")
+    if mh ~= "" then
+        secrets.morrenusApiKey = mh
+        secrets.manifestHubApiKey = mh
+        changed = true
+    end
+    local ry = tostring(general.ryuuSession or "")
+    if ry ~= "" then
+        secrets.ryuuSession = ry
+        changed = true
+    end
+    if changed then _write_secrets_file(secrets) end
+end
+
+local function _sync_shared_unlock_config_write(values)
+    local unlock = type(values.unlock) == "table" and values.unlock or nil
+    if not unlock then return end
+    local ok, unlock_paths = pcall(require, "unlock_paths")
+    if not ok or not unlock_paths or not unlock_paths.write_shared_config then return end
+    local partial = {}
+    if type(unlock.backend) == "string" and unlock.backend ~= "" then
+        partial.unlockBackend = unlock.backend
+    end
+    if unlock.millenniumOptional ~= nil then
+        partial.millenniumOptional = unlock.millenniumOptional == true
+    end
+    if next(partial) == nil then return end
+    local steam = steam_utils.detect_steam_install_path()
+    if steam and steam ~= "" then partial.steamPath = steam end
+    pcall(unlock_paths.write_shared_config, partial)
+end
+
 local function _merge_shared_unlock_config(values)
     local ok, unlock_paths = pcall(require, "unlock_paths")
     if not ok or not unlock_paths or not unlock_paths.read_shared_config then return end
@@ -284,6 +333,12 @@ end
 
 function manager.get_settings_payload()
     local values = manager._get_values_locked()
+    -- Hydrate secrets for the settings UI without requiring a separate Key Vault step.
+    values.general = values.general or {}
+    local mh = _read_local_secret("morrenusApiKey") or _read_local_secret("manifestHubApiKey")
+    if mh then values.general.morrenusApiKey = mh end
+    local ry = _read_local_secret("ryuuSession")
+    if ry then values.general.ryuuSession = ry end
     local schema = _inject_locale_choices(options.get_settings_schema())
     local avail_locales = manager.get_available_locales()
     local language = manager.get_current_language()
@@ -331,6 +386,8 @@ function manager.apply_settings_changes(changes)
         end
 
         _ensure_language_valid(updated)
+        _persist_secrets_from_values(updated)
+        _sync_shared_unlock_config_write(updated)
         _persist_values(updated)
 
         local language = updated.general and updated.general.language or locales.DEFAULT_LOCALE

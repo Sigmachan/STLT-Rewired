@@ -111,6 +111,7 @@ end
 local http_client = require("http_client")
 local config      = require("config")
 local m_utils     = require("utils")
+local unlock_paths = require("unlock_paths")
 
 local SEV_ORDER = { fail = 3, warn = 2, ok = 1, info = 0, skip = -1 }
 
@@ -121,17 +122,26 @@ local function _check(id_, label, status, detail, fix)
 end
 
 function M.ensure_stplugin_dir()
-    local base = steam_utils.detect_steam_install_path() or ""
-    if base == "" then return false end
-    local d = fs.join(base, "config", "stplug-in")
-    if not fs.exists(d) then
-        fs.create_directories(d)
-    end
-    return fs.exists(d)
+    local ok, dir_or_err = unlock_paths.ensure_lua_script_dir()
+    return ok == true
+end
+
+function M.ensure_lua_script_dir()
+    local ok = unlock_paths.ensure_lua_script_dir()
+    return ok == true
+end
+
+local function _backend_label()
+    local backend = unlock_paths.resolve_backend()
+    if backend == "opensteamtool" then return "OpenSteamTool (config/lua)" end
+    if backend == "steamtools" then return "SteamTools (stplug-in)" end
+    if backend == "lumacore" then return "LumaCore (stplug-in)" end
+    if backend == "millennium" then return "Millennium plugin only" end
+    return "none detected"
 end
 
 local function _chk_platform()
-    return _check("platform", "Platform", "info", "Windows (SteamTools / stplug-in)")
+    return _check("platform", "Platform", "info", "Windows · " .. _backend_label())
 end
 
 local function _chk_steam_root()
@@ -143,25 +153,39 @@ local function _chk_steam_root()
         "Steam install not found. Install Steam and restart the client.")
 end
 
-local function _chk_stplugin_dir()
-    local base = steam_utils.detect_steam_install_path() or ""
-    local d = base ~= "" and fs.join(base, "config", "stplug-in") or ""
-    if d == "" then
-        return _check("stplugin_dir", "stplug-in directory", "fail", "Could not resolve stplug-in path.")
-    end
-    if fs.is_directory(d) and M.ensure_stplugin_dir() then
-        return _check("stplugin_dir", "stplug-in directory", "ok", d)
+local function _chk_lua_script_dir()
+    local backend = unlock_paths.resolve_backend()
+    local label = backend == "opensteamtool" and "config/lua directory" or "Lua script directory"
+    local ok, dir_or_err = unlock_paths.ensure_lua_script_dir()
+    if ok then
+        return _check("lua_script_dir", label, "ok", dir_or_err)
     end
     return _check(
-        "stplugin_dir", "stplug-in directory", "fail",
-        d .. " is missing or not writable.",
-        { label = "Create stplug-in folder", ipc = "EnsureStpluginDir", args = {} }
+        "lua_script_dir", label, "fail",
+        tostring(dir_or_err or "missing or not writable"),
+        { label = "Create unlock script folder", ipc = "EnsureLuaScriptDir", args = {} }
+    )
+end
+
+local function _chk_unlock_stack()
+    local backend = unlock_paths.resolve_backend()
+    if backend ~= "none" then
+        local status = unlock_paths.get_unlock_status()
+        local detail = _backend_label()
+        if status.openSteamTool then detail = detail .. " · OpenSteamTool.dll present" end
+        if status.steamTools then detail = detail .. " · SteamTools markers present" end
+        if status.lumaCore then detail = detail .. " · LumaCore.dll present" end
+        return _check("unlock_stack", "Unlock backend", "ok", detail)
+    end
+    return _check(
+        "unlock_stack", "Unlock backend", "fail",
+        "No OpenSteamTool, SteamTools, or LumaCore detected. Install OpenSteamTool or run Rewired Manager setup.",
+        { label = "Install OpenSteamTool", ipc = "InstallOpenSteamTool", args = {} }
     )
 end
 
 local function _chk_installed_lua()
-    local base = steam_utils.detect_steam_install_path() or ""
-    local d = base ~= "" and fs.join(base, "config", "stplug-in") or ""
+    local d = unlock_paths.lua_script_dir()
     local n = 0
     if d ~= "" and fs.is_directory(d) then
         local files = fs.list(d)
@@ -199,8 +223,7 @@ end
 
 local function _chk_app(appid)
     local out = {}
-    local base = steam_utils.detect_steam_install_path() or ""
-    local d = base ~= "" and fs.join(base, "config", "stplug-in") or ""
+    local d = unlock_paths.lua_script_dir()
     local lua_path = d ~= "" and fs.join(d, tostring(appid) .. ".lua") or ""
     if lua_path == "" or not fs.exists(lua_path) then
         table.insert(out, _check("app_activated", "App " .. appid .. ": activated", "warn",
@@ -230,7 +253,8 @@ function M.run_health_check(appid, quick)
     local checks = {
         _chk_platform(),
         _chk_steam_root(),
-        _chk_stplugin_dir(),
+        _chk_unlock_stack(),
+        _chk_lua_script_dir(),
         _chk_installed_lua(),
         _chk_millennium(),
     }

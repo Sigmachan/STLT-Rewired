@@ -53,6 +53,37 @@ function M.invalidate_cache()
     RESOLVED_BACKEND = nil
 end
 
+function M.write_shared_config(partial)
+    if type(partial) ~= "table" then return false, "invalid payload" end
+    SHARED_CONFIG = nil
+    RESOLVED_BACKEND = nil
+    local current = M.read_shared_config()
+    for k, v in pairs(partial) do current[k] = v end
+    local path = _shared_config_path()
+    if path == "" then return false, "LOCALAPPDATA not set" end
+    local dir = fs.join(m_utils.getenv("LOCALAPPDATA") or "", "Rewired")
+    if not fs.exists(dir) then pcall(fs.create_directories, dir) end
+    local ok = pcall(m_utils.write_file, path, cjson.encode(current))
+    if ok then SHARED_CONFIG = current end
+    return ok, path
+end
+
+local function _read_plugin_unlock_backend()
+    local ok, paths = pcall(require, "paths")
+    if not ok or not paths or not paths.backend_path then return nil end
+    local settings_file = paths.backend_path("data/settings.json")
+    if not fs.exists(settings_file) then return nil end
+    local raw = m_utils.read_file(settings_file)
+    if not raw or raw == "" then return nil end
+    local ok2, data = pcall(cjson.decode, raw)
+    if not ok2 or type(data) ~= "table" then return nil end
+    local values = data.values
+    if type(values) ~= "table" or type(values.unlock) ~= "table" then return nil end
+    local backend = tostring(values.unlock.backend or "")
+    if backend == "" then return nil end
+    return backend:lower()
+end
+
 function M.detect_opensteamtool(steam)
     steam = steam or _steam_path()
     if steam == "" then return false end
@@ -80,7 +111,7 @@ function M.resolve_backend()
     if RESOLVED_BACKEND then return RESOLVED_BACKEND end
 
     local shared = M.read_shared_config()
-    local pref = tostring(shared.unlockBackend or shared.unlock_backend or "auto"):lower()
+    local pref = tostring(shared.unlockBackend or shared.unlock_backend or _read_plugin_unlock_backend() or "auto"):lower()
     if not BACKENDS[pref] then pref = "auto" end
 
     local steam = tostring(shared.steamPath or shared.steam_path or ""):gsub("/", "\\")

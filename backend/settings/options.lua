@@ -53,6 +53,14 @@ options.SETTINGS_GROUPS = {
                 description = "API key for ManifestHub (formerly Morrenus / Hubcap). Get yours at manifesthub.filegear-sg.me or hubcapmanifest.com.",
                 default = "",
                 metadata = {placeholder = "Enter your ManifestHub API key..."}
+            },
+            {
+                key = "ryuuSession",
+                label = "Ryuu Session Cookie",
+                option_type = "text",
+                description = "Session cookie for generator.ryuu.lol (Ryuu Premium). Stored locally in secrets.local.json.",
+                default = "",
+                metadata = {placeholder = "Paste Ryuu session cookie value…", sensitive = true}
             }
         }
     },

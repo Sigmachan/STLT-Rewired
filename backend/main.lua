@@ -1688,9 +1688,31 @@ function GetLinuxHealthReport(appid, contentScriptQuery)
 end
 
 function EnsureStpluginDir()
-    local ok, res = pcall(health.ensure_stplugin_dir)
+    local ok, res = pcall(health.ensure_lua_script_dir)
     if not ok then return json_err(res) end
     return json_ok({ success = res == true })
+end
+
+function EnsureLuaScriptDir()
+    local ok, res = pcall(health.ensure_lua_script_dir)
+    if not ok then return json_err(res) end
+    return json_ok({ success = res == true })
+end
+
+function InstallOpenSteamTool()
+    local ok, ost = pcall(require, "opensteamtool_install")
+    if not ok or not ost then return json_err(ost) end
+    local ok2, res = pcall(ost.install_latest)
+    if not ok2 then return json_err(res) end
+    return json_ok(res)
+end
+
+function GetUnlockStatus()
+    local ok, unlock_paths = pcall(require, "unlock_paths")
+    if not ok or not unlock_paths then return json_err(unlock_paths) end
+    local ok2, res = pcall(unlock_paths.get_unlock_status)
+    if not ok2 then return json_err(res) end
+    return json_ok({ success = true, status = res })
 end
 
 function GetSetupState()

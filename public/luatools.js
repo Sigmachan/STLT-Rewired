@@ -3942,7 +3942,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
                 var autofix = s.autoFixable || [];
                 var blockers = s.blockers || [];
+                var applied = s.applied || [];
                 var html = '<div style="font-size:12px;opacity:0.85;margin-bottom:10px;">' + lt('A couple of things to get downloads working:') + '</div>';
+                if (applied.length) {
+                    html += '<div style="margin-bottom:10px;padding:8px;background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.3);border-radius:6px;font-size:12px;">'
+                        + '<div style="color:#4caf50;font-weight:600;margin-bottom:4px;">' + lt('Fixed automatically') + '</div>';
+                    applied.forEach(function (label) {
+                        html += '<div style="opacity:0.85;">✓ ' + esc(label) + '</div>';
+                    });
+                    html += '</div>';
+                }
                 autofix.forEach(function (f) {
                     html += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0;">'
                         + '<span style="color:#66c0f4;">○</span><span>' + esc(f.label) + ' <span style="opacity:0.6;">— ' + lt('I can do this for you') + '</span></span></div>';

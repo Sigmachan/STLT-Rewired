@@ -13,6 +13,7 @@ local cjson = require("json")
 
 local downloads = {}
 local DOWNLOAD_STATE = {}
+local _history_mod = nil
 
 -- The Ryuu session cookie (data/secrets.local.json) authenticates the generator.ryuu.lol hub —
 -- and ONLY that host (the cookie is domain-scoped; never send it cross-domain). Returns the Cookie
@@ -41,6 +42,39 @@ local function _get_download_state(appid)
     return copy
 end
 
+local function _history()
+    if _history_mod == false then return nil end
+    if not _history_mod then
+        local ok, mod = pcall(require, "history")
+        _history_mod = ok and mod or false
+    end
+    return _history_mod or nil
+end
+
+local function _history_start(appid, source)
+    local h = _history()
+    if not h or not h.record_start then return nil end
+    local ok, row_id = pcall(h.record_start, appid, source or "", "")
+    if ok then return row_id end
+    return nil
+end
+
+local function _history_complete(appid)
+    local state = _get_download_state(appid)
+    local row_id = state.historyId
+    if not row_id then return end
+    local h = _history()
+    if h and h.record_complete then pcall(h.record_complete, row_id, "", state.totalBytes or 0, "") end
+end
+
+local function _history_fail(appid, err)
+    local state = _get_download_state(appid)
+    local row_id = state.historyId
+    if not row_id then return end
+    local h = _history()
+    if h and h.record_failure then pcall(h.record_failure, row_id, err or "failed") end
+end
+
 function downloads.get_add_status(appid)
     if type(appid) == "string" then appid = tonumber(appid) end
     
@@ -63,6 +97,7 @@ function downloads.get_add_status(appid)
                     local ok, res = pcall(downloads._finalize_install_lua, appid, extract_dir, dest_path, apiName)
                     if not ok then
                         _set_download_state(appid, { status = "failed", error = tostring(res) })
+                        _history_fail(appid, tostring(res))
                     end
                     
                     -- Cleanup background script files
@@ -70,6 +105,7 @@ function downloads.get_add_status(appid)
                     pcall(fs.remove, fs.join(dest_root, tostring(appid) .. "_dl.ps1"))
                     pcall(fs.remove, fs.join(dest_root, tostring(appid) .. "_dl.sh"))
                 elseif data.status == "failed" then
+                    _history_fail(appid, data.error or "download failed")
                     pcall(fs.remove, state_file)
                 end
             end
@@ -84,6 +120,7 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     local ok_dir, target_dir = unlock_paths.ensure_lua_script_dir()
     if not ok_dir then
         _set_download_state(appid, { status = "failed", error = target_dir or "lua script dir unavailable" })
+        _history_fail(appid, target_dir or "lua script dir unavailable")
         return { success = false, error = target_dir }
     end
 
@@ -133,6 +170,7 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     pcall(fs.remove_all, extract_dir)
     pcall(fs.remove, dest_path)
     _set_download_state(appid, { status = "done", success = true, api = api_name })
+    _history_complete(appid)
 
     pcall(function()
         require("manifest_auto_updater").update_app(appid, "after_add")
@@ -173,7 +211,8 @@ function downloads.start_add_via_luatools_from_url(appid, url, apiName)
     if not appid then return { success = false, error = "Invalid appid" } end
 
     logger.log("LuaTools: StartAddViaLuaToolsFromUrl appid=" .. tostring(appid) .. " api=" .. tostring(apiName))
-    _set_download_state(appid, { status = "downloading", currentApi = apiName, bytesRead = 0, totalBytes = 0 })
+    local history_id = _history_start(appid, apiName)
+    _set_download_state(appid, { status = "downloading", currentApi = apiName, bytesRead = 0, totalBytes = 0, historyId = history_id })
 
     local ok, res = pcall(function()
         if not url or url == "" then error("Invalid URL provided") end
@@ -186,6 +225,7 @@ function downloads.start_add_via_luatools_from_url(appid, url, apiName)
     if not ok then
         logger.warn("LuaTools: Async Download crashed - " .. tostring(res))
         _set_download_state(appid, { status = "failed", error = tostring(res) })
+        _history_fail(appid, tostring(res))
         return { success = false, error = tostring(res) }
     end
 
@@ -202,6 +242,7 @@ function downloads.start_add_via_luatools(appid)
     local apis = api_manifest.load_api_manifest()
     if not apis or #apis == 0 then
         _set_download_state(appid, { status = "failed", error = "No APIs available" })
+        _history_fail(appid, "No APIs available")
         return { success = true }
     end
 
@@ -271,13 +312,14 @@ function downloads.start_add_via_luatools(appid)
         end
         if not target_url then error("Not available on any API") end
         
-        _set_download_state(appid, { status = "downloading", currentApi = target_name })
+        _set_download_state(appid, { status = "downloading", currentApi = target_name, historyId = _history_start(appid, target_name) })
         _launch_async_download(appid, target_url, dest_path, extract_dir, _ryuu_cookie(target_url, target_name))
     end)
 
     if not ok then
         logger.warn("LuaTools: start_add_via_luatools crashed - " .. tostring(res))
         _set_download_state(appid, { status = "failed", error = tostring(res) })
+        _history_fail(appid, tostring(res))
         return { success = false, error = tostring(res) }
     end
 
