@@ -76,6 +76,8 @@ local function on_load()
 
     pcall(setup_assistant.self_heal)
 
+    pcall(function() auto_update.maybe_check_on_boot() end)
+
     local ok_u, upd_msg = pcall(auto_update.apply_pending_update_if_any)
     if ok_u and upd_msg and upd_msg ~= "" then
         api_manifest.store_last_message(upd_msg)
@@ -159,6 +161,12 @@ function CheckForUpdatesNow()
         logger.warn("CheckForUpdatesNow failed: " .. tostring(res))
         return json_err(res)
     end
+    return json_ok(res)
+end
+
+function GetUpdateStatus()
+    local ok, res = pcall(auto_update.get_update_status)
+    if not ok then return json_err(res) end
     return json_ok(res)
 end
 
@@ -555,12 +563,11 @@ end
 
 function GetInstalledLuaScripts()
     local ok, res = pcall(function()
-        local base = steam_utils.detect_steam_install_path()
-        if not base or base == "" then
+        local target_dir = unlock_paths.lua_script_dir()
+        if not target_dir or target_dir == "" then
             logger.warn("GetInstalledLuaScripts: Steam install path not found")
             return { success = false, error = "Steam install path not found", scripts = st.A({}) }
         end
-        local target_dir = fs.join(base, "config", "stplug-in")
 
         local ok2, files = pcall(fs.list, target_dir)
         if not ok2 then

@@ -1,8 +1,16 @@
 {
-  "_comment": "Auto-update checks Sigmachan/STLT-Rewired releases. Downgrade-proof: only updates when GitHub release version is strictly newer than the running build AND asset STLT-Rewired.zip is attached. Blank owner/repo to disable.",
+  "_comment": "GitHub release auto-update for plugin (in-Steam + boot) and install script URLs for Manager/scripts.",
   "github": {
     "owner": "Sigmachan",
     "repo": "STLT-Rewired",
-    "asset_name": "STLT-Rewired.zip"
+    "asset_name": "STLT-Rewired.zip",
+    "manager_asset_name": "RewiredManager-win-x64-framework-dependent.zip",
+    "tag_prefix": "v"
+  },
+  "install": {
+    "windows_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1",
+    "windows_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1",
+    "linux_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh",
+    "linux_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh"
   }
 }

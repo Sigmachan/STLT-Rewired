@@ -8,9 +8,31 @@ ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
 
 > See `docs/PRODUCTION_STACK.md` for the recommended install path (Manager + OpenSteamTool, Millennium optional).
 
+## Quick install
+
+**Windows (full stack):**
+
+```powershell
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+```
+
+**Windows (update):**
+
+```powershell
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1 | iex
+```
+
+**Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+```
+
+Details: `docs/INSTALL.md`.
+
 ## Project docs
 
-- `docs/PRODUCTION_STACK.md` — Manager-first install, unlock backends, release layout.
+- `docs/INSTALL.md` — one-liner URLs, install/update scripts, auto-update channels.
 - `docs/ARCHITECTURE.md` — runtime shape, backend modules, RPC surface, safety model.
 - `docs/GEN1_GEN2_COMPARISON.md` — notes from the Gen 1 plugin archive and Gen 2 portable app.
 - `docs/COMPETITIVE_BASELINE.md` — official LuaTools/Gen2 baseline and Rewired differentiators.

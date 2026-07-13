@@ -185,7 +185,7 @@ foreach ($root in @($cand30, $candOld)) {
 }
 $dupes = @($dupes | Select-Object -Unique)
 if ($dupes.Count -gt 1) {
-    Write-Host "Found $($dupes.Count) '$pluginName' plugin folders — removing duplicates (keeping $dst)..." -ForegroundColor Yellow
+    Write-Host "Found $($dupes.Count) '$pluginName' plugin folders - removing duplicates (keeping $dst)..." -ForegroundColor Yellow
     foreach ($d in $dupes) {
         if ($d -ieq $dst) { continue }
         try { Remove-Item -Recurse -Force -LiteralPath $d } catch {
@@ -236,7 +236,7 @@ Write-Host ""
 Write-Host "Next:" -ForegroundColor Cyan
 Write-Host "  1. Fully restart Steam (Steam menu -> Exit, then relaunch)."
 Write-Host "  2. In Steam -> Millennium settings, confirm 'luatools' (Rewired) is enabled."
-Write-Host "  3. Open the Millennium/CEF console; expect: [LuaTools] rich UI loaded (<n> bytes)"
+Write-Host '  3. Open the Millennium/CEF console; expect: [LuaTools] rich UI loaded (N bytes)'
 Write-Host "  4. Open a game page -> Add via Rewired button and Rewired menu should appear."
 Write-Host ""
-Write-Host "Roll back any time:  pwsh -File deploy.ps1 -Restore" -ForegroundColor DarkGray
+Write-Host 'Roll back any time:  pwsh -NoProfile -File deploy.ps1 -Restore' -ForegroundColor DarkGray

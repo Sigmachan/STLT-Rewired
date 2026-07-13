@@ -1,0 +1,73 @@
+# Quick install URLs and one-liners for STLT-Rewired (Rewired).
+
+## Windows (recommended)
+
+**Full install** — Millennium (if missing), Rewired plugin, Manager, OpenSteamTool, desktop shortcut:
+
+```powershell
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+```
+
+**Update only** (plugin + Manager from latest GitHub release):
+
+```powershell
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1 | iex
+```
+
+### Options (local script)
+
+```powershell
+pwsh -NoProfile -File scripts/install.ps1 -SkipMillennium -SkipOpenSteamTool
+pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
+```
+
+| Switch | Effect |
+|--------|--------|
+| `-SkipMillennium` | Do not install Millennium runtime |
+| `-SkipManager` | Plugin only |
+| `-SkipOpenSteamTool` | Do not install OpenSteamTool DLLs |
+| `-SkipShortcut` | No desktop shortcut |
+
+## Linux
+
+**Full install** — Millennium (via steambrew if missing) + Rewired plugin:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+```
+
+**Update** (skips Millennium, re-installs plugin preserving `backend/data`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh | bash
+```
+
+Linux unlock (SLSsteam / ACCELA) is **not** bundled — see [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) and [SLSsteam](https://github.com/AceSLS/SLSsteam).
+
+Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
+
+## Auto-update channels
+
+| Component | Mechanism |
+|-----------|-----------|
+| **Plugin (in Steam)** | `CheckForUpdatesNow` RPC + throttled boot check every 2h via `backend/update.json` → GitHub release `STLT-Rewired.zip` |
+| **Manager (Windows)** | System tab → **Check for updates** (GitHub `RewiredManager-*.zip` + live plugin) |
+| **Script** | Re-run `update.ps1` / `update.sh` one-liners above |
+
+Install URLs are also embedded in `backend/update.json` under `install.*` for in-plugin display via `GetUpdateStatus`.
+
+## First-time maintainers
+
+Publish a GitHub release before one-liner installs work:
+
+```powershell
+pwsh -NoProfile -File scripts/build_release.ps1
+pwsh -NoProfile -File manager/scripts/publish-manager.ps1
+gh release create v0.1.5 releases/STLT-Rewired.zip releases/RewiredManager-win-x64-framework-dependent.zip --title "STLT-Rewired v0.1.5"
+```
+
+## Dev / git checkout
+
+```powershell
+pwsh -NoProfile -File deploy.ps1
+```

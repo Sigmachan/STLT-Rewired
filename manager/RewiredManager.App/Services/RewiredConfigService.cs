@@ -19,6 +19,9 @@ public sealed class RewiredConfigService
 
     public static string ConfigPath => Path.Combine(ConfigDirectory, "rewired.json");
 
+    public static string GetDefaultManagerInstallDir =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rewired", "Manager");
+
     public RewiredSharedConfig Load()
     {
         if (!File.Exists(ConfigPath))
