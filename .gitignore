@@ -60,6 +60,7 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+NUL
 
 # Runtime / Generated Files (Backend)
 backend/temp_dl/
@@ -97,14 +98,26 @@ backend/data/*.sample
 # Gemini CLI / agent scratch
 .gjc/
 
+# Local AI / agent tooling (Cursor rules, skills, hooks, MCP — never commit)
+.cursor/
+
+# Agent memory + LLM context (local-only)
+AGENTS.md
+llms.txt
+
 # local personal secrets (Ryuu session, hubcap key) — never commit
 backend/data/secrets.local.json
 backend/data/*.cookies.txt
 backend/data/cookies*.txt
 
 # local release zips (build with scripts/build_release.ps1 and manager/scripts/publish-manager.ps1)
+# (covered by releases/ above; keep explicit zip rule for safety)
 releases/*.zip
 
-# Private reverse-engineering artifacts (local ilspycmd output)
+# Private reverse-engineering / gen2 reference (local ilspycmd output)
 docs/gen2/decompiled/
-NUL
+docs/gen2/LuaTools.types.txt
+docs/gen2/*.types.txt
+
+# Local release build output (zips + checksum sidecars)
+releases/
