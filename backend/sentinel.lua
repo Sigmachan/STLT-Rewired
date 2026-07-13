@@ -115,9 +115,21 @@ function M.unignore_game(appid)
 end
 
 function M.get_status()
+    local cfg = read_config()
     return {
-        success = true, running = false, backgroundWatcher = false,
-        config = read_config(), note = UNAVAILABLE,
+        success = true,
+        running = false,
+        backgroundWatcher = false,
+        watcherUnavailable = true,
+        unsupported = true,
+        note = UNAVAILABLE,
+        config = cfg,
+        enabled = cfg.enabled == true,
+        poll_interval = tonumber(cfg.poll_interval) or 45,
+        poll_interval_minutes = tonumber(cfg.poll_interval) or 45,
+        auto_apply_policy = cfg.auto_apply_policy or "ask",
+        notification_style = cfg.notification_style or "toast",
+        seen_games_count = #(cfg.per_game_ignore or {}),
     }
 end
 

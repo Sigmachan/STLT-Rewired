@@ -1363,6 +1363,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             const gameToolsBtn = createMenuButton('lt-st-game-tools', 'menu.gameTools', '🎮 Game Tools (per-app)', 'fa-gamepad');
             const cacheInfoBtn = createMenuButton('lt-st-cache-info', 'menu.cacheManager', '🧹 Cache Manager', 'fa-broom');
             const folderStatsBtn = createMenuButton('lt-st-folder-stats', 'menu.folderStats', '📁 Folder Stats', 'fa-chart-pie');
+            const downloadHistoryBtn = createMenuButton('lt-st-download-history', 'menu.downloadHistory', '📜 Download History', 'fa-clock-rotate-left');
             const conflictsBtn = createMenuButton('lt-st-conflicts', 'menu.depotConflicts', '⚠️ Depot Conflict Check', 'fa-triangle-exclamation');
             const libScanBtn = createMenuButton('lt-st-lib-scan', 'menu.libraryScan', '💿 Library Scanner', 'fa-hard-drive');
             const backupBtn = createMenuButton('lt-st-backup', 'menu.backupRestore', '💾 Backup & Restore', 'fa-box-archive');
@@ -1388,7 +1389,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 var _advancedBtns = [sentinelBtn, repairAllBtn, acctTransferBtn,
                     keyVaultBtn, sourceHealthBtn, companionBtn, supportBundleBtn, cloudRedirectBtn, acctSwitchBtn,
                     tokeerBtn, syncBtn, migratorBtn,
-                    achieveBtn, gameToolsBtn, cacheInfoBtn, folderStatsBtn,
+                    achieveBtn, gameToolsBtn, cacheInfoBtn, folderStatsBtn, downloadHistoryBtn,
                     conflictsBtn, libScanBtn, backupBtn, customApisBtn,
                     compatToolBtn].filter(Boolean);
                 if (_advancedBtns.length) {
@@ -1654,6 +1655,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     e.preventDefault();
                     try { overlay.remove(); } catch (_) { }
                     showSteamToolsFolderStats();
+                });
+            }
+
+            if (downloadHistoryBtn) {
+                downloadHistoryBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try { overlay.remove(); } catch (_) { }
+                    showDownloadHistoryPanel();
                 });
             }
 
@@ -4611,6 +4620,81 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         });
     }
 
+    function showDownloadHistoryPanel() {
+        _stOverlayShell('📜 ' + lt('Download History'), function (body, ov, colors) {
+            function fmtBytes(n) {
+                n = Number(n) || 0;
+                if (n >= 1073741824) return (n / 1073741824).toFixed(2) + ' GB';
+                if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+                if (n >= 1024) return Math.round(n / 1024) + ' KB';
+                return n + ' B';
+            }
+            function fmtTime(ts) {
+                if (!ts) return '—';
+                try { return new Date(ts * 1000).toLocaleString(); } catch (_) { return String(ts); }
+            }
+            function statusColor(st) {
+                if (st === 'complete') return '#4caf50';
+                if (st === 'failed') return '#f44336';
+                return '#ff9800';
+            }
+            function load() {
+                body.innerHTML = '<div style="text-align:center;padding:12px;color:' + colors.accent + ';"><i class="fa-solid fa-spinner fa-spin"></i><div style="margin-top:8px;">' + lt('Loading…') + '</div></div>';
+                Promise.all([
+                    _ltServer('GetDownloadStats', { contentScriptQuery: '' }),
+                    _ltServer('GetDownloadHistory', { appid: 0, limit: 80, contentScriptQuery: '' })
+                ]).then(function (results) {
+                    var statsP = _ltParsePayload(results[0]);
+                    var histP = _ltParsePayload(results[1]);
+                    if (!statsP.success && !histP.success) {
+                        body.innerHTML = '<div style="color:#f44336;">' + _ltEscapeHtml((histP.error || statsP.error) || 'Failed') + '</div>';
+                        return;
+                    }
+                    var stats = statsP.stats || {};
+                    var rows = histP.history || [];
+                    var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">';
+                    html += '<div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"><div style="font-size:18px;font-weight:700;color:' + colors.accent + ';">' + (stats.total_downloads || 0) + '</div><div style="font-size:10px;opacity:0.65;">Total</div></div>';
+                    html += '<div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"><div style="font-size:18px;font-weight:700;color:#4caf50;">' + ((stats.by_status && stats.by_status.complete) || 0) + '</div><div style="font-size:10px;opacity:0.65;">Complete</div></div>';
+                    html += '<div style="text-align:center;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;"><div style="font-size:18px;font-weight:700;color:' + colors.text + ';">' + fmtBytes(stats.total_bytes || 0) + '</div><div style="font-size:10px;opacity:0.65;">Downloaded</div></div>';
+                    html += '</div>';
+                    if (!rows.length) {
+                        html += '<div style="text-align:center;padding:20px;opacity:0.7;font-size:13px;">' + lt('No download history yet. Add a game to start recording.') + '</div>';
+                    } else {
+                        html += '<div style="max-height:42vh;overflow-y:auto;border:1px solid ' + colors.borderRgba + ';border-radius:6px;">';
+                        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid ' + colors.borderRgba + ';opacity:0.8;"><th style="text-align:left;padding:6px 8px;">AppID</th><th style="text-align:left;padding:6px 8px;">Source</th><th style="text-align:left;padding:6px 8px;">Status</th><th style="text-align:left;padding:6px 8px;">When</th></tr></thead><tbody>';
+                        rows.forEach(function (r) {
+                            html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">'
+                                + '<td style="padding:6px 8px;font-weight:600;">' + _ltEscapeHtml(r.appid) + '</td>'
+                                + '<td style="padding:6px 8px;">' + _ltEscapeHtml(r.source || '—') + '</td>'
+                                + '<td style="padding:6px 8px;color:' + statusColor(r.status) + ';">' + _ltEscapeHtml(r.status || '—') + '</td>'
+                                + '<td style="padding:6px 8px;opacity:0.75;">' + _ltEscapeHtml(fmtTime(r.created_at)) + '</td></tr>';
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                    html += '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">'
+                        + '<button id="lt-hist-refresh" style="padding:8px 12px;background:rgba(255,255,255,0.08);border:1px solid ' + colors.borderRgba + ';border-radius:6px;color:' + colors.text + ';cursor:pointer;">' + lt('Refresh') + '</button>'
+                        + '<button id="lt-hist-prune" style="padding:8px 12px;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);border-radius:6px;color:#ff9800;cursor:pointer;">' + lt('Prune 30d+') + '</button>'
+                        + '</div>';
+                    body.innerHTML = html;
+                    var refreshBtn = document.getElementById('lt-hist-refresh');
+                    if (refreshBtn) refreshBtn.onclick = function () { load(); };
+                    var pruneBtn = document.getElementById('lt-hist-prune');
+                    if (pruneBtn) pruneBtn.onclick = function () {
+                        pruneBtn.disabled = true;
+                        _ltServer('PruneHistory', { days: 30, contentScriptQuery: '' }).then(function (p) {
+                            p = _ltParsePayload(p);
+                            showLuaToolsToast(p.success ? ('Pruned ' + (p.deleted || 0) + ' entries') : (p.error || 'Prune failed'), 3000, p.success ? 'success' : 'error');
+                            load();
+                        });
+                    };
+                }).catch(function (err) {
+                    body.innerHTML = '<div style="color:#f44336;">Failed: ' + _ltEscapeHtml(err) + '</div>';
+                });
+            }
+            load();
+        });
+    }
+
     function showSteamToolsFolderStats() {
         _stOverlayShell('📊 Steam Folder Stats', function (body, ov, colors) {
             body.innerHTML = '<div style="text-align:center;padding:10px;color:' + colors.accent + '"><i class="fa-solid fa-spinner fa-spin" style="font-size:16px;"></i><div style="margin-top:8px;">Calculating folder sizes…</div></div>';
@@ -4652,9 +4736,9 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 Millennium.callServerMethod('luatools', 'GetSteamProcessInfo', { contentScriptQuery: '' }),
                 Millennium.callServerMethod('luatools', 'GetSentinelStatus', { contentScriptQuery: '' })
             ]).then(function (results) {
-                var d = typeof results[0] === 'string' ? JSON.parse(results[0]) : results[0];
-                var pi = typeof results[1] === 'string' ? JSON.parse(results[1]) : results[1];
-                var sentinelInfo = typeof results[2] === 'string' ? JSON.parse(results[2]) : results[2];
+                var d = _ltParsePayload(results[0]);
+                var pi = _ltParsePayload(results[1]);
+                var sentinelInfo = _ltParsePayload(results[2]);
 
                 function card(icon, label, value, color) {
                     return '<div style="text-align:center;padding:10px 6px;background:rgba(255,255,255,0.04);border-radius:8px;min-width:80px;">'
@@ -4727,6 +4811,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     };
                     actionRow.appendChild(enableBtn);
 
+                    if (!sentinelInfo.watcherUnavailable && !sentinelInfo.unsupported) {
                     var runBtn = document.createElement('button');
                     runBtn.textContent = sentinelInfo.running ? 'Stop Sentinel' : 'Start Sentinel';
                     runBtn.style.cssText = 'padding:8px 12px;background:' + (sentinelInfo.running ? '#ff9800' : '#1976d2') + ';color:#fff;border:none;border-radius:6px;cursor:pointer;min-width:120px;';
@@ -4745,6 +4830,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             }).catch(function () { showLuaToolsToast('Sentinel action failed', 2500, 'error'); });
                     };
                     actionRow.appendChild(runBtn);
+                    }
 
                     var refreshBtn = document.createElement('button');
                     refreshBtn.textContent = 'Refresh';
@@ -4763,7 +4849,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             body.innerHTML = '<div style="text-align:center;padding:10px;color:' + colors.accent + '"><i class="fa-solid fa-spinner fa-spin" style="font-size:16px;"></i><div style="margin-top:8px;">Loading Sentinel status…</div></div>';
             Millennium.callServerMethod('luatools', 'GetSentinelStatus', { contentScriptQuery: '' })
                 .then(function (res) {
-                    var info = typeof res === 'string' ? JSON.parse(res) : res;
+                    var info = _ltParsePayload(res);
                     if (!info.success) {
                         body.innerHTML = '<div style="color:#f44336;">Error: ' + (info.error || 'Unknown') + '</div>';
                         return;
@@ -4784,7 +4870,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             + '<div style="font-size:10px;opacity:0.6;margin-top:2px;">' + label + '</div></div>';
                     }
 
-                    var html = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px;">'
+                    var watcherOff = info.watcherUnavailable === true || info.unsupported === true;
+                    var html = '';
+                    if (watcherOff && info.note) {
+                        html += '<div style="margin-bottom:10px;padding:10px;background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:6px;font-size:12px;line-height:1.45;color:#ffc800;">'
+                            + '<i class="fa-solid fa-circle-info" style="margin-right:6px;"></i>' + _ltEscapeHtml(info.note) + '</div>';
+                    }
+
+                    html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px;">'
                         + card('fa-shield-check', 'Status', status, color)
                         + card('fa-toggle-on', 'Enabled', enabled, info.enabled ? '#4caf50' : '#f44336')
                         + card('fa-clock', 'Poll', poll, '#2196f3')
@@ -4794,11 +4887,15 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         + '</div>';
 
                     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">'
-                        + '<button id="lt-sentinel-toggle" style="padding:10px 14px;background:' + (info.enabled ? '#f44336' : '#4caf50') + ';color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:140px;">' + (info.enabled ? 'Disable Sentinel' : 'Enable Sentinel') + '</button>'
-                        + '<button id="lt-sentinel-run" style="padding:10px 14px;background:' + (info.running ? '#ff9800' : '#1976d2') + ';color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:140px;">' + (info.running ? 'Stop Sentinel' : 'Start Sentinel') + '</button>'
-                        + '<button id="lt-sentinel-staleness" style="padding:10px 14px;background:#673ab7;color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:160px;">Check Manifest Staleness</button>'
-                        + '<button id="lt-sentinel-service" style="padding:10px 14px;background:#37474f;color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;min-width:170px;">Background Service…</button>'
-                        + '<button id="lt-sentinel-refresh" style="padding:10px 14px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;min-width:120px;">Refresh</button>'
+                        + '<button id="lt-sentinel-toggle" style="padding:10px 14px;background:' + (info.enabled ? '#f44336' : '#4caf50') + ';color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:140px;">' + (info.enabled ? 'Disable Sentinel' : 'Enable Sentinel') + '</button>';
+                    if (!watcherOff) {
+                        html += '<button id="lt-sentinel-run" style="padding:10px 14px;background:' + (info.running ? '#ff9800' : '#1976d2') + ';color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:140px;">' + (info.running ? 'Stop Sentinel' : 'Start Sentinel') + '</button>';
+                    }
+                    html += '<button id="lt-sentinel-staleness" style="padding:10px 14px;background:#673ab7;color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:160px;">Check Manifest Staleness</button>';
+                    if (!watcherOff) {
+                        html += '<button id="lt-sentinel-service" style="padding:10px 14px;background:#37474f;color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;min-width:170px;">Background Service…</button>';
+                    }
+                    html += '<button id="lt-sentinel-refresh" style="padding:10px 14px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;min-width:120px;">Refresh</button>'
                         + '</div>';
                     html += '<div id="lt-sentinel-results" style="margin-top:12px;max-height:40vh;overflow-y:auto;"></div>';
 
@@ -4823,7 +4920,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             }).catch(function () { showLuaToolsToast('Sentinel update failed', 2500, 'error'); });
                     };
 
-                    document.getElementById('lt-sentinel-run').onclick = function () {
+                    var runBtn = document.getElementById('lt-sentinel-run');
+                    if (runBtn) runBtn.onclick = function () {
                         var method = info.running ? 'StopSentinel' : 'StartSentinel';
                         Millennium.callServerMethod('luatools', method, { contentScriptQuery: '' })
                             .then(function (r) {
@@ -4837,11 +4935,13 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             }).catch(function () { showLuaToolsToast('Sentinel action failed', 2500, 'error'); });
                     };
 
-                    document.getElementById('lt-sentinel-refresh').onclick = function () {
+                    var refreshBtn = document.getElementById('lt-sentinel-refresh');
+                    if (refreshBtn) refreshBtn.onclick = function () {
                         showSentinelPanel();
                     };
 
-                    document.getElementById('lt-sentinel-service').onclick = function () {
+                    var serviceBtn = document.getElementById('lt-sentinel-service');
+                    if (serviceBtn) serviceBtn.onclick = function () {
                         var rc = document.getElementById('lt-sentinel-results');
                         rc.innerHTML = '<div style="text-align:center;padding:10px;color:' + colors.accent + '"><i class="fa-solid fa-spinner fa-spin"></i> Checking service status…</div>';
                         Millennium.callServerMethod('luatools', 'GetSentinelService', { contentScriptQuery: '' })

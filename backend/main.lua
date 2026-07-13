@@ -924,6 +924,12 @@ end
 -- ── Download history & config transfer (history.py / config_transfer.py) ──────
 
 function GetDownloadHistory(appid, contentScriptQuery, limit, source, status)
+    if type(appid) == "table" then
+        limit = appid.limit
+        source = appid.source
+        status = appid.status
+        appid = appid.appid
+    end
     local ok, res = pcall(history.get_download_history_json, appid, limit, status, source)
     if not ok then return json_err(res) end
     return json_ok(res)
@@ -936,6 +942,11 @@ function GetDownloadStats()
 end
 
 function PruneHistory(contentScriptQuery, days)
+    if type(contentScriptQuery) == "table" then
+        days = contentScriptQuery.days
+        contentScriptQuery = contentScriptQuery.contentScriptQuery
+    end
+    days = tonumber(days) or 30
     local ok, res = pcall(history.prune_history_json, days)
     if not ok then return json_err(res) end
     return json_ok(res)
