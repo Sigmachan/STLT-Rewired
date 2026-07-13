@@ -46,7 +46,10 @@ Local-only decompile: `docs/gen2/decompiled/` (gitignored). Hermes references: `
 | Config import/export (Settings) | Done |
 | ManifestHub usage stats button | Done |
 | Menu locale keys (en/ru) | Done — uk/de/be/ru complete |
-| Theme-token sweep (hardcoded grays) | Partial — parity panels use `getThemeColors()` |
+| Key vault / sync / config persistence | Fixed — `apply_settings_changes` + secrets.local.json |
+| Global RPC payload parse | Done — all `luatools` calls unwrap bridge envelopes |
+| Ryuu catalog warm | Async background load + UI polling (no Steam freeze) |
+| Theme-token sweep (hardcoded grays) | Done — advanced overlays use theme tokens |
 | Denuvo in-app browser | Ryuu fixes fallback only |
 
 ## Do not port

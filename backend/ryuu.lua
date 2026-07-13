@@ -17,6 +17,24 @@ local DOWNLOAD_TIMEOUT = 120
 local INDEX_MEM = nil
 local INDEX_MEM_TS = 0
 local INDEX_MEM_SIZE = 0
+local CATALOG_JOB = { state = "idle", error = nil }
+
+local function spawn_background(fn)
+    if type(millennium) == "table" and type(millennium.start_coroutine) == "function" then
+        local ok = pcall(millennium.start_coroutine, fn)
+        if ok then return true end
+    end
+    fn()
+    return false
+end
+
+local function set_catalog_index(games)
+    INDEX_MEM = games
+    INDEX_MEM_TS = now_seconds()
+    INDEX_MEM_SIZE = #games
+    CATALOG_JOB.state = "ready"
+    CATALOG_JOB.error = nil
+end
 
 local function now_seconds()
     return os.time()
@@ -139,10 +157,35 @@ local function ensure_catalog_index(force_refresh)
         return nil, err or "Ryuu catalog unavailable"
     end
 
-    INDEX_MEM = games
-    INDEX_MEM_TS = now
-    INDEX_MEM_SIZE = #games
+    set_catalog_index(games)
     return games, nil, INDEX_MEM_SIZE
+end
+
+local function begin_catalog_load(force_refresh)
+    if CATALOG_JOB.state == "loading" then
+        return false, "Catalog index loading…"
+    end
+
+    CATALOG_JOB.state = "loading"
+    CATALOG_JOB.error = nil
+
+    local function work()
+        local games, err = ensure_catalog_index(force_refresh == true)
+        if not games then
+            CATALOG_JOB.state = "error"
+            CATALOG_JOB.error = err or "Ryuu catalog unavailable"
+            return
+        end
+        CATALOG_JOB.state = "ready"
+    end
+
+    local async = spawn_background(work)
+    if async then
+        return true, force_refresh and "Refreshing Ryuu catalog index…" or "Loading Ryuu catalog index…"
+    end
+
+    CATALOG_JOB.state = "ready"
+    return false, nil
 end
 
 local function search_index(catalog, query, limit)
@@ -173,6 +216,44 @@ local function search_index(catalog, query, limit)
 end
 
 function M.warm_catalog_cache(force_refresh)
+    if force_refresh then
+        INDEX_MEM = nil
+        INDEX_MEM_TS = 0
+        INDEX_MEM_SIZE = 0
+        CATALOG_JOB.state = "idle"
+    end
+
+    if INDEX_MEM and INDEX_MEM_TS > 0 and force_refresh ~= true then
+        return {
+            success = true,
+            catalogSize = INDEX_MEM_SIZE or #INDEX_MEM,
+            cachePath = catalog_cache_path(),
+            refreshed = false,
+        }
+    end
+
+    if CATALOG_JOB.state == "loading" then
+        return {
+            success = false,
+            pending = true,
+            error = CATALOG_JOB.error or "Catalog index loading…",
+        }
+    end
+
+    if CATALOG_JOB.state == "error" and force_refresh ~= true then
+        return { success = false, error = CATALOG_JOB.error or "Ryuu catalog unavailable" }
+    end
+
+    local path = catalog_cache_path()
+    local needs_download = force_refresh == true or not fs.exists(path)
+    local started, message = begin_catalog_load(force_refresh == true)
+    if started then
+        if needs_download and not cache_is_fresh(path) then
+            message = "Downloading Ryuu catalog index (first run may take ~1 min)…"
+        end
+        return { success = false, pending = true, error = message }
+    end
+
     local catalog, err, size = ensure_catalog_index(force_refresh == true)
     if not catalog then
         return { success = false, error = err or "Ryuu catalog unavailable" }
@@ -197,6 +278,9 @@ function M.search_catalog(query, limit)
 
     local catalog, err, size = ensure_catalog_index(false)
     if not catalog then
+        if CATALOG_JOB.state == "loading" then
+            return { success = false, pending = true, error = "Catalog index still loading…", results = st.A({}) }
+        end
         return { success = false, error = err or "Ryuu catalog unavailable", results = st.A({}) }
     end
 

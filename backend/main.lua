@@ -1432,7 +1432,10 @@ end
 function ImportKeyProfile(activate, blob, contentScriptQuery, nameOverride)
     if type(activate) == "table" then
         local t = activate
-        blob = t.blob; nameOverride = t.nameOverride; activate = t.activate
+        blob = t.blob
+        nameOverride = t.nameOverride
+        activate = t.activate
+        contentScriptQuery = t.contentScriptQuery
     end
     local ok, res = pcall(key_vault.import_profile, blob, nameOverride, activate)
     if not ok then return json_err(res) end

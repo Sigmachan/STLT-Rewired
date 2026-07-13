@@ -33,6 +33,70 @@ local GETTERS = {
     steamGridDbKey = "get_steamgriddb_key", githubToken = "get_github_token",
 }
 
+local SECRETS_FILE = st.data_path("secrets.local.json")
+local SECRET_FIELDS = {
+    morrenusApiKey = true,
+    manifestHubApiKey = true,
+    ryuuSession = true,
+    depotboxSid = true,
+}
+
+local function read_secrets()
+    if not fs.is_file(SECRETS_FILE) then return {} end
+    local ok, data = pcall(cjson.decode, m_utils.read_file(SECRETS_FILE) or "")
+    if ok and type(data) == "table" then return data end
+    return {}
+end
+
+local function write_secrets(data)
+    if type(data) ~= "table" then return false end
+    local dir = st.data_dir()
+    if dir and dir ~= "" and not fs.exists(dir) then
+        pcall(fs.create_directories, dir)
+    end
+    local ok = pcall(m_utils.write_file, SECRETS_FILE, cjson.encode(data))
+    return ok
+end
+
+local function persist_secret_fields(keys)
+    if type(keys) ~= "table" then return end
+    local secrets = read_secrets()
+    local changed = false
+    for field in pairs(SECRET_FIELDS) do
+        local value = keys[field]
+        if value and value ~= "" then
+            secrets[field] = tostring(value)
+            changed = true
+        end
+    end
+    if keys.morrenusApiKey and keys.morrenusApiKey ~= "" then
+        secrets.manifestHubApiKey = tostring(keys.morrenusApiKey)
+        changed = true
+    end
+    if changed then write_secrets(secrets) end
+end
+
+local function apply_profile_keys(keys)
+    local bulk, applied = {}, {}
+    for _, f in ipairs(VAULT_FIELDS) do
+        local value = keys[f[1]]
+        if value and value ~= "" then
+            local group = FIELD_GROUPS[f[1]] or "general"
+            bulk[group] = bulk[group] or {}
+            bulk[group][f[1]] = value
+            table.insert(applied, f[1])
+        end
+    end
+    if next(bulk) ~= nil then
+        local ok, sm = pcall(require, "settings.manager")
+        if ok and type(sm) == "table" and type(sm.apply_settings_changes) == "function" then
+            pcall(sm.apply_settings_changes, bulk)
+        end
+    end
+    persist_secret_fields(keys)
+    return applied
+end
+
 local function vault_path() return st.data_path("key_vault.json") end
 
 local function read_vault()
@@ -125,22 +189,7 @@ function M.load_profile(name)
     local keys = vault.profiles[name]
     if not keys then return { success = false, error = "Profile '" .. name .. "' not found" } end
 
-    local bulk, applied = {}, {}
-    for _, f in ipairs(VAULT_FIELDS) do
-        local value = keys[f[1]]
-        if value and value ~= "" then
-            local group = FIELD_GROUPS[f[1]] or "general"
-            bulk[group] = bulk[group] or {}
-            bulk[group][f[1]] = value
-            table.insert(applied, f[1])
-        end
-    end
-    if next(bulk) ~= nil then
-        local ok, sm = pcall(require, "settings.manager")
-        if ok and type(sm) == "table" and type(sm.apply_settings_bulk) == "function" then
-            pcall(sm.apply_settings_bulk, bulk)
-        end
-    end
+    local applied = apply_profile_keys(keys)
 
     vault.active = name
     write_vault(vault)

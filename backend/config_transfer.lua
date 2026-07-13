@@ -22,9 +22,14 @@ function M.export_config()
     -- 1. settings
     config.settings = {}
     local ok_s, sm = pcall(require, "settings.manager")
-    if ok_s and type(sm) == "table" and type(sm.get_all_settings) == "function" then
-        local ok, s = pcall(sm.get_all_settings)
-        if ok and type(s) == "table" then config.settings = s end
+    if ok_s and type(sm) == "table" then
+        if type(sm.get_settings_state) == "function" then
+            local ok, s = pcall(sm.get_settings_state)
+            if ok and type(s) == "table" then config.settings = s.values or s end
+        elseif type(sm.get_settings_payload) == "function" then
+            local ok, s = pcall(sm.get_settings_payload)
+            if ok and type(s) == "table" then config.settings = s.values or s end
+        end
     end
 
     -- 2. source chain
@@ -83,9 +88,19 @@ function M.import_config(config_json)
     -- 1. settings
     if data.settings ~= nil and next(data.settings) ~= nil then
         local ok_s, sm = pcall(require, "settings.manager")
-        if ok_s and type(sm) == "table" and type(sm.apply_settings_bulk) == "function" then
-            local ok, err = pcall(sm.apply_settings_bulk, data.settings)
-            if ok then table.insert(imported, "settings") else table.insert(errors, "settings: " .. tostring(err)) end
+        if ok_s and type(sm) == "table" and type(sm.apply_settings_changes) == "function" then
+            local settings_payload = data.settings
+            if type(settings_payload) == "table" and type(settings_payload.values) == "table" then
+                settings_payload = settings_payload.values
+            end
+            local ok, err = pcall(sm.apply_settings_changes, settings_payload)
+            if ok and type(err) == "table" and err.success == false then
+                table.insert(errors, "settings: " .. tostring(err.error or "apply failed"))
+            elseif ok then
+                table.insert(imported, "settings")
+            else
+                table.insert(errors, "settings: " .. tostring(err))
+            end
         else
             table.insert(errors, "settings: unsupported")
         end

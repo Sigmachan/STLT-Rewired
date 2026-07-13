@@ -13,6 +13,19 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 (function () {
     'use strict';
 
+    function _ltParsePayload(res) {
+        var payload = res;
+        if (payload && payload.result !== undefined) payload = payload.result;
+        if (payload && payload.value !== undefined) payload = payload.value;
+        if (typeof payload === 'string') {
+            try { payload = JSON.parse(payload); } catch (_) { }
+        }
+        if (typeof payload === 'string') {
+            try { payload = JSON.parse(payload); } catch (_) { }
+        }
+        return (payload && typeof payload === 'object') ? payload : {};
+    }
+
     // Millennium beta.8 crashes when heavy luatools RPCs overlap. Only queue disk/network scans;
     // keep menu, add-game polling, and settings reads on the fast path.
     (function patchLuatoolsRpcQueue() {
@@ -31,16 +44,23 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             GetSourceHealth: true,
             ScanAllLuaScripts: true,
             RunHealthScanAll: true,
-            ExportSupportBundle: true
+            ExportSupportBundle: true,
+            WarmRyuuCatalogCache: true,
+            SearchRyuuCatalog: true
         };
         var orig = Millennium.callServerMethod.bind(Millennium);
         Millennium.callServerMethod = function (plugin, method, args) {
+            var run = function () {
+                return orig(plugin, method, args).then(function (res) {
+                    return plugin === 'luatools' ? _ltParsePayload(res) : res;
+                });
+            };
             if (plugin !== 'luatools' || !HEAVY_RPC[method]) {
-                return orig(plugin, method, args);
+                return run();
             }
             var call = heavyChain
                 .catch(function () { return null; })
-                .then(function () { return orig(plugin, method, args); });
+                .then(run);
             heavyChain = call.catch(function () { return null; });
             return call;
         };
@@ -1904,21 +1924,11 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:6px;"></span>';
     }
 
-    function _ltParsePayload(res) {
-        var payload = res;
-        if (payload && payload.result) payload = payload.result;
-        if (payload && payload.value) payload = payload.value;
-        if (typeof payload === 'string') {
-            try { payload = JSON.parse(payload); } catch (_) { }
-        }
-        return payload || {};
-    }
-
     function _ltServer(method, args) {
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve({ success: false, error: 'Millennium bridge unavailable' });
         }
-        return Millennium.callServerMethod('luatools', method, args || { contentScriptQuery: '' }).then(_ltParsePayload).catch(function (err) {
+        return Millennium.callServerMethod('luatools', method, args || { contentScriptQuery: '' }).catch(function (err) {
             return { success: false, error: (err && err.message) ? err.message : String(err || 'request failed') };
         });
     }
@@ -1945,6 +1955,10 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     function _stMuted(colors) {
         return (colors && colors.textSecondary) ? colors.textSecondary : '#9eb0c2';
+    }
+
+    function _stIntroCss(colors) {
+        return 'font-size:12px;color:' + _stMuted(colors) + ';line-height:1.6;margin-bottom:10px;padding:8px;background:rgba(102,192,244,0.05);border:1px solid ' + colors.borderRgba + ';border-radius:5px;';
     }
 
     function _stInputCss(colors, opts) {
@@ -2361,21 +2375,41 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
             var deb;
             input.addEventListener('input', function () { clearTimeout(deb); deb = setTimeout(doSearch, 450); });
-            status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading Ryuu catalog index (first run may take ~1 min)…';
-            _ltServer('WarmRyuuCatalogCache', { contentScriptQuery: '' }).then(function (payload) {
-                if (!payload || payload.success !== true) {
-                    status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: '
-                        + _ltEscapeHtml((payload && payload.error) || 'unknown error') + '</span>';
-                    return;
-                }
+
+            function finishWarm(payload) {
                 catalogReady = true;
                 catalogSize = payload.catalogSize || 0;
                 status.textContent = catalogSize + ' games indexed — type ≥2 chars to search';
                 input.focus();
                 if ((input.value || '').trim().length >= 2) doSearch();
-            }).catch(function (e) {
-                status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: ' + _ltEscapeHtml(String(e)) + '</span>';
-            });
+            }
+
+            function pollWarm(attempt) {
+                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + _ltEscapeHtml(
+                    attempt === 0 ? 'Loading Ryuu catalog index (first run may take ~1 min)…' : 'Still loading Ryuu catalog index…'
+                );
+                _ltServer('WarmRyuuCatalogCache', { contentScriptQuery: '' }).then(function (payload) {
+                    if (payload && payload.success === true) {
+                        finishWarm(payload);
+                        return;
+                    }
+                    if (payload && payload.pending) {
+                        status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + _ltEscapeHtml(payload.error || 'Loading…');
+                        if (attempt < 90) {
+                            setTimeout(function () { pollWarm(attempt + 1); }, 2000);
+                        } else {
+                            status.innerHTML = '<span style="color:#f44336;">Catalog load timed out. Try again in a minute.</span>';
+                        }
+                        return;
+                    }
+                    status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: '
+                        + _ltEscapeHtml((payload && payload.error) || 'unknown error') + '</span>';
+                }).catch(function (e) {
+                    status.innerHTML = '<span style="color:#f44336;">Failed to load catalog: ' + _ltEscapeHtml(String(e)) + '</span>';
+                });
+            }
+
+            pollWarm(0);
         });
     }
 
@@ -2383,34 +2417,31 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     function showKeyVaultPanel() {
         _stOverlayShell('🔑 API Key Vault', function (body, ov, colors) {
             var intro = document.createElement('div');
-            intro.style.cssText = 'font-size:12px;color:#aaa;line-height:1.6;margin-bottom:10px;padding:8px;background:rgba(102,192,244,0.05);border:1px solid rgba(102,192,244,0.2);border-radius:5px;';
-            intro.innerHTML = '<i class="fa-solid fa-info-circle" style="color:#66c0f4;margin-right:5px;"></i>' +
+            intro.style.cssText = _stIntroCss(colors);
+            intro.innerHTML = '<i class="fa-solid fa-info-circle" style="color:' + colors.accent + ';margin-right:5px;"></i>' +
                 'Save Ryuu / DepotBox / ManifestHub / SteamGridDB / GitHub keys as profiles. ' +
                 'Switch sets in one click or export to a .ltkeys blob for another machine.';
             body.appendChild(intro);
 
             var ryuuStatus = document.createElement('div');
-            ryuuStatus.style.cssText = 'font-size:12px;margin-bottom:10px;padding:8px;border-radius:5px;background:rgba(255,255,255,0.03);color:#888;';
+            ryuuStatus.style.cssText = 'font-size:12px;margin-bottom:10px;padding:8px;border-radius:5px;background:rgba(255,255,255,0.03);color:' + _stMuted(colors) + ';';
             ryuuStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking Ryuu session…';
             body.appendChild(ryuuStatus);
-            Millennium.callServerMethod('luatools', 'GetRyuuSession', { contentScriptQuery: '' })
-                .then(function (res) {
-                    var p = typeof res === 'string' ? JSON.parse(res) : res;
-                    if (!p || !p.success) { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; return; }
-                    if (!p.configured) {
-                        ryuuStatus.style.color = '#888';
-                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> no session cookie — set <code>ryuuSession</code> in backend/data/secrets.local.json.';
-                    } else if (p.valid) {
-                        ryuuStatus.style.color = '#4caf50';
-                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ✅ ' + (p.username || 'logged in')
-                            + (p.premium ? ' · <span style="color:#ffc800;">premium</span>' : ' · free') + ' · session live';
-                    } else {
-                        ryuuStatus.style.color = '#ff9800';
-                        ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ⚠️ session expired (HTTP ' + (p.status || '?')
-                            + ') — regenerate at generator.ryuu.lol and update <code>ryuuSession</code> in secrets.local.json.';
-                    }
-                })
-                .catch(function () { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; });
+            _ltServer('GetRyuuSession', { contentScriptQuery: '' }).then(function (p) {
+                if (!p || !p.success) { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; return; }
+                if (!p.configured) {
+                    ryuuStatus.style.color = _stMuted(colors);
+                    ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> no session cookie — set <code>ryuuSession</code> in Settings or backend/data/secrets.local.json.';
+                } else if (p.valid) {
+                    ryuuStatus.style.color = '#4caf50';
+                    ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ✅ ' + _ltEscapeHtml(p.username || 'logged in')
+                        + (p.premium ? ' · <span style="color:#ffc800;">premium</span>' : ' · free') + ' · session live';
+                } else {
+                    ryuuStatus.style.color = '#ff9800';
+                    ryuuStatus.innerHTML = '🐉 <b>Ryuu Generator:</b> ⚠️ session expired (HTTP ' + _ltEscapeHtml(p.status || '?')
+                        + ') — regenerate at generator.ryuu.lol and update <code>ryuuSession</code>.';
+                }
+            }).catch(function () { ryuuStatus.innerHTML = '🐉 Ryuu: check failed'; });
 
             var saveRow = document.createElement('div');
             saveRow.style.cssText = 'display:flex;gap:6px;margin-bottom:10px;padding:8px;background:rgba(255,255,255,0.03);border-radius:5px;';
@@ -2443,103 +2474,91 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
 
             function refreshList() {
-                Millennium.callServerMethod('luatools', 'ListKeyProfiles', { contentScriptQuery: '' })
-                    .then(function (res) {
-                        var p = typeof res === 'string' ? JSON.parse(res) : res;
-                        if (!p || !p.success) {
-                            listArea.innerHTML = '<div style="color:#f44336;font-size:12px;">' + (p && p.error ? p.error : 'Failed') + '</div>';
-                            return;
-                        }
-                        var profiles = p.profiles || [];
-                        if (!profiles.length) {
-                            listArea.innerHTML = '<div style="color:#888;font-size:12px;padding:10px;text-align:center;">No saved profiles yet. Save your current keys above.</div>';
-                            return;
-                        }
-                        var html = '';
-                        profiles.forEach(function (prof) {
-                            var isActive = (prof.name === p.active);
-                            html += '<div style="margin-bottom:6px;padding:8px;background:' + (isActive ? 'rgba(102,192,244,0.08)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (isActive ? 'rgba(102,192,244,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:5px;">';
-                            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
-                            html += '<div style="font-size:13px;font-weight:600;color:#ccc;">🔑 ' + prof.name;
-                            if (isActive) html += ' <span style="background:#1b6fa8;border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;margin-left:4px;">ACTIVE</span>';
-                            html += '</div>';
-                            html += '<div style="font-size:10px;color:#888;">' + prof.fieldsSet + '/' + prof.totalFields + ' fields</div>';
-                            html += '</div>';
-                            html += '<div style="font-size:10px;color:#888;font-family:monospace;line-height:1.5;">';
-                            (p.fields || []).forEach(function (f) {
-                                var v = prof.masked[f.key];
-                                if (v) html += f.label + ': <span style="color:#66c0f4;">' + v + '</span><br>';
-                            });
-                            html += '</div>';
-                            html += '<div style="display:flex;gap:4px;margin-top:6px;">';
-                            html += '<button class="lt-kv-action" data-action="load" data-name="' + prof.name + '" style="padding:3px 8px;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:3px;color:#4caf50;font-size:11px;cursor:pointer;">🔄 Activate</button>';
-                            html += '<button class="lt-kv-action" data-action="export" data-name="' + prof.name + '" style="padding:3px 8px;background:rgba(102,192,244,0.15);border:1px solid rgba(102,192,244,0.4);border-radius:3px;color:#66c0f4;font-size:11px;cursor:pointer;">📤 Export</button>';
-                            html += '<button class="lt-kv-action" data-action="delete" data-name="' + prof.name + '" style="padding:3px 8px;background:rgba(244,67,54,0.15);border:1px solid rgba(244,67,54,0.4);border-radius:3px;color:#f44336;font-size:11px;cursor:pointer;">🗑 Delete</button>';
-                            html += '</div></div>';
+                _ltServer('ListKeyProfiles', { contentScriptQuery: '' }).then(function (p) {
+                    if (!p || !p.success) {
+                        listArea.innerHTML = '<div style="color:#f44336;font-size:12px;">' + _ltEscapeHtml((p && p.error) || 'Failed') + '</div>';
+                        return;
+                    }
+                    var profiles = p.profiles || [];
+                    if (!profiles.length) {
+                        listArea.innerHTML = '<div style="color:' + _stMuted(colors) + ';font-size:12px;padding:10px;text-align:center;">No saved profiles yet. Save your current keys above.</div>';
+                        return;
+                    }
+                    var html = '';
+                    profiles.forEach(function (prof) {
+                        var isActive = (prof.name === p.active);
+                        html += '<div style="margin-bottom:6px;padding:8px;background:' + (isActive ? 'rgba(102,192,244,0.08)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (isActive ? colors.borderRgba : 'rgba(255,255,255,0.06)') + ';border-radius:5px;">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+                        html += '<div style="font-size:13px;font-weight:600;color:' + colors.text + ';">🔑 ' + _ltEscapeHtml(prof.name);
+                        if (isActive) html += ' <span style="background:' + colors.accentDark + ';border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;margin-left:4px;">ACTIVE</span>';
+                        html += '</div>';
+                        html += '<div style="font-size:10px;color:' + _stMuted(colors) + ';">' + prof.fieldsSet + '/' + prof.totalFields + ' fields</div>';
+                        html += '</div>';
+                        html += '<div style="font-size:10px;color:' + _stMuted(colors) + ';font-family:monospace;line-height:1.5;">';
+                        (p.fields || []).forEach(function (f) {
+                            var v = prof.masked[f.key];
+                            if (v) html += _ltEscapeHtml(f.label) + ': <span style="color:' + colors.accent + ';">' + _ltEscapeHtml(v) + '</span><br>';
                         });
-                        listArea.innerHTML = html;
-
-                        listArea.querySelectorAll('.lt-kv-action').forEach(function (btn) {
-                            btn.onclick = function () {
-                                var action = btn.getAttribute('data-action');
-                                var name = btn.getAttribute('data-name');
-                                if (action === 'load') {
-                                    Millennium.callServerMethod('luatools', 'LoadKeyProfile', { name: name, contentScriptQuery: '' })
-                                        .then(function (r) {
-                                            var pp = typeof r === 'string' ? JSON.parse(r) : r;
-                                            if (pp && pp.success) showMsg('✅ Loaded profile "' + name + '" — ' + (pp.applied || []).length + ' fields applied', '#4caf50');
-                                            else showMsg(pp && pp.error || 'Failed', '#f44336');
-                                        });
-                                } else if (action === 'export') {
-                                    Millennium.callServerMethod('luatools', 'ExportKeyProfile', { name: name, contentScriptQuery: '' })
-                                        .then(function (r) {
-                                            var pp = typeof r === 'string' ? JSON.parse(r) : r;
-                                            if (pp && pp.success) {
-                                                try { navigator.clipboard.writeText(pp.blob); } catch (_) {}
-                                                showMsg('📋 Blob copied to clipboard (' + pp.blob.length + ' chars). Paste to import on another machine.', '#66c0f4');
-                                            } else showMsg(pp && pp.error || 'Failed', '#f44336');
-                                        });
-                                } else if (action === 'delete') {
-                                    if (window.confirm('Delete profile "' + name + '"? Active keys in settings are not affected.')) {
-                                        Millennium.callServerMethod('luatools', 'DeleteKeyProfile', { name: name, contentScriptQuery: '' })
-                                            .then(function (r) {
-                                                var pp = typeof r === 'string' ? JSON.parse(r) : r;
-                                                if (pp && pp.success) showMsg('🗑 Deleted "' + name + '"', '#4caf50');
-                                                else showMsg(pp && pp.error || 'Failed', '#f44336');
-                                            });
-                                    }
-                                }
-                            };
-                        });
+                        html += '</div>';
+                        html += '<div style="display:flex;gap:4px;margin-top:6px;">';
+                        html += '<button class="lt-kv-action" data-action="load" data-name="' + _ltEscapeHtml(prof.name) + '" style="padding:3px 8px;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:3px;color:#4caf50;font-size:11px;cursor:pointer;">🔄 Activate</button>';
+                        html += '<button class="lt-kv-action" data-action="export" data-name="' + _ltEscapeHtml(prof.name) + '" style="padding:3px 8px;background:rgba(102,192,244,0.15);border:1px solid ' + colors.borderRgba + ';border-radius:3px;color:' + colors.accent + ';font-size:11px;cursor:pointer;">📤 Export</button>';
+                        html += '<button class="lt-kv-action" data-action="delete" data-name="' + _ltEscapeHtml(prof.name) + '" style="padding:3px 8px;background:rgba(244,67,54,0.15);border:1px solid rgba(244,67,54,0.4);border-radius:3px;color:#f44336;font-size:11px;cursor:pointer;">🗑 Delete</button>';
+                        html += '</div></div>';
                     });
+                    listArea.innerHTML = html;
+
+                    listArea.querySelectorAll('.lt-kv-action').forEach(function (btn) {
+                        btn.onclick = function () {
+                            var action = btn.getAttribute('data-action');
+                            var name = btn.getAttribute('data-name');
+                            if (action === 'load') {
+                                _ltServer('LoadKeyProfile', { name: name, contentScriptQuery: '' }).then(function (pp) {
+                                    if (pp && pp.success) showMsg('✅ Loaded profile "' + name + '" — ' + (pp.applied || []).length + ' fields applied', '#4caf50');
+                                    else showMsg((pp && pp.error) || 'Failed', '#f44336');
+                                });
+                            } else if (action === 'export') {
+                                _ltServer('ExportKeyProfile', { name: name, contentScriptQuery: '' }).then(function (pp) {
+                                    if (pp && pp.success) {
+                                        try { navigator.clipboard.writeText(pp.blob); } catch (_) {}
+                                        showMsg('📋 Blob copied to clipboard (' + pp.blob.length + ' chars). Paste to import on another machine.', colors.accent);
+                                    } else showMsg((pp && pp.error) || 'Failed', '#f44336');
+                                });
+                            } else if (action === 'delete') {
+                                if (window.confirm('Delete profile "' + name + '"? Active keys in settings are not affected.')) {
+                                    _ltServer('DeleteKeyProfile', { name: name, contentScriptQuery: '' }).then(function (pp) {
+                                        if (pp && pp.success) showMsg('🗑 Deleted "' + name + '"', '#4caf50');
+                                        else showMsg((pp && pp.error) || 'Failed', '#f44336');
+                                    });
+                                }
+                            }
+                        };
+                    });
+                });
             }
 
             setTimeout(function () {
                 var saveBtn = document.getElementById('lt-kv-save');
                 if (saveBtn) saveBtn.onclick = function () {
                     var name = (document.getElementById('lt-kv-name').value || 'main').trim();
-                    Millennium.callServerMethod('luatools', 'SaveKeyProfile', { name: name, contentScriptQuery: '' })
-                        .then(function (r) {
-                            var pp = typeof r === 'string' ? JSON.parse(r) : r;
-                            if (pp && pp.success) showMsg('✅ Saved profile "' + pp.name + '" — ' + pp.fieldsSet + ' fields', '#4caf50');
-                            else showMsg(pp && pp.error || 'Failed', '#f44336');
-                        });
+                    _ltServer('SaveKeyProfile', { name: name, contentScriptQuery: '' }).then(function (pp) {
+                        if (pp && pp.success) showMsg('✅ Saved profile "' + pp.name + '" — ' + pp.fieldsSet + ' fields', '#4caf50');
+                        else showMsg((pp && pp.error) || 'Failed', '#f44336');
+                    });
                 };
 
                 var importBtn = document.getElementById('lt-kv-import');
                 if (importBtn) importBtn.onclick = function () {
                     var blob = (document.getElementById('lt-kv-blob').value || '').trim();
                     if (!blob) { showMsg('Paste a .ltkeys blob first', '#ff9800'); return; }
-                    Millennium.callServerMethod('luatools', 'ImportKeyProfile', { blob: blob, contentScriptQuery: '' })
-                        .then(function (r) {
-                            var pp = typeof r === 'string' ? JSON.parse(r) : r;
-                            if (pp && pp.success) {
-                                showMsg('✅ Imported as "' + pp.name + '" — ' + pp.fieldsSet + ' fields', '#4caf50');
-                                document.getElementById('lt-kv-blob').value = '';
-                            } else {
-                                showMsg(pp && pp.error || 'Failed', '#f44336');
-                            }
-                        });
+                    _ltServer('ImportKeyProfile', { blob: blob, activate: true, contentScriptQuery: '' }).then(function (pp) {
+                        if (pp && pp.success) {
+                            showMsg('✅ Imported as "' + pp.name + '" — ' + (pp.fieldsSet || (pp.applied || []).length || 0) + ' fields', '#4caf50');
+                            document.getElementById('lt-kv-blob').value = '';
+                        } else {
+                            showMsg((pp && pp.error) || 'Failed', '#f44336');
+                        }
+                    });
                 };
             }, 50);
 
@@ -2935,21 +2954,17 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
 
             function loadConfig() {
-                Millennium.callServerMethod('luatools', 'GetSyncConfig', { contentScriptQuery: '' })
-                    .then(function (res) {
-                        var p = typeof res === 'string' ? JSON.parse(res) : res;
-                        if (p && p.success) {
-                            config = p.config || {};
-                            setBackendVisual(config.backend || 'git');
-                            return Millennium.callServerMethod('luatools', 'SyncStatus', { contentScriptQuery: '' });
-                        }
-                        showMsg('<span style="color:#f44336;">Config load failed.</span>', '#f44336');
-                    })
-                    .then(function (res) {
-                        if (!res) return;
-                        var st = typeof res === 'string' ? JSON.parse(res) : res;
-                        showMsg('<span style="color:#888;">Ready.</span>' + renderStatus(st));
-                    });
+                _ltServer('GetSyncConfig', { contentScriptQuery: '' }).then(function (p) {
+                    if (p && p.success) {
+                        config = p.config || {};
+                        setBackendVisual(config.backend || 'git');
+                        return _ltServer('SyncStatus', { contentScriptQuery: '' });
+                    }
+                    showMsg('<span style="color:#f44336;">Config load failed.</span>', '#f44336');
+                }).then(function (st) {
+                    if (!st) return;
+                    showMsg('<span style="color:' + _stMuted(colors) + ';">Ready.</span>' + renderStatus(st));
+                });
             }
 
             // Wire backend toggle
@@ -2962,63 +2977,53 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 document.getElementById('lt-sync-save').onclick = function () {
                     var updates = gatherFormConfig();
                     showMsg('<i class="fa-solid fa-spinner fa-spin"></i> Saving…');
-                    Millennium.callServerMethod('luatools', 'SetSyncConfig', { updates: updates, contentScriptQuery: '' })
-                        .then(function (res) {
-                            var p = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (p && p.success) {
-                                config = p.config;
-                                showMsg('<span style="color:#4caf50;">✅ Config saved.</span>', '#4caf50');
-                            } else {
-                                showMsg('<span style="color:#f44336;">❌ ' + (p && p.error || 'Failed') + '</span>', '#f44336');
-                            }
-                        });
+                    _ltServer('SetSyncConfig', { updates: updates, contentScriptQuery: '' }).then(function (p) {
+                        if (p && p.success) {
+                            config = p.config;
+                            showMsg('<span style="color:#4caf50;">✅ Config saved.</span>', '#4caf50');
+                        } else {
+                            showMsg('<span style="color:#f44336;">❌ ' + _ltEscapeHtml((p && p.error) || 'Failed') + '</span>', '#f44336');
+                        }
+                    });
                 };
 
                 document.getElementById('lt-sync-test').onclick = function () {
                     showMsg('<i class="fa-solid fa-spinner fa-spin"></i> Testing connection…');
-                    Millennium.callServerMethod('luatools', 'SyncTestConnection', { contentScriptQuery: '' })
-                        .then(function (res) {
-                            var p = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (p && p.success) showMsg('<span style="color:#4caf50;">✅ ' + (p.message || 'OK') + '</span>', '#4caf50');
-                            else showMsg('<span style="color:#f44336;">❌ ' + (p && p.error || 'Failed') + '</span>', '#f44336');
-                        });
+                    _ltServer('SyncTestConnection', { contentScriptQuery: '' }).then(function (p) {
+                        if (p && p.success) showMsg('<span style="color:#4caf50;">✅ ' + _ltEscapeHtml(p.message || 'OK') + '</span>', '#4caf50');
+                        else showMsg('<span style="color:#f44336;">❌ ' + _ltEscapeHtml((p && p.error) || 'Failed') + '</span>', '#f44336');
+                    });
                 };
 
                 document.getElementById('lt-sync-pull-dry').onclick = function () {
                     showMsg('<i class="fa-solid fa-spinner fa-spin"></i> Previewing pull (dry-run)…');
-                    Millennium.callServerMethod('luatools', 'SyncPull', { dryRun: true, contentScriptQuery: '' })
-                        .then(function (res) {
-                            var p = typeof res === 'string' ? JSON.parse(res) : res;
-                            renderPullResult(p, true);
-                        });
+                    _ltServer('SyncPull', { dryRun: true, contentScriptQuery: '' }).then(function (p) {
+                        renderPullResult(p, true);
+                    });
                 };
 
                 document.getElementById('lt-sync-pull').onclick = function () {
                     if (!window.confirm('Pull will overwrite local files (with .presync-* backups). Continue?')) return;
                     showMsg('<i class="fa-solid fa-spinner fa-spin"></i> Pulling…');
-                    Millennium.callServerMethod('luatools', 'SyncPull', { dryRun: false, contentScriptQuery: '' })
-                        .then(function (res) {
-                            var p = typeof res === 'string' ? JSON.parse(res) : res;
-                            renderPullResult(p, false);
-                        });
+                    _ltServer('SyncPull', { dryRun: false, contentScriptQuery: '' }).then(function (p) {
+                        renderPullResult(p, false);
+                    });
                 };
 
                 document.getElementById('lt-sync-push').onclick = function () {
                     showMsg('<i class="fa-solid fa-spinner fa-spin"></i> Pushing…');
-                    Millennium.callServerMethod('luatools', 'SyncPush', { contentScriptQuery: '' })
-                        .then(function (res) {
-                            var p = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (!p || !p.success) {
-                                showMsg('<span style="color:#f44336;">❌ ' + (p && p.error || 'Failed') + '</span>', '#f44336');
-                                return;
-                            }
-                            var h = '<div style="color:#4caf50;font-weight:600;">✅ Push complete</div>' +
-                                '<div style="font-size:11px;">Files staged: ' + (p.filesStaged || 0) + ', new/changed: ' + (p.filesNew || 0) + '</div>';
-                            if ((p.stageErrors || []).length) {
-                                h += '<div style="color:#ff9800;font-size:11px;margin-top:4px;">Warnings: ' + p.stageErrors.length + '</div>';
-                            }
-                            showMsg(h, '#4caf50');
-                        });
+                    _ltServer('SyncPush', { contentScriptQuery: '' }).then(function (p) {
+                        if (!p || !p.success) {
+                            showMsg('<span style="color:#f44336;">❌ ' + _ltEscapeHtml((p && p.error) || 'Failed') + '</span>', '#f44336');
+                            return;
+                        }
+                        var h = '<div style="color:#4caf50;font-weight:600;">✅ Push complete</div>' +
+                            '<div style="font-size:11px;">Files staged: ' + (p.filesStaged || 0) + ', new/changed: ' + (p.filesNew || 0) + '</div>';
+                        if ((p.stageErrors || []).length) {
+                            h += '<div style="color:#ff9800;font-size:11px;margin-top:4px;">Warnings: ' + p.stageErrors.length + '</div>';
+                        }
+                        showMsg(h, '#4caf50');
+                    });
                 };
             }, 50);
 
