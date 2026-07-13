@@ -113,6 +113,9 @@ backend/data/cookies*.txt
 # local AI scratch (user-specific)
 public/for my ai/
 
+# SWACloud portable binary (private / not shipped)
+public/swacloud/
+
 # local release zips (build with scripts/build_release.ps1 and manager/scripts/publish-manager.ps1)
 # (covered by releases/ above; keep explicit zip rule for safety)
 releases/*.zip
