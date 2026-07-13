@@ -55,7 +55,7 @@ if (Test-Path $shaFile) {
     Set-Content $shaFile -Value $line -Encoding ASCII
 }
 
-Write-Host "Published $zipPath" -ForegroundColor Green
+Write-Host "Published $zipPath (main binary: Rewired.exe)" -ForegroundColor Green
 Write-Host "SHA256 $sha"
 Write-Host ""
 Write-Host "Attach to GitHub release alongside STLT-Rewired.zip:" -ForegroundColor Cyan

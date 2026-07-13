@@ -6,7 +6,7 @@ Rewired ships as a **two-layer product**. Millennium is optional when Manager + 
 
 | Layer | Component | Required? |
 |-------|-----------|-------------|
-| Control plane | **Rewired Manager** (`manager/`) | Yes (primary UI) |
+| Control plane | **Rewired** (`Rewired.exe`, `manager/`) | Yes (primary UI) |
 | Unlock / injector | OpenSteamTool (default), SteamTools, or LumaCore | Yes |
 | In-Steam UI | Millennium `luatools` plugin | Optional |
 
@@ -15,13 +15,13 @@ Plugin and Manager both read it for unlock backend preference and Steam path.
 
 ## Default Windows install (recommended)
 
-1. Build or download `RewiredManager-win-x64-framework-dependent.zip`.
-2. Open **Rewired Manager → System**.
-3. Set Steam path → **Install OpenSteamTool** (pulls latest [OpenSteam001/OpenSteamTool](https://github.com/OpenSteam001/OpenSteamTool) release).
-4. **Secrets** tab → Ryuu session + ManifestHub key → Save → Test.
-5. **Restart Steam** from Manager.
-6. **Add game** tab: enter AppID → Download & install.
-7. Optional: **Deploy** tab or `deploy.ps1` for in-Steam Rewired UI.
+1. Download **`Rewired.exe`** from the latest GitHub release (`RewiredManager-win-x64-framework-dependent.zip`).
+2. Run **Rewired** → first-run **Set up Rewired** wizard (OpenSteamTool + in-Steam UI).
+3. **Secrets** tab → Ryuu session + ManifestHub key → Save → Test.
+4. **Add game** tab: AppID → Download & install.
+5. Restart Steam when prompted.
+
+Legacy: build or download Manager zip manually, or use `install.ps1` one-liner.
 
 OpenSteamTool reads Lua from `Steam/config/lua/`. SteamTools and LumaCore use `config/stplug-in/`.  
 The plugin backend (`unlock_paths.lua`) picks the directory automatically.

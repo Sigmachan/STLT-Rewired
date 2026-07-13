@@ -2,7 +2,15 @@
 
 ## Windows (recommended)
 
-**Full install** — Millennium (if missing), Rewired plugin, Manager, OpenSteamTool, desktop shortcut:
+**Download `Rewired.exe`** from the latest [GitHub release](https://github.com/Sigmachan/STLT-Rewired/releases) (`RewiredManager-win-x64-framework-dependent.zip` — contains `Rewired.exe`).
+
+1. Run **Rewired.exe**
+2. First-run wizard: **Set up Rewired** (Steam path → Install OpenSteamTool + in-Steam UI)
+3. **Secrets** tab → Ryuu + ManifestHub → Save
+4. **Add game** → AppID → Download & install
+5. Restart Steam when prompted
+
+Legacy one-liner (scripts; needs published release zips):
 
 ```powershell
 irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex

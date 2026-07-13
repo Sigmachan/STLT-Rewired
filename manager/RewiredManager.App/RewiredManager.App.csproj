@@ -6,7 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.1.5</Version>
+    <AssemblyName>Rewired</AssemblyName>
+    <Product>Rewired</Product>
+    <Version>0.1.6</Version>
   </PropertyGroup>
 
   <ItemGroup>
