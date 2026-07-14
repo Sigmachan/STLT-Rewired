@@ -122,6 +122,7 @@ releases/*.zip
 
 # Private reverse-engineering / gen2 reference (local ilspycmd output)
 docs/gen2/decompiled/
+docs/gen2/swacloud/
 docs/gen2/LuaTools.types.txt
 docs/gen2/*.types.txt
 
