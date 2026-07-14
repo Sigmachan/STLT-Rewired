@@ -440,4 +440,242 @@ function fixes.get_installed_fixes()
     return { success = true, fixes = st.A(installed) }
 end
 
+local FIXES_INDEX_URL = "https://index.luatools.work/fixes-index.json"
+local FIXES_INDEX_CACHE = nil
+local FIXES_INDEX_CACHE_AT = 0
+local FIXES_INDEX_TTL_SEC = 3600
+
+local function fixes_index_now()
+    if m_utils.time then return m_utils.time() end
+    return os.time()
+end
+
+local function appid_lookup(list)
+    local out = {}
+    for _, v in ipairs(list or {}) do
+        local n = tonumber(v)
+        if n and n > 0 then out[n] = true end
+    end
+    return out
+end
+
+--- Cached LuaTools fixes index (generic + online AppID sets).
+function fixes.get_fixes_index()
+    local now = fixes_index_now()
+    if FIXES_INDEX_CACHE and (now - FIXES_INDEX_CACHE_AT) < FIXES_INDEX_TTL_SEC then
+        return FIXES_INDEX_CACHE
+    end
+
+    local payload = {
+        success = false,
+        generic = {},
+        online = {},
+        rateLimited = false,
+        error = nil,
+        fetchedAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    local ok_http, resp = pcall(http_client.get, FIXES_INDEX_URL, { timeout = 12 })
+    if not ok_http then
+        payload.error = "Failed to fetch fixes index"
+        FIXES_INDEX_CACHE = payload
+        FIXES_INDEX_CACHE_AT = now
+        return payload
+    end
+    if resp and resp.status == 429 then
+        payload.rateLimited = true
+        payload.error = "Fixes index rate limited"
+        FIXES_INDEX_CACHE = payload
+        FIXES_INDEX_CACHE_AT = now
+        return payload
+    end
+    if not resp or resp.status ~= 200 or not resp.body then
+        payload.error = resp and ("Fixes index HTTP " .. tostring(resp.status)) or "Fixes index unavailable"
+        FIXES_INDEX_CACHE = payload
+        FIXES_INDEX_CACHE_AT = now
+        return payload
+    end
+
+    local data = utils.decode_json(resp.body)
+    if type(data) ~= "table" then
+        payload.error = "Invalid fixes index JSON"
+        FIXES_INDEX_CACHE = payload
+        FIXES_INDEX_CACHE_AT = now
+        return payload
+    end
+
+    payload.success = true
+    payload.generic = appid_lookup(data.genericFixes or {})
+    payload.online = appid_lookup(data.onlineFixes or {})
+    FIXES_INDEX_CACHE = payload
+    FIXES_INDEX_CACHE_AT = now
+    return payload
+end
+
+local function collect_steam_library_games()
+    local games = {}
+    local seen = {}
+
+    local function add_game(aid, game_name, install_path, library_path)
+        aid = tonumber(aid)
+        if not aid or seen[aid] then return end
+        seen[aid] = true
+        table.insert(games, {
+            appid = aid,
+            gameName = game_name or ("Unknown Game (" .. aid .. ")"),
+            installPath = install_path or "",
+            libraryPath = library_path or "",
+            source = "steam",
+        })
+    end
+
+    local base = steam_utils.detect_steam_install_path()
+    if not base or base == "" then
+        return games, "Could not find Steam installation path"
+    end
+
+    local lib_paths = { base }
+    local lib_vdf = fs.join(base, "config", "libraryfolders.vdf")
+    if fs.is_file(lib_vdf) then
+        local vdf = m_utils.read_file(lib_vdf) or ""
+        for p in vdf:gmatch('"path"%s+"([^"]+)"') do
+            local norm = (p:gsub('\\\\', '\\'))
+            local found = false
+            for _, existing in ipairs(lib_paths) do
+                if existing:lower() == norm:lower() then found = true break end
+            end
+            if not found and norm ~= "" then table.insert(lib_paths, norm) end
+        end
+    end
+
+    for _, lib in ipairs(lib_paths) do
+        local sa = fs.join(lib, "steamapps")
+        if fs.is_directory(sa) then
+            for _, e in ipairs(fs.list(sa) or {}) do
+                local n = e.name or ""
+                if n:match("^appmanifest_") and n:match("%.acf$") then
+                    local aid = tonumber(n:match("appmanifest_(%d+)%.acf"))
+                    if aid then
+                        local mc = m_utils.read_file(e.path)
+                        if mc then
+                            local install_dir = mc:match('"installdir"%s+"([^"]+)"')
+                            local game_name = mc:match('"name"%s+"([^"]+)"') or ("Unknown Game (" .. aid .. ")")
+                            local full = install_dir and fs.join(lib, "steamapps", "common", install_dir) or ""
+                            if install_dir and fs.is_directory(full) then
+                                add_game(aid, game_name, full, lib)
+                            else
+                                add_game(aid, game_name, "", lib)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return games, nil
+end
+
+local function collect_lua_script_games()
+    local games = {}
+    local ok_paths, unlock_paths = pcall(require, "unlock_paths")
+    if not ok_paths or not unlock_paths then return games end
+    local dir = unlock_paths.lua_script_dir()
+    if not dir or dir == "" or not fs.is_directory(dir) then return games end
+    for _, e in ipairs(fs.list(dir) or {}) do
+        local name = e.name or ""
+        local aid = name:match("^(%d+)%.lua") or name:match("^(%d+)%.luda") or name:match("^(%d+)%.lua%.disabled$")
+        if aid then
+            table.insert(games, {
+                appid = tonumber(aid),
+                gameName = "Unknown Game (" .. aid .. ")",
+                installPath = "",
+                libraryPath = "",
+                source = "lua",
+            })
+        end
+    end
+    return games
+end
+
+--- SWA-style bulk match: installed Steam library (+ lua scripts) ↔ LuaTools fixes index.
+function fixes.match_available_fixes_for_library()
+    local index = fixes.get_fixes_index()
+    if not index.success then
+        return {
+            success = false,
+            error = index.error or "Fixes index unavailable",
+            rateLimited = index.rateLimited == true,
+            matches = st.A({}),
+        }
+    end
+
+    local steam_games, steam_err = collect_steam_library_games()
+    local lua_games = collect_lua_script_games()
+    local by_appid = {}
+
+    for _, g in ipairs(steam_games) do
+        by_appid[g.appid] = g
+    end
+    for _, g in ipairs(lua_games) do
+        if not by_appid[g.appid] then
+            by_appid[g.appid] = g
+        else
+            by_appid[g.appid].hasLuaScript = true
+        end
+    end
+
+    local matches = {}
+    local scanned = 0
+    for appid, game in pairs(by_appid) do
+        scanned = scanned + 1
+        local has_generic = index.generic[appid] == true
+        local has_online = index.online[appid] == true
+        if has_generic or has_online then
+            local entry = {
+                appid = appid,
+                gameName = game.gameName,
+                installPath = game.installPath or "",
+                source = game.source or "steam",
+                hasLuaScript = game.hasLuaScript == true or game.source == "lua",
+                genericAvailable = has_generic,
+                onlineAvailable = has_online,
+                genericUrl = has_generic and ("https://files.luatools.work/GameBypasses/" .. appid .. ".zip") or "",
+                onlineUrl = has_online and ("https://files.luatools.work/OnlineFix1/" .. appid .. ".zip") or "",
+            }
+            if entry.installPath ~= "" then
+                local log_path = fs.join(entry.installPath, "luatools-fix-log-" .. appid .. ".log")
+                entry.hasAppliedFix = fs.is_file(log_path)
+            else
+                entry.hasAppliedFix = false
+            end
+            table.insert(matches, entry)
+        end
+    end
+
+    table.sort(matches, function(a, b)
+        return tostring(a.gameName):lower() < tostring(b.gameName):lower()
+    end)
+
+    local cap = 200
+    local truncated = #matches > cap
+    if truncated then
+        local trimmed = {}
+        for i = 1, cap do trimmed[i] = matches[i] end
+        matches = trimmed
+    end
+
+    logger.log("match_available_fixes_for_library: scanned=" .. scanned .. " matches=" .. tostring(#matches))
+    return {
+        success = true,
+        scannedGames = scanned,
+        matchCount = #matches,
+        truncated = truncated,
+        rateLimited = false,
+        steamError = steam_err,
+        matches = st.A(matches),
+        indexFetchedAt = index.fetchedAt,
+    }
+end
+
 return fixes

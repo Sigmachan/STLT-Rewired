@@ -565,6 +565,12 @@ function GetInstalledFixes()
     return json_ok(res)
 end
 
+function GetMatchedAvailableFixes()
+    local ok, res = pcall(fixes.match_available_fixes_for_library)
+    if not ok then return json_err(res) end
+    return json_ok(res)
+end
+
 local _settings_inventory_scan_in_flight = false
 
 local function list_installed_lua_scripts()

@@ -40,6 +40,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             GetSettingsInstalledInventory: true,
             GetInstalledFixes: true,
             GetInstalledLuaScripts: true,
+            GetMatchedAvailableFixes: true,
             RunManifestAutoUpdate: true,
             GetSourceHealth: true,
             ScanAllLuaScripts: true,
@@ -1338,6 +1339,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             removeBtn.style.display = 'none';
 
             const fixesMenuBtn = createMenuButton('lt-settings-fixes-menu', 'menu.fixesMenu', 'Fixes Menu', 'fa-wrench');
+            const libraryFixMatchBtn = createMenuButton('lt-settings-library-fix-match', 'menu.libraryFixMatch', 'Library fix match', 'fa-list-check');
 
             createSectionLabel('menu.advancedLabel', 'Advanced');
             const checkBtn = createMenuButton('lt-settings-check', 'menu.checkForUpdates', 'Check For Updates', 'fa-cloud-arrow-down');
@@ -1817,6 +1819,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     } catch (err) {
                         backendLog('LuaTools: Fixes Menu button error: ' + err);
                     }
+                });
+            }
+
+            if (libraryFixMatchBtn) {
+                libraryFixMatchBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    try {
+                        overlay.remove();
+                    } catch (_) { }
+                    showLibraryFixMatchPopup();
                 });
             }
 
@@ -5747,6 +5759,111 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             runState.inProgress = false;
             runState.appid = null;
         }
+    }
+
+    // Library-wide fix match (LuaTools index + installed Steam library; no SWACloud)
+    function showLibraryFixMatchPopup() {
+        if (document.querySelector('.luatools-library-fix-match-overlay')) return;
+        ensureLuaToolsStyles();
+        ensureFontAwesome();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-library-fix-match-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+
+        const modal = document.createElement('div');
+        const colors = getThemeColors();
+        modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:640px;max-width:95vw;max-height:82vh;display:flex;flex-direction:column;padding:14px 18px;box-shadow:0 20px 60px rgba(0,0,0,.8);`;
+
+        const title = document.createElement('div');
+        title.style.cssText = `font-size:15px;font-weight:700;margin-bottom:8px;color:${colors.accent};`;
+        title.textContent = lt('Library fix match');
+
+        const subtitle = document.createElement('div');
+        subtitle.style.cssText = `font-size:12px;color:${colors.textSecondary};margin-bottom:10px;`;
+        subtitle.textContent = lt('Scanning your Steam libraries against the LuaTools fixes index…');
+
+        const body = document.createElement('div');
+        body.style.cssText = `flex:1 1 auto;overflow-y:auto;padding:10px;border:1px solid ${colors.border};border-radius:8px;background:${colors.bgContainer};min-height:120px;`;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.textContent = lt('Close');
+        closeBtn.style.cssText = `margin-top:10px;align-self:flex-end;padding:8px 16px;border-radius:6px;border:1px solid ${colors.border};background:${colors.bgTertiary};color:${colors.text};cursor:pointer;`;
+        closeBtn.onclick = function () { try { overlay.remove(); } catch (_) { } };
+
+        modal.appendChild(title);
+        modal.appendChild(subtitle);
+        modal.appendChild(body);
+        modal.appendChild(closeBtn);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        function renderError(msg) {
+            body.innerHTML = '<div style="color:#ff5c5c;padding:8px;">' + msg + '</div>';
+        }
+
+        function openFixesForMatch(match) {
+            if (!match || !match.appid) return;
+            try { overlay.remove(); } catch (_) { }
+            window.__LuaToolsCurrentAppId = match.appid;
+            if (match.installPath) {
+                window.__LuaToolsGameInstallPath = match.installPath;
+                window.__LuaToolsGameIsInstalled = true;
+            } else {
+                window.__LuaToolsGameIsInstalled = false;
+            }
+            showFixesLoadingPopupAndCheck(match.appid);
+        }
+
+        function renderMatches(payload) {
+            if (!payload || !payload.success) {
+                renderError(payload && payload.error ? payload.error : lt('Failed to match fixes.'));
+                return;
+            }
+            const matches = payload.matches || [];
+            const scanned = payload.scannedGames || 0;
+            let summary = lt('Scanned {count} games — {matches} with available fixes.')
+                .replace('{count}', String(scanned))
+                .replace('{matches}', String(matches.length));
+            if (payload.truncated) {
+                summary += ' ' + lt('(Showing first 200 matches)');
+            }
+            if (payload.rateLimited) {
+                summary += ' ' + lt('Fixes index rate limited — try again later.');
+            }
+            subtitle.textContent = summary;
+
+            if (!matches.length) {
+                body.innerHTML = '<div style="padding:12px;text-align:center;color:' + colors.textSecondary + ';">'
+                    + lt('No matching fixes found for your installed library.') + '</div>';
+                return;
+            }
+
+            body.innerHTML = '';
+            matches.forEach(function (m) {
+                const row = document.createElement('button');
+                row.type = 'button';
+                row.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border-radius:6px;border:1px solid ' + colors.border + ';background:' + colors.bgTertiary + ';color:' + colors.text + ';cursor:pointer;';
+                const badges = [];
+                if (m.genericAvailable) badges.push(lt('Generic'));
+                if (m.onlineAvailable) badges.push(lt('Online'));
+                const badgeText = badges.length ? (' · ' + badges.join(' + ')) : '';
+                const applied = m.hasAppliedFix ? (' · ' + lt('Fix applied')) : '';
+                row.innerHTML = '<strong>' + (m.gameName || ('AppID ' + m.appid)) + '</strong>'
+                    + '<span style="font-size:11px;opacity:0.75;">AppID ' + m.appid + badgeText + applied + '</span>';
+                row.onclick = function () { openFixesForMatch(m); };
+                body.appendChild(row);
+            });
+        }
+
+        Millennium.callServerMethod('luatools', 'GetMatchedAvailableFixes', { contentScriptQuery: '' })
+            .then(function (res) {
+                renderMatches(_ltParsePayload(res));
+            })
+            .catch(function (err) {
+                renderError((err && err.message) ? err.message : lt('Failed to match fixes.'));
+            });
     }
 
     // Fixes Results popup
