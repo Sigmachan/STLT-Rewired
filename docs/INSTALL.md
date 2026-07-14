@@ -48,7 +48,13 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 
 ## Linux
 
-**Full install** — Millennium (via steambrew if missing) + Rewired plugin:
+**Full stack (recommended)** — [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition) wraps enter-the-wired + plugin:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/install.sh | bash
+```
+
+**Plugin only** — Millennium (via steambrew if missing) + Rewired plugin:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
@@ -60,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh | bash
 ```
 
-Linux unlock (SLSsteam / ACCELA) is **not** bundled in Rewired.exe — use [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) then `install.sh`. See [ACCELA_STYLE.md](ACCELA_STYLE.md).
+Linux unlock (SLSsteam / ACCELA) is **not** bundled in the main repo — Femboy Edition or [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) first. See [ACCELA_STYLE.md](ACCELA_STYLE.md).
 
 Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
 
