@@ -1,8 +1,10 @@
 # STLT (Sigmachan) parity tracker
 
-Reference fork: [Sigmachan/STLT](https://github.com/Sigmachan/STLT) (10.x line after 9.0.7).  
+Reference fork: Sigmachan/STLT (10.x line after 9.0.7; GitHub listing is gone/private —
+use a local checkout for diffs).  
 Local checkout (preferred for diffs/locale import): `F:\STLT`  
-Planning doc on disk: `F:\STLT-since-9.0.7-and-clean-build.pdf`.
+Planning doc on disk: `F:\STLT-since-9.0.7-and-clean-build.pdf`.  
+Live Rewired update channel: `Sigmachan/STLT-Rewired` (`backend/update.json`).
 
 Rewired intentionally keeps a **Windows-first, native Lua** backend (~169 RPCs) instead of STLT’s Python HTTP bridge on `:6767`. This file tracks what is already ported, what differs by design, and what is still worth pulling over.
 
@@ -23,7 +25,7 @@ Rewired intentionally keeps a **Windows-first, native Lua** backend (~169 RPCs) 
 | Health preflight (Windows) | Done (`health.run_health_check`, settings health panel no longer Linux-only skip) |
 | Fast Download → auto-pick single source | Done (`isFastDownloadEnabled()` in add poll) |
 | Big Picture gamepad polish | Done (B = back, larger targets, hint bar on menu open) |
-| Update channel semver | Done (`plugin_utils.is_newer_version`, `update.json` → Sigmachan/STLT) |
+| Update channel semver | Done (`plugin_utils.is_newer_version`, `update.json` → Sigmachan/STLT-Rewired) |
 | Deploy duplicate-plugin dedup | Done (`deploy.ps1`, from STLT `install.ps1`) |
 | STLT reference docs in `docs/` | Done (`CHANGELOG.md`, `MILLENNIUM_3_0_ERRORS.md`, `ROADMAP-10.0.md`, `STLT-FINDINGS.md`) |
 | Manifest auto-updater | Done (`manifest_auto_updater.lua`, `RunManifestAutoUpdate`, setting `general.autoUpdateManifests`) |

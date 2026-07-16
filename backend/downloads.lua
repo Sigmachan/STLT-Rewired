@@ -177,6 +177,57 @@ function downloads._finalize_install_lua(appid, extract_dir, dest_path, api_name
     end)
 end
 
+local function _ps_quote(value)
+    return "'" .. tostring(value or ""):gsub("'", "''") .. "'"
+end
+
+-- Write a PowerShell downloader script. The old cmd.exe /C string embedded
+-- JSON status echoes inside double quotes, which truncated the command at the
+-- first quote and left downloads stuck on "downloading".
+local function _write_windows_download_script(script_path, state_file, url, dest_path, extract_dir, cookie)
+    local lines = {
+        "$ErrorActionPreference = 'Stop'",
+        "$ProgressPreference = 'Continue'",
+        "$stateFile = " .. _ps_quote(state_file),
+        "$url = " .. _ps_quote(url),
+        "$zip = " .. _ps_quote(dest_path),
+        "$extract = " .. _ps_quote(extract_dir),
+        "$cookie = " .. _ps_quote(cookie or ""),
+        "$tarExe = Join-Path $env:WINDIR 'System32\\tar.exe'",
+        "$curlExe = Join-Path $env:WINDIR 'System32\\curl.exe'",
+        "if (-not (Test-Path -LiteralPath $tarExe)) { $tarExe = 'tar.exe' }",
+        "if (-not (Test-Path -LiteralPath $curlExe)) { $curlExe = 'curl.exe' }",
+        "function Write-State([string]$status, [string]$errorMessage = '') {",
+        "  $obj = @{ status = $status }",
+        "  if ($errorMessage -ne '') { $obj.error = $errorMessage }",
+        "  $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $stateFile -Encoding ASCII",
+        "}",
+        "try {",
+        "  Write-Host 'LuaTools is downloading the requested files...'",
+        "  Write-Host 'Please keep this window open until it closes automatically.'",
+        "  Write-State 'downloading'",
+        "  if (-not (Test-Path -LiteralPath $extract)) { New-Item -ItemType Directory -Path $extract -Force | Out-Null }",
+        "  $curlArgs = @('-L', '-A', 'discord(dot)gg/luatools', $url, '-o', $zip)",
+        "  if ($cookie -ne '') { $curlArgs = @('-H', ('Cookie: ' + $cookie)) + $curlArgs }",
+        "  & $curlExe @curlArgs",
+        "  if ($LASTEXITCODE -ne 0) { throw \"curl.exe failed with exit code $LASTEXITCODE\" }",
+        "  if (-not (Test-Path -LiteralPath $zip)) { throw 'Downloaded archive was not created' }",
+        "  Write-State 'extracting'",
+        "  Write-Host 'Extracting files...'",
+        "  & $tarExe -xf $zip -C $extract",
+        "  if ($LASTEXITCODE -ne 0) { throw \"tar.exe failed with exit code $LASTEXITCODE\" }",
+        "  Write-State 'extracted'",
+        "}",
+        "catch {",
+        "  Write-State 'failed' ($_.Exception.Message)",
+        "  Write-Host ('ERROR: ' + $_.Exception.Message)",
+        "  Start-Sleep -Seconds 5",
+        "  exit 1",
+        "}",
+    }
+    m_utils.write_file(script_path, table.concat(lines, "\n"))
+end
+
 local function _launch_async_download(appid, url, dest_path, extract_dir, cookie)
     local is_windows = m_utils.getenv("OS") == "Windows_NT"
     local dest_root = utils.ensure_temp_download_dir()
@@ -185,14 +236,13 @@ local function _launch_async_download(appid, url, dest_path, extract_dir, cookie
     m_utils.write_file(state_file, '{"status": "downloading"}')
     if not fs.exists(extract_dir) then fs.create_directories(extract_dir) end
 
-    -- Authenticated Ryuu Premium requires the session cookie on the download request.
-    local cookie_arg = ""
-    if cookie and cookie ~= "" then cookie_arg = ' -H "Cookie: ' .. cookie .. '"' end
-
     if is_windows then
+        local script_file = fs.join(dest_root, tostring(appid) .. "_download.ps1")
+        pcall(fs.remove, script_file)
+        _write_windows_download_script(script_file, state_file, url, dest_path, extract_dir, cookie)
         local cmd = string.format(
-            'cmd.exe /C start "LuaTools Downloader" cmd.exe /C "color 0B && echo LuaTools is downloading the requested files... && echo Please keep this window open until it closes automatically. && echo. && (echo {"status": "downloading"} > "%s" && curl.exe -# -L -A "discord(dot)gg/luatools"%s "%s" -o "%s" && echo {"status": "extracting"} > "%s" && echo. && echo Extracting files... && tar.exe -xf "%s" -C "%s" && echo {"status": "extracted"} > "%s") || (echo. && echo ERROR: Download or extraction failed! && echo {"status": "failed"} > "%s" && timeout /t 5)"',
-            state_file, cookie_arg, url, dest_path, state_file, dest_path, extract_dir, state_file, state_file
+            'cmd.exe /C start "LuaTools Downloader" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%s"',
+            script_file
         )
         m_utils.exec(cmd)
     else

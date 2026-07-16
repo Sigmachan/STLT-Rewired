@@ -60,7 +60,9 @@ local function try_get(http_client, url, options)
     return nil, status
 end
 
---- Fetch URL; for GitHub hosts retry via Vercel proxy then jsDelivr (raw only).
+--- Fetch URL; for GitHub hosts retry via optional proxy then jsDelivr (raw only).
+--- Direct 404 means the object is missing. Proxy 404 must NOT abort — a dead
+--- proxy would otherwise skip jsDelivr and hard-fail recoverable fetches.
 function M.fetch(http_client, url, options, proxy_base)
     options = options or {}
     local body, status = try_get(http_client, url, options)
@@ -71,14 +73,13 @@ function M.fetch(http_client, url, options, proxy_base)
     local proxy_url = M.vercel_proxy_url(url, proxy_base)
     if proxy_url ~= "" then
         logger.warn("GitHub direct failed for " .. url .. ", trying proxy")
-        body, status = try_get(http_client, proxy_url, options)
+        body = try_get(http_client, proxy_url, options)
         if body then return body end
-        if status == 404 then return nil end
     end
 
     local jsdelivr = M.jsdelivr_from_raw(url)
     if jsdelivr ~= "" then
-        logger.warn("GitHub proxy failed for " .. url .. ", trying jsDelivr")
+        logger.warn("GitHub fetch falling back to jsDelivr for " .. url)
         body = try_get(http_client, jsdelivr, options)
         if body then return body end
     end
