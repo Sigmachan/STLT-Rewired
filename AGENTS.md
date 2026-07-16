@@ -38,10 +38,5 @@ embedded into `.millennium/Dist/webkit.js`. See `readme.md`, `REWIRED-PLAN.md`, 
   `utils`, `json`, `millennium`) before `require`-ing the module. Pure-logic modules like
   `github_mirror` only need a `logger` stub.
 
-### Known pre-existing issue (not a setup problem)
-- `backend/opensteamtool_install.lua:79` has a genuine Lua syntax error (`''%s''` inside a
-  single-quoted string is invalid Lua; needs `\'` escaping). It is unrelated to environment
-  setup — leave it unless explicitly asked to fix it.
-
 > Note: root `AGENTS.md` is listed in `.gitignore` (intended as local-only). This file was
 > force-added so future cloud agents inherit these notes; merge it to keep them.
