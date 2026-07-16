@@ -73,7 +73,11 @@ options.SETTINGS_GROUPS = {
                 key = "backend",
                 label = "Backend preference",
                 option_type = "select",
+<<<<<<< HEAD
                 description = "auto prefers SteamTools/SLSsteam (stplug-in), then LumaCore, then OpenSteamTool (Windows config/lua).",
+=======
+                description = "auto prefers SteamTools (stplug-in), then LumaCore, then OpenSteamTool (config/lua).",
+>>>>>>> f7770ef (fix: prefer SteamTools unlock backend and unify script paths)
                 default = "auto",
                 choices = {
                     {value = "auto", label = "Auto-detect"},

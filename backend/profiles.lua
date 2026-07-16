@@ -43,7 +43,11 @@ end
 local function lua_path(appid)
     local dir = st.lua_script_dir()
     if dir == "" then return "" end
+<<<<<<< HEAD
     return fs.join(dir, tostring(appid) .. ".lua")
+=======
+    return fs.join(dir, appid .. ".lua")
+>>>>>>> f7770ef (fix: prefer SteamTools unlock backend and unify script paths)
 end
 
 local function read_lua_snapshot(appid)
