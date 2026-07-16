@@ -15,7 +15,9 @@ local config = {
 
     API_MANIFEST_URL = "https://raw.githubusercontent.com/madoiscool/lt_api_links/refs/heads/main/load_free_manifest_apis",
     API_MANIFEST_PROXY_URL = "https://luatools.vercel.app/load_free_manifest_apis",
-    GITHUB_PROXY_BASE = "https://luatools.vercel.app/api/github",
+    -- /api/github and /api/raw on luatools.vercel.app return 404; leave blank so
+    -- github_mirror skips the dead hop and falls through to jsDelivr for raw URLs.
+    GITHUB_PROXY_BASE = "",
     API_JSON_FILE = "api.json",
 
     UPDATE_CONFIG_FILE = "update.json",
