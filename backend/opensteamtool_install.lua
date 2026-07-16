@@ -75,8 +75,10 @@ function M.install_latest(steam_path)
     end
 
     pcall(fs.create_directories, extract_dir)
+    -- Long string so PowerShell single-quotes around paths are valid Lua (''%s'' in a
+    -- Lua '...' string is a syntax error). Path apostrophes are doubled for PowerShell.
     local ex_cmd = string.format(
-        'powershell.exe -NoProfile -Command "Expand-Archive -LiteralPath ''%s'' -DestinationPath ''%s'' -Force"',
+        [[powershell.exe -NoProfile -Command "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force"]],
         zip_path:gsub("'", "''"), extract_dir:gsub("'", "''")
     )
     pcall(m_utils.exec, ex_cmd)
