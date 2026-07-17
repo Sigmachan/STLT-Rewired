@@ -31,30 +31,27 @@ local function load_millennium()
 end
 
 local function get_millennium_version(mil)
-    if not mil or type(mil.version) ~= "function" then return "unknown" end
-    local ok, version = pcall(mil.version)
+    if not mil then return "unknown" end
+    local ok, version = pcall(function() return mil.version() end)
     if ok and version and version ~= "" then return tostring(version) end
     return "unknown"
 end
 
 local function compare_millennium_version(mil, version, target)
-    if not mil or type(mil.cmp_version) ~= "function" or version == "unknown" then return nil end
-    local ok, result = pcall(mil.cmp_version, version, target)
+    if not mil or version == "unknown" then return nil end
+    local ok, result = pcall(function() return mil.cmp_version(version, target) end)
     if ok and type(result) == "number" and result >= -1 and result <= 1 then return result end
     return nil
 end
 
 local function api_report(mil)
+    -- Under the live Lua host, do not index/iterate the millennium table after
+    -- ready() — beta.9 has shown native ACCESS_VIOLATION when probing it.
+    -- Presence of the module is enough proof the host APIs exist.
+    if mil then return true, {} end
     local missing = {}
-    if not mil then
-        for _, name in ipairs(REQUIRED_API) do table.insert(missing, name) end
-        return false, missing
-    end
-
-    for _, name in ipairs(REQUIRED_API) do
-        if type(mil[name]) ~= "function" then table.insert(missing, name) end
-    end
-    return #missing == 0, missing
+    for _, name in ipairs(REQUIRED_API) do table.insert(missing, name) end
+    return false, missing
 end
 
 local function millennium_installed(root)

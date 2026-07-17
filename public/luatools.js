@@ -26,8 +26,9 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         return (payload && typeof payload === 'object') ? payload : {};
     }
 
-    // Millennium beta.8 crashes when heavy luatools RPCs overlap. Only queue disk/network scans;
-    // keep menu, add-game polling, and settings reads on the fast path.
+    // Millennium beta.8/9 crashes (ACCESS_VIOLATION in luavm) when heavy or
+    // overlapping luatools RPCs hit the native bridge. Serialize disk/network
+    // scans always; also serialize everything for a short boot window.
     (function patchLuatoolsRpcQueue() {
         if (window.__LUATOOLS_RPC_PATCHED__) return;
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
@@ -36,6 +37,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         }
         window.__LUATOOLS_RPC_PATCHED__ = true;
         var heavyChain = Promise.resolve();
+        var bootSerialUntil = Date.now() + 20000;
         var HEAVY_RPC = {
             GetSettingsInstalledInventory: true,
             GetInstalledFixes: true,
@@ -47,7 +49,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             RunHealthScanAll: true,
             ExportSupportBundle: true,
             WarmRyuuCatalogCache: true,
-            SearchRyuuCatalog: true
+            SearchRyuuCatalog: true,
+            SelfHeal: true,
+            GetSetupState: true,
+            RunSetup: true,
+            GetSettingsConfig: true,
+            ReadLoadedApps: true,
+            CheckForFixes: true,
+            GetGamesDatabase: true
         };
         var orig = Millennium.callServerMethod.bind(Millennium);
         Millennium.callServerMethod = function (plugin, method, args) {
@@ -56,7 +65,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     return plugin === 'luatools' ? _ltParsePayload(res) : res;
                 });
             };
-            if (plugin !== 'luatools' || !HEAVY_RPC[method]) {
+            var mustSerial = plugin === 'luatools' && (HEAVY_RPC[method] || Date.now() < bootSerialUntil);
+            if (!mustSerial) {
                 return run();
             }
             var call = heavyChain
@@ -9439,8 +9449,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 // Now translations are ready — insert the button in the correct language
                 addLuaToolsButton();
 
-                // First-run setup assistant: once per session, show the "You're all
-                // set" flow if this is a first run or something is blocking downloads.
+                // First-run setup assistant: once per session (staggered so it
+                // does not overlap GetSettingsConfig / InitApis on beta.9).
                 try {
                     if (!window.__LUATOOLS_SETUP_CHECKED__) {
                         window.__LUATOOLS_SETUP_CHECKED__ = true;
@@ -9463,18 +9473,15 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         var s = typeof raw === 'string' ? JSON.parse(raw) : raw;
                                         if (s && s.success) {
                                             if (!s.ready) {
-                                                // Something to guide — show the assistant.
                                                 showSetupAssistant(s);
                                             } else if (s.firstRun) {
-                                                // Already good on first run — don't interrupt;
-                                                // just remember so we don't check again.
                                                 try { Millennium.callServerMethod('luatools', 'MarkSetupSeen', { contentScriptQuery: '' }); } catch (_) { }
                                             }
                                         }
                                     })
                                     .catch(function () { });
                             } catch (_) { }
-                        }, 1800);
+                        }, 4500);
                     }
                 } catch (_) { }
 
@@ -9563,53 +9570,56 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         }, 500);
 
         // Ask backend if there is a queued startup message from InitApis
+        // (delayed so it does not race GetSettingsConfig on beta.9).
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                Millennium.callServerMethod('luatools', 'GetInitApisMessage', {
-                    contentScriptQuery: ''
-                }).then(function (res) {
+                setTimeout(function () {
                     try {
-                        const payload = typeof res === 'string' ? JSON.parse(res) : res;
-                        if (payload && payload.message) {
-                            const msg = String(payload.message);
-                            // Check if this is an update message (contains "update" or "restart")
-                            const isUpdateMsg = msg.toLowerCase().includes('update') || msg.toLowerCase().includes('restart');
+                        Millennium.callServerMethod('luatools', 'GetInitApisMessage', {
+                            contentScriptQuery: ''
+                        }).then(function (res) {
+                            try {
+                                const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                if (payload && payload.message) {
+                                    const msg = String(payload.message);
+                                    const isUpdateMsg = msg.toLowerCase().includes('update') || msg.toLowerCase().includes('restart');
 
-                            if (isUpdateMsg) {
-                                // For update messages, use confirm dialog with OK (restart) and Cancel options
-                                showLuaToolsConfirm('Rewired', msg, function () {
-                                    // User clicked Confirm - restart Steam
-                                    try {
-                                        Millennium.callServerMethod('luatools', 'RestartSteam', {
-                                            contentScriptQuery: ''
-                                        });
-                                    } catch (_) { }
-                                }, function () {
-                                    // User clicked Cancel - do nothing (just closes dialog)
-                                });
-                            } else {
-                                // For non-update messages, use regular alert
-                                ShowLuaToolsAlert('Rewired', msg);
-                            }
-                        }
+                                    if (isUpdateMsg) {
+                                        showLuaToolsConfirm('Rewired', msg, function () {
+                                            try {
+                                                Millennium.callServerMethod('luatools', 'RestartSteam', {
+                                                    contentScriptQuery: ''
+                                                });
+                                            } catch (_) { }
+                                        }, function () { });
+                                    } else {
+                                        ShowLuaToolsAlert('Rewired', msg);
+                                    }
+                                }
+                            } catch (_) { }
+                        });
                     } catch (_) { }
-                });
+                }, 1200);
                 // Also show loaded apps list if present (only once per session, store page only)
                 try {
                     if (window.location.hostname === 'store.steampowered.com') {
                         if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
                             sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
-                            Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
-                                contentScriptQuery: ''
-                            }).then(function (res) {
+                            setTimeout(function () {
                                 try {
-                                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
-                                    const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
-                                    if (apps.length > 0) {
-                                        showLoadedAppsPopup(apps);
-                                    }
+                                    Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
+                                        contentScriptQuery: ''
+                                    }).then(function (res) {
+                                        try {
+                                            const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                            const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
+                                            if (apps.length > 0) {
+                                                showLoadedAppsPopup(apps);
+                                            }
+                                        } catch (_) { }
+                                    });
                                 } catch (_) { }
-                            });
+                            }, 2500);
                         }
                     }
                 } catch (_) { }
