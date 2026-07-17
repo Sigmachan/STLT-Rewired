@@ -326,15 +326,52 @@ function Install-RewiredPluginFromUrl {
     }
 }
 
+function Get-LatestMillenniumReleaseTag {
+    param(
+        [ValidateSet('windows', 'linux')]
+        [string]$Platform = 'windows',
+        [string]$Fallback = 'v3.4.0-beta.9'
+    )
+    # Prefer newest GitHub release that ships a platform archive (includes prereleases).
+    # /releases/latest is stable-only and can lag behind beta tags.
+    $suffix = if ($Platform -eq 'linux') { 'linux-x86_64.tar.gz' } else { 'windows-x86_64.zip' }
+    try {
+        $uri = 'https://api.github.com/repos/SteamClientHomebrew/Millennium/releases?per_page=20'
+        $releases = Invoke-RestMethod -Uri $uri -Headers (Get-GitHubApiHeaders) -TimeoutSec 45
+        foreach ($rel in @($releases)) {
+            if ($rel.draft) { continue }
+            $tag = [string]$rel.tag_name
+            if (-not $tag) { continue }
+            foreach ($asset in @($rel.assets)) {
+                $name = [string]$asset.name
+                if ($name.StartsWith('millennium-') -and $name.EndsWith($suffix)) {
+                    return $tag
+                }
+            }
+        }
+    } catch {
+        if (Test-GitHubRateLimitError $_) {
+            Write-Warning 'GitHub API rate limit while resolving Millennium version; using fallback tag.'
+        } else {
+            Write-Warning ("Could not resolve latest Millennium release: " + $_.Exception.Message)
+        }
+    }
+    return $Fallback
+}
+
 function Install-RewiredMillennium {
     param(
         [Parameter(Mandatory)][string]$SteamPath,
-        [string]$Version = 'v3.4.0-beta.9'
+        [string]$Version = ''
     )
     $running = Get-Process -Name 'steam', 'steamwebhelper' -ErrorAction SilentlyContinue
     if ($running) {
         Write-Warning 'Steam is running. Exit Steam fully before installing Millennium.'
         return $false
+    }
+    if (-not $Version -or $Version -eq 'latest') {
+        $Version = Get-LatestMillenniumReleaseTag -Platform windows
+        Write-Host "Resolved latest Millennium tag: $Version" -ForegroundColor DarkGray
     }
     $assetBase = "millennium-$Version-windows-x86_64"
     $base = "https://github.com/SteamClientHomebrew/Millennium/releases/download/$Version"

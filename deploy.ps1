@@ -2,7 +2,8 @@
 # Reversible: backs up the currently-deployed plugin first. Does NOT restart Steam.
 #
 #   pwsh -NoProfile -File deploy.ps1                         # deploy (recommended)
-#   pwsh -NoProfile -File deploy.ps1 -InstallMillenniumBeta  # update Millennium beta, then deploy
+#   pwsh -NoProfile -File deploy.ps1 -InstallMillenniumBeta                 # latest Millennium, then deploy
+#   pwsh -NoProfile -File deploy.ps1 -InstallMillenniumBeta -MillenniumVersion v3.4.0-beta.9
 #   pwsh -NoProfile -File deploy.ps1 -Restore                # roll back to the last plugin backup
 #
 # Use -NoProfile: some PowerShell profiles hang after the welcome banner and never run the script.
@@ -10,7 +11,7 @@
 param(
     [switch]$Restore,
     [switch]$InstallMillenniumBeta,
-    [string]$MillenniumVersion = "v3.4.0-beta.9",
+    [string]$MillenniumVersion = "latest",
     [string]$SteamPath = "C:\Program Files (x86)\Steam"
 )
 
@@ -66,11 +67,43 @@ function Restore-MillenniumRuntimeBackup {
     }
 }
 
+function Get-LatestMillenniumReleaseTag {
+    param([string]$Fallback = 'v3.4.0-beta.9')
+    try {
+        $headers = @{
+            Accept       = 'application/vnd.github+json'
+            'User-Agent' = 'Rewired-Deploy'
+        }
+        if ($env:GITHUB_TOKEN) { $headers.Authorization = "Bearer $($env:GITHUB_TOKEN)" }
+        elseif ($env:GH_TOKEN) { $headers.Authorization = "Bearer $($env:GH_TOKEN)" }
+        $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/SteamClientHomebrew/Millennium/releases?per_page=20' -Headers $headers -TimeoutSec 45
+        foreach ($rel in @($releases)) {
+            if ($rel.draft) { continue }
+            $tag = [string]$rel.tag_name
+            if (-not $tag) { continue }
+            foreach ($asset in @($rel.assets)) {
+                $name = [string]$asset.name
+                if ($name.StartsWith('millennium-') -and $name.EndsWith('windows-x86_64.zip')) {
+                    return $tag
+                }
+            }
+        }
+    } catch {
+        Write-Warning ("Could not resolve latest Millennium release: " + $_.Exception.Message)
+    }
+    return $Fallback
+}
+
 function Install-MillenniumBeta {
     param(
         [Parameter(Mandatory=$true)][string]$Version,
         [Parameter(Mandatory=$true)][string]$SteamRoot
     )
+
+    if (-not $Version -or $Version -eq 'latest') {
+        $Version = Get-LatestMillenniumReleaseTag
+        Write-Host "Resolved latest Millennium tag: $Version" -ForegroundColor DarkGray
+    }
 
     if (-not (Test-Path $SteamRoot)) { throw "Steam path not found: $SteamRoot" }
     Assert-SteamStopped

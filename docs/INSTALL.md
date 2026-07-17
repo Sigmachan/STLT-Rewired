@@ -12,7 +12,7 @@ Preferred AIO URLs: **`https://sigmachan.ru/install.ps1`** (Windows) and **`http
 
 ### AIO install (default)
 
-Millennium + OpenSteamTool unlock + Rewired plugin:
+Millennium + OpenSteamTool unlock + Rewired plugin (Millennium tag resolved from GitHub **latest** release, including prereleases):
 
 ```powershell
 irm https://sigmachan.ru/install.ps1 | iex
@@ -72,7 +72,7 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Steam auto-detect covers **native
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
 | `FORCE=1` | Re-run unlock installer even if ACCELA/SLS already present |
 | `STEAM_PATH=...` | Override Steam root (native or Flatpak data dir) |
-| `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default `v3.4.0-beta.9`) |
+| `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default: **latest** release including prereleases) |
 
 Examples when auto-detect fails (env must be on the **bash** side of the pipe — `VAR=x curl | bash` does **not** pass `VAR` into the installer):
 

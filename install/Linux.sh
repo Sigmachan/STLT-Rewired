@@ -9,7 +9,7 @@
 #   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
 #   SKIP_PLUGIN=1            do not install/update the Rewired plugin
 #   FORCE=1                  re-run unlock installer even if ACCELA/SLS present
-#   MILLENNIUM_VERSION=...   pin Millennium tag (default v3.4.0-beta.9)
+#   MILLENNIUM_VERSION=...   pin Millennium tag (default: latest GitHub release incl. prerelease)
 #   GITHUB_TOKEN / GH_TOKEN  higher GitHub API rate limit
 # Example:
 #   curl -fsSL https://sigmachan.ru/install | STEAM_PATH="$HOME/.local/share/Steam" bash
@@ -318,10 +318,42 @@ install_unlock_stack() {
   ok "Unlock stack installer finished (ACCELA + SLSsteam)."
 }
 
+resolve_latest_millennium_version() {
+  # Newest non-draft GitHub release with a linux-x86_64 tarball (includes prereleases).
+  # /releases/latest is stable-only and can lag behind betas.
+  local fallback="${1:-v3.4.0-beta.9}"
+  local headers=() json tag
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    headers=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  elif [[ -n "${GH_TOKEN:-}" ]]; then
+    headers=(-H "Authorization: Bearer ${GH_TOKEN}")
+  fi
+  if json="$(curl -fsSL "${headers[@]}" "https://api.github.com/repos/SteamClientHomebrew/Millennium/releases?per_page=20" 2>/dev/null)"; then
+    tag="$("$PYTHON_BIN" -c "
+import json,sys
+rels=json.load(sys.stdin)
+for r in rels:
+    if r.get('draft'): continue
+    tag=r.get('tag_name') or ''
+    if not tag: continue
+    for a in r.get('assets') or []:
+        name=a.get('name') or ''
+        if name.endswith('linux-x86_64.tar.gz') and name.startswith('millennium-'):
+            print(tag)
+            raise SystemExit
+" <<<"$json" 2>/dev/null || true)"
+    if [[ -n "${tag:-}" ]]; then
+      echo "$tag"
+      return
+    fi
+  fi
+  warn "Could not resolve latest Millennium release; using ${fallback}."
+  echo "$fallback"
+}
+
 install_millennium_if_needed() {
   local steam="$1"
-  local ver="${MILLENNIUM_VERSION:-v3.4.0-beta.9}"
-  local url work
+  local ver url work
   if [[ "$SKIP_MILLENNIUM" == "1" ]]; then
     warn "Skipping Millennium install (SKIP_MILLENNIUM=1)."
     return
@@ -333,6 +365,12 @@ install_millennium_if_needed() {
   if [[ -f "$steam/millennium/libmillennium_x86.so" ]] || [[ -f "$steam/millennium/lib/libmillennium_x86.so" ]]; then
     info "Millennium appears installed."
     return
+  fi
+
+  if [[ -n "${MILLENNIUM_VERSION:-}" ]]; then
+    ver="$MILLENNIUM_VERSION"
+  else
+    ver="$(resolve_latest_millennium_version)"
   fi
 
   need_cmd tar
