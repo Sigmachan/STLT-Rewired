@@ -56,13 +56,13 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 
 ## Linux
 
-**Full stack (recommended)** — Millennium + Rewired plugin + **ACCELA + SLSsteam**:
+**AIO (recommended)** — ACCELA + SLSsteam + Millennium + Rewired plugin in one shot:
 
 ```bash
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) combo installer (ACCELA + Headcrab/SLSsteam), then installs Millennium (if missing) and the Rewired plugin. Unlock scripts land in `Steam/config/stplug-in/`.
+Unlock Lua lands in `Steam/config/stplug-in/`. Skip pieces with env vars if needed:
 
 | Env | Effect |
 |-----|--------|
@@ -70,14 +70,6 @@ This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-
 | `SKIP_MILLENNIUM=1` | Do not install Millennium |
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
 | `STEAM_PATH=...` | Override Steam root |
-| `FORCE=1` | With unlock-only script: reinstall even if present |
-
-**Unlock only** (ACCELA + SLSsteam):
-
-```bash
-curl -fsSL https://sigmachan.ru/unlock | bash
-# FORCE=1 curl -fsSL …/unlock | bash
-```
 
 **Update plugin** (skips Millennium + unlock, preserves `backend/data`):
 

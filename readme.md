@@ -25,8 +25,8 @@ irm https://sigmachan.ru/update.ps1 | iex
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-Installs ACCELA + SLSsteam, Millennium if needed, and the Rewired plugin.  
-Unlock only: `…/unlock | bash`. Full names under `install/`. Details: `docs/INSTALL.md`.
+Installs **ACCELA + SLSsteam** (unlock), Millennium if needed, and the Rewired plugin in one step.  
+Update later: `…/update | bash`. Details: `docs/INSTALL.md`.
 
 ## Project docs
 
