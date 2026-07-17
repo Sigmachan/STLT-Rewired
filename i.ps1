@@ -6,6 +6,7 @@ param(
     [switch]$SkipMillennium,
     [switch]$SkipManager,
     [switch]$SkipOpenSteamTool,
+    [switch]$InstallOpenSteamTool,
     [switch]$SkipShortcut,
     [switch]$FromRepo
 )

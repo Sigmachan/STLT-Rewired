@@ -164,20 +164,12 @@ function M.resolve_backend()
         return RESOLVED_BACKEND
     end
 
-<<<<<<< HEAD
     -- auto: SteamTools/SLSsteam (stplug-in) first, then LumaCore, then OpenSteamTool
-=======
-    -- auto: prefer SteamTools (stplug-in), then LumaCore, then OpenSteamTool (config/lua)
->>>>>>> f7770ef (fix: prefer SteamTools unlock backend and unify script paths)
     if M.detect_steamtools(steam) then
         RESOLVED_BACKEND = "steamtools"
     elseif M.detect_lumacore(steam) then
         RESOLVED_BACKEND = "lumacore"
-<<<<<<< HEAD
     elseif platform.is_windows() and M.detect_opensteamtool(steam) then
-=======
-    elseif M.detect_opensteamtool(steam) then
->>>>>>> f7770ef (fix: prefer SteamTools unlock backend and unify script paths)
         RESOLVED_BACKEND = "opensteamtool"
     else
         RESOLVED_BACKEND = "none"
