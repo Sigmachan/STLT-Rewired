@@ -69,6 +69,7 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Steam auto-detect covers **native
 | `SKIP_UNLOCK=1` | Do not install ACCELA/SLSsteam |
 | `SKIP_MILLENNIUM=1` | Do not install Millennium |
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
+| `FORCE=1` | Re-run unlock installer even if ACCELA/SLS already present |
 | `STEAM_PATH=...` | Override Steam root (native or Flatpak data dir) |
 | `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default `v3.4.0-beta.9`) |
 

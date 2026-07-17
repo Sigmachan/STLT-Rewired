@@ -8,6 +8,7 @@
 #   SKIP_MILLENNIUM=1        do not install Millennium
 #   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
 #   SKIP_PLUGIN=1            do not install/update the Rewired plugin
+#   FORCE=1                  re-run unlock installer even if ACCELA/SLS present
 #   MILLENNIUM_VERSION=...   pin Millennium tag (default v3.4.0-beta.9)
 #   GITHUB_TOKEN / GH_TOKEN  higher GitHub API rate limit
 set -euo pipefail
@@ -19,6 +20,7 @@ TAG_PREFIX="${TAG_PREFIX:-v}"
 SKIP_MILLENNIUM="${SKIP_MILLENNIUM:-0}"
 SKIP_UNLOCK="${SKIP_UNLOCK:-0}"
 SKIP_PLUGIN="${SKIP_PLUGIN:-0}"
+FORCE="${FORCE:-0}"
 
 # Community Linux unlock combo installer (ACCELA + Headcrab/SLSsteam).
 ENTER_THE_WIRED_URL="${ENTER_THE_WIRED_URL:-https://raw.githubusercontent.com/ciscosweater/enter-the-wired/main/enter-the-wired}"
@@ -45,8 +47,8 @@ resolve_python() {
 
 PYTHON_BIN="$(resolve_python)"
 need_cmd curl
-command -v unzip >/dev/null 2>&1 || need_cmd busybox
 need_cmd tar
+# Zip extract: unzip → busybox unzip → Python zipfile (see unzip_into).
 
 detect_distro() {
   local id="" like="" name=""
@@ -92,6 +94,14 @@ is_steam_root() {
   if command -v readlink >/dev/null 2>&1; then
     p="$(readlink -f "$p" 2>/dev/null || echo "$p")"
   fi
+  # System package trees (/usr/share/steam) often ship client libs but are not a
+  # writable user data root — only accept them if they look like a real library.
+  case "$p" in
+    /usr/share/steam|/usr/lib/steam|/usr/lib64/steam)
+      [[ -d "$p/steamapps" ]] && [[ -w "$p" ]] && return 0
+      return 1
+      ;;
+  esac
   [[ -f "$p/steam.sh" ]] && return 0
   [[ -d "$p/steamapps" ]] && return 0
   [[ -d "$p/ubuntu12_32" ]] && return 0
@@ -171,7 +181,7 @@ unzip_into() {
   mkdir -p "$dest"
   if command -v unzip >/dev/null 2>&1; then
     unzip -q "$zip" -d "$dest"
-  elif command -v busybox >/dev/null 2>&1; then
+  elif command -v busybox >/dev/null 2>&1 && busybox unzip -h >/dev/null 2>&1; then
     busybox unzip -q "$zip" -d "$dest"
   else
     "$PYTHON_BIN" - "$zip" "$dest" <<'PY'
@@ -179,6 +189,29 @@ import sys, zipfile
 zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])
 PY
   fi
+}
+
+# Normalize release zip layouts (flat or single top-level folder).
+resolve_plugin_extract_root() {
+  local extract="$1"
+  if [[ -d "$extract/backend" ]] || [[ -d "$extract/.millennium" ]]; then
+    echo "$extract"
+    return
+  fi
+  local child
+  # shellcheck disable=SC2045
+  for child in "$extract"/*; do
+    [[ -d "$child" ]] || continue
+    if [[ -d "$child/backend" ]] || [[ -d "$child/.millennium" ]]; then
+      echo "$child"
+      return
+    fi
+  done
+  echo "$extract"
+}
+
+json_escape() {
+  "$PYTHON_BIN" -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"
 }
 
 DISTRO_LABEL="$(detect_distro)"
@@ -247,10 +280,13 @@ install_unlock_stack() {
     return
   fi
 
-  if unlock_already_present; then
+  if [[ "$FORCE" != "1" ]] && unlock_already_present; then
     ok "ACCELA + SLSsteam already present — skipping unlock installer."
-    info "Force unlock reinstall: FORCE=1 curl -fsSL https://sigmachan.ru/unlock | bash"
+    info "Force unlock reinstall: FORCE=1 curl -fsSL https://sigmachan.ru/install | bash"
     return
+  fi
+  if [[ "$FORCE" == "1" ]] && unlock_already_present; then
+    warn "FORCE=1 — re-running unlock installer even though ACCELA/SLS look present."
   fi
 
   need_cmd tar
@@ -322,6 +358,9 @@ install_plugin() {
 
   curl -fsSL "$url" -o "$work/plugin.zip"
   unzip_into "$work/plugin.zip" "$work/extract"
+  local src
+  src="$(resolve_plugin_extract_root "$work/extract")"
+  [[ -d "$src/backend" ]] || die "Plugin zip layout unrecognized (expected backend/)."
 
   if [[ -d "$plugin_root/backend/data" ]]; then
     preserved="$work/preserved-data"
@@ -330,7 +369,7 @@ install_plugin() {
 
   rm -rf "$plugin_root"
   mkdir -p "$(dirname "$plugin_root")"
-  cp -a "$work/extract/." "$plugin_root/"
+  cp -a "$src/." "$plugin_root/"
 
   if [[ -n "${preserved:-}" && -d "$preserved" ]]; then
     mkdir -p "$plugin_root/backend/data"
@@ -344,14 +383,17 @@ install_plugin() {
 write_shared_config() {
   local steam="$1"
   local cfg_dir="$HOME/.local/share/Rewired"
+  local steam_json plugin_json
+  steam_json="$(json_escape "$steam")"
+  plugin_json="$(json_escape "$steam/millennium/plugins/luatools")"
   mkdir -p "$cfg_dir"
   cat >"$cfg_dir/rewired.json" <<EOF
 {
   "version": 1,
-  "steamPath": "$steam",
+  "steamPath": ${steam_json},
   "unlockBackend": "steamtools",
   "millenniumOptional": false,
-  "pluginPath": "$steam/millennium/plugins/luatools",
+  "pluginPath": ${plugin_json},
   "linuxUnlock": "slssteam+accela"
 }
 EOF

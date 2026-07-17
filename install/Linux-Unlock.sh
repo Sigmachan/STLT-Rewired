@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# install-linux-unlock.sh - Install ACCELA + SLSsteam (via enter-the-wired / Headcrab).
-#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh | bash
+# install/Linux-Unlock.sh — ACCELA + SLSsteam only (via enter-the-wired / Headcrab).
+#   curl -fsSL https://sigmachan.ru/unlock | bash
 #
 # This does NOT install Millennium or the Rewired plugin — use install/Linux.sh for the full stack.
 # Force reinstall even if present: FORCE=1 ...
@@ -18,8 +18,11 @@ command -v curl >/dev/null 2>&1 || die "Missing required command: curl"
 command -v tar >/dev/null 2>&1 || die "Missing required command: tar"
 
 already_present() {
-  [[ -d "$HOME/.local/share/ACCELA" ]] || return 1
-  if [[ -d "$HOME/.local/share/SLSsteam" ]] || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
+  # Match install/Linux.sh unlock_already_present (native + config + Flatpak paths).
+  [[ -d "$HOME/.local/share/ACCELA" ]] || [[ -d "$HOME/.config/ACCELA" ]] || return 1
+  if [[ -d "$HOME/.local/share/SLSsteam" ]] \
+    || [[ -d "$HOME/.config/SLSsteam" ]] \
+    || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
     return 0
   fi
   return 1
@@ -27,14 +30,24 @@ already_present() {
 
 if [[ "$FORCE" != "1" ]] && already_present; then
   ok "ACCELA + SLSsteam already look installed."
-  info "ACCELA:  $HOME/.local/share/ACCELA"
   info "Force reinstall: FORCE=1 curl -fsSL https://sigmachan.ru/unlock | bash"
   exit 0
+fi
+if [[ "$FORCE" == "1" ]] && already_present; then
+  warn "FORCE=1 — re-running unlock installer even though ACCELA/SLS look present."
 fi
 
 info "Installing ACCELA + SLSsteam via enter-the-wired..."
 info "Upstream: https://github.com/ciscosweater/enter-the-wired"
 info "SLSsteam (Headcrab): https://github.com/Deadboy666/h3adcr-b · AceSLS/SLSsteam"
+
+# Help combo installers find Flatpak / custom Steam roots (Bazzite, etc.).
+if [[ -n "${STEAM_PATH:-}" ]]; then
+  export STEAM_DIR="${STEAM_DIR:-$STEAM_PATH}"
+elif [[ -n "${STEAM_ROOT:-}" ]]; then
+  export STEAM_PATH="${STEAM_PATH:-$STEAM_ROOT}"
+  export STEAM_DIR="${STEAM_DIR:-$STEAM_ROOT}"
+fi
 
 # Template must end in XXXXXX (GNU/BSD mktemp); do not put .sh after the X's.
 tmp="$(mktemp "${TMPDIR:-/tmp}/rewired-enter-the-wired.XXXXXX")"
