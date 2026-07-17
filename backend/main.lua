@@ -683,20 +683,42 @@ function OpenExternalUrl(url)
 end
 
 function GetSettingsConfig()
-    local ok, payload = pcall(settings_manager.get_settings_payload)
+    -- beta.9: returning values+schema+translations in one IPC string AV's luavm.
+    -- Ship values only; schema/translations come from separate RPCs.
+    pcall(logger.log, "GetSettingsConfig: start")
+    local ok, payload = pcall(settings_manager.get_settings_values_payload)
     if not ok then
         logger.warn("GetSettingsConfig failed: " .. tostring(payload))
         return json_err(payload)
     end
-    return json_ok({
+    local encoded = json_ok({
+        success        = true,
+        schemaVersion  = payload.version,
+        values         = payload.values or {},
+        language       = payload.language,
+        locales        = payload.locales or {},
+        secretsPresent = payload.secretsPresent or {},
+        schema         = {},
+        translations   = {}
+    })
+    pcall(logger.log, "GetSettingsConfig: encoded " .. tostring(#tostring(encoded)) .. " bytes")
+    return encoded
+end
+
+function GetSettingsSchema()
+    pcall(logger.log, "GetSettingsSchema: start")
+    local ok, payload = pcall(settings_manager.get_settings_schema_payload)
+    if not ok then
+        logger.warn("GetSettingsSchema failed: " .. tostring(payload))
+        return json_err(payload)
+    end
+    local encoded = json_ok({
         success       = true,
         schemaVersion = payload.version,
-        schema        = payload.schema or {},
-        values        = payload.values or {},
-        language      = payload.language,
-        locales       = payload.locales or {},
-        translations  = payload.translations or {}
+        schema        = payload.schema or {}
     })
+    pcall(logger.log, "GetSettingsSchema: encoded " .. tostring(#tostring(encoded)) .. " bytes")
+    return encoded
 end
 
 function GetThemes()

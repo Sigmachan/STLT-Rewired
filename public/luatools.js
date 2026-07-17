@@ -26,9 +26,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         return (payload && typeof payload === 'object') ? payload : {};
     }
 
-    // Millennium beta.8/9 crashes (ACCESS_VIOLATION in luavm) when heavy or
-    // overlapping luatools RPCs hit the native bridge. Serialize disk/network
-    // scans always; also serialize everything for a short boot window.
+    // Millennium beta.8/9: ACCESS_VIOLATION in luavm when luatools RPCs overlap.
+    // Serialize every luatools callServerMethod; never fire RPCs until the patch is live.
     (function patchLuatoolsRpcQueue() {
         if (window.__LUATOOLS_RPC_PATCHED__) return;
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
@@ -36,28 +35,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             return;
         }
         window.__LUATOOLS_RPC_PATCHED__ = true;
-        var heavyChain = Promise.resolve();
-        var bootSerialUntil = Date.now() + 20000;
-        var HEAVY_RPC = {
-            GetSettingsInstalledInventory: true,
-            GetInstalledFixes: true,
-            GetInstalledLuaScripts: true,
-            GetMatchedAvailableFixes: true,
-            RunManifestAutoUpdate: true,
-            GetSourceHealth: true,
-            ScanAllLuaScripts: true,
-            RunHealthScanAll: true,
-            ExportSupportBundle: true,
-            WarmRyuuCatalogCache: true,
-            SearchRyuuCatalog: true,
-            SelfHeal: true,
-            GetSetupState: true,
-            RunSetup: true,
-            GetSettingsConfig: true,
-            ReadLoadedApps: true,
-            CheckForFixes: true,
-            GetGamesDatabase: true
-        };
+        var rpcChain = Promise.resolve();
         var orig = Millennium.callServerMethod.bind(Millennium);
         Millennium.callServerMethod = function (plugin, method, args) {
             var run = function () {
@@ -65,16 +43,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                     return plugin === 'luatools' ? _ltParsePayload(res) : res;
                 });
             };
-            var mustSerial = plugin === 'luatools' && (HEAVY_RPC[method] || Date.now() < bootSerialUntil);
-            if (!mustSerial) {
+            if (plugin !== 'luatools') {
                 return run();
             }
-            var call = heavyChain
+            var call = rpcChain
                 .catch(function () { return null; })
                 .then(run);
-            heavyChain = call.catch(function () { return null; });
+            rpcChain = call.catch(function () { return null; });
             return call;
         };
+        window.__LUATOOLS_RPC_READY__ = true;
     })();
 
     // Inject gamepad navigation CSS
@@ -718,13 +696,15 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     // Detect and save mode at startup
     window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
 
-    // Forward logs to Millennium backend so they appear in the dev console
+    // Forward logs to Millennium backend so they appear in the dev console.
+    // Until the RPC queue patch is live, stay console-only (avoids unpatched races).
     function backendLog(message) {
         try {
+            if (typeof console !== 'undefined' && console.log) {
+                console.log('[LuaTools]', message);
+            }
+            if (!window.__LUATOOLS_RPC_READY__) return;
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                // Flat method name: Millennium 3.x dispatches via getattr, so a
-                // dotted name (the old 'Logger.log') is unresolvable. Always
-                // swallow the promise so a backend miss can't flood cef_log.
                 const p = Millennium.callServerMethod('luatools', 'LogFrontend', {
                     message: String(message)
                 });
@@ -737,8 +717,11 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         }
     }
 
-    backendLog('LuaTools script loaded');
-    backendLog('Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
+    // Defer Mode Detection backend log until RPC queue is ready (console already logged above path).
+    setTimeout(function () {
+        backendLog('LuaTools script loaded');
+        backendLog('Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
+    }, 500);
     // anti-spam state
     const logState = {
         missingOnce: false,
@@ -6787,7 +6770,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
 
     function fetchSettingsConfig(forceRefresh) {
         try {
-            if (!forceRefresh && window.__LuaToolsSettings && Array.isArray(window.__LuaToolsSettings.schema)) {
+            if (!forceRefresh && window.__LuaToolsSettings && Array.isArray(window.__LuaToolsSettings.schema)
+                && window.__LuaToolsSettings.schema.length > 0) {
                 return Promise.resolve(window.__LuaToolsSettings);
             }
         } catch (_) { }
@@ -6796,6 +6780,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             return Promise.reject(new Error(lt('LuaTools backend unavailable')));
         }
 
+        // Split across RPCs: beta.9 ACCESS_VIOLATION on combined values+schema+translations.
         return Millennium.callServerMethod('luatools', 'GetSettingsConfig', {
             contentScriptQuery: ''
         }).then(function (res) {
@@ -6806,20 +6791,39 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             }
             const config = {
                 schemaVersion: payload.schemaVersion || 0,
-                schema: Array.isArray(payload.schema) ? payload.schema : [],
+                schema: [],
                 values: (payload && payload.values && typeof payload.values === 'object') ? payload.values : {},
                 language: payload && payload.language ? String(payload.language) : 'en',
                 locales: Array.isArray(payload && payload.locales) ? payload.locales : [],
-                translations: (payload && payload.translations && typeof payload.translations === 'object') ? payload.translations : {},
+                translations: {},
+                secretsPresent: (payload && payload.secretsPresent && typeof payload.secretsPresent === 'object')
+                    ? payload.secretsPresent : {},
                 lastFetched: Date.now()
             };
-            applyTranslationBundle({
-                language: config.language,
-                locales: config.locales,
-                strings: config.translations
-            });
             window.__LuaToolsSettings = config;
-            return config;
+            return Millennium.callServerMethod('luatools', 'GetSettingsSchema', {
+                contentScriptQuery: ''
+            }).then(function (schemaRes) {
+                const sp = typeof schemaRes === 'string' ? JSON.parse(schemaRes) : schemaRes;
+                if (sp && sp.success === true && Array.isArray(sp.schema)) {
+                    config.schema = sp.schema;
+                    if (sp.schemaVersion) config.schemaVersion = sp.schemaVersion;
+                }
+                return ensureTranslationsLoaded(forceRefresh, config.language).then(function (i18n) {
+                    config.translations = (i18n && i18n.strings) ? i18n.strings : {};
+                    config.language = (i18n && i18n.language) ? i18n.language : config.language;
+                    if (i18n && Array.isArray(i18n.locales) && i18n.locales.length) {
+                        config.locales = i18n.locales;
+                    }
+                    applyTranslationBundle({
+                        language: config.language,
+                        locales: config.locales,
+                        strings: config.translations
+                    });
+                    window.__LuaToolsSettings = config;
+                    return config;
+                });
+            });
         });
     }
 
@@ -9426,103 +9430,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             ensureLuaToolsStyles();
         } catch (_) { }
 
-        // Paint the store button immediately when we already have translations cached.
-        if (window.__LuaToolsI18n && window.__LuaToolsI18n.ready) {
-            addLuaToolsButton();
-        }
+        // Paint without RPC first. beta.9 AV often lands right after Mode Detection
+        // when GetSettingsConfig / LogFrontend / SelfHeal overlap in luavm.
+        try { addLuaToolsButton(); } catch (_) { }
 
-        try {
-            fetchSettingsConfig(false).then(function (cfg) {
-                try {
-                    ensureLuaToolsStyles();
-                } catch (_) { }
-
-                // Show disclaimer after translations are loaded so it displays in the correct language
-                try {
-                    if (window.location.hostname === 'store.steampowered.com') {
-                        if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
-                            showMillenniumDisclaimerModal();
-                        }
-                    }
-                } catch (_) { }
-
-                // Now translations are ready — insert the button in the correct language
-                addLuaToolsButton();
-
-                // First-run setup assistant: once per session (staggered so it
-                // does not overlap GetSettingsConfig / InitApis on beta.9).
-                try {
-                    if (!window.__LUATOOLS_SETUP_CHECKED__) {
-                        window.__LUATOOLS_SETUP_CHECKED__ = true;
-                        setTimeout(function () {
-                            try {
-                                Millennium.callServerMethod('luatools', 'SelfHeal', { contentScriptQuery: '' })
-                                    .then(function (raw) {
-                                        try {
-                                            var h = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                                            if (h && h.healed && h.healed.length) {
-                                                showLuaToolsToast('🛠 ' + lt('Fixed automatically') + ': ' + h.healed.join(', '), 5000, 'success');
-                                            }
-                                        } catch (_) { }
-                                    })
-                                    .catch(function () { })
-                                    .then(function () {
-                                        return Millennium.callServerMethod('luatools', 'GetSetupState', { contentScriptQuery: '' });
-                                    })
-                                    .then(function (raw) {
-                                        var s = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                                        if (s && s.success) {
-                                            if (!s.ready) {
-                                                showSetupAssistant(s);
-                                            } else if (s.firstRun) {
-                                                try { Millennium.callServerMethod('luatools', 'MarkSetupSeen', { contentScriptQuery: '' }); } catch (_) { }
-                                            }
-                                        }
-                                    })
-                                    .catch(function () { });
-                            } catch (_) { }
-                        }, 4500);
-                    }
-                } catch (_) { }
-
-                // Throttled manifest auto-update sweep (after settings load).
-                try {
-                    if (!window.__LUATOOLS_MANIFEST_AUTO__) {
-                        window.__LUATOOLS_MANIFEST_AUTO__ = true;
-                        var autoManifests = !(cfg && cfg.values && cfg.values.general
-                            && cfg.values.general.autoUpdateManifests === false);
-                        if (autoManifests) {
-                            function runManifestAutoUpdateWhenIdle() {
-                                if (isRewiredSettingsOpen()) {
-                                    setTimeout(runManifestAutoUpdateWhenIdle, 5000);
-                                    return;
-                                }
-                                _ltHeavyRpc('RunManifestAutoUpdate', { contentScriptQuery: '' })
-                                    .then(function (p) {
-                                        if (p && p.success && !p.skipped && (p.downloaded || 0) > 0) {
-                                            showLuaToolsToast('📦 Updated ' + p.downloaded + ' depot manifest(s) automatically', 4500, 'info');
-                                        }
-                                    })
-                                    .catch(function () { });
-                            }
-                            setTimeout(runManifestAutoUpdateWhenIdle, 15000);
-                        }
-                    }
-                } catch (_) { }
-            }).catch(function (_) {
-                // Settings failed, still insert button (English fallback)
-                addLuaToolsButton();
-            });
-        } catch (_) {
-            addLuaToolsButton();
-        }
-
-        // Show gamepad hint if connected (only in Big Picture mode)
+        // Show gamepad hint if connected (only in Big Picture mode) — no RPC required.
         setTimeout(function () {
             if (window.GamepadNav && window.GamepadNav.isConnected && window.GamepadNav.isConnected()) {
-                backendLog('[LuaTools] Gamepad detected - Navigation enabled');
-
-                // Only show visual hint in Big Picture mode
+                if (typeof console !== 'undefined' && console.log) {
+                    console.log('[LuaTools] Gamepad detected - Navigation enabled');
+                }
                 if (window.__LUATOOLS_IS_BIG_PICTURE__) {
                     const hint = document.createElement('div');
                     hint.id = 'luatools-gamepad-hint';
@@ -9541,8 +9458,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);\
                         animation: fadeInOut 3s ease-in-out;\
                     ';
-
-                    // Add CSS animation if not already present
                     if (!document.querySelector('#luatools-gamepad-hint-styles')) {
                         const style = document.createElement('style');
                         style.id = 'luatools-gamepad-hint-styles';
@@ -9556,23 +9471,98 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         ';
                         document.head.appendChild(style);
                     }
-
                     document.body.appendChild(hint);
-
-                    // Auto-remove after animation
                     setTimeout(function () {
-                        if (hint && hint.parentElement) {
-                            hint.remove();
-                        }
+                        if (hint && hint.parentElement) hint.remove();
                     }, 3000);
                 }
             }
         }, 500);
 
-        // Ask backend if there is a queued startup message from InitApis
-        // (delayed so it does not race GetSettingsConfig on beta.9).
-        try {
-            if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
+        function bootAfterQuiet() {
+            if (!window.__LUATOOLS_RPC_READY__) {
+                setTimeout(bootAfterQuiet, 100);
+                return;
+            }
+            try {
+                fetchSettingsConfig(false).then(function (cfg) {
+                    try { ensureLuaToolsStyles(); } catch (_) { }
+
+                    try {
+                        if (window.location.hostname === 'store.steampowered.com') {
+                            if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
+                                showMillenniumDisclaimerModal();
+                            }
+                        }
+                    } catch (_) { }
+
+                    addLuaToolsButton();
+
+                    try {
+                        if (!window.__LUATOOLS_SETUP_CHECKED__) {
+                            window.__LUATOOLS_SETUP_CHECKED__ = true;
+                            setTimeout(function () {
+                                try {
+                                    Millennium.callServerMethod('luatools', 'SelfHeal', { contentScriptQuery: '' })
+                                        .then(function (raw) {
+                                            try {
+                                                var h = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                                if (h && h.healed && h.healed.length) {
+                                                    showLuaToolsToast('🛠 ' + lt('Fixed automatically') + ': ' + h.healed.join(', '), 5000, 'success');
+                                                }
+                                            } catch (_) { }
+                                        })
+                                        .catch(function () { })
+                                        .then(function () {
+                                            return Millennium.callServerMethod('luatools', 'GetSetupState', { contentScriptQuery: '' });
+                                        })
+                                        .then(function (raw) {
+                                            var s = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                            if (s && s.success) {
+                                                if (!s.ready) {
+                                                    showSetupAssistant(s);
+                                                } else if (s.firstRun) {
+                                                    try { Millennium.callServerMethod('luatools', 'MarkSetupSeen', { contentScriptQuery: '' }); } catch (_) { }
+                                                }
+                                            }
+                                        })
+                                        .catch(function () { });
+                                } catch (_) { }
+                            }, 4500);
+                        }
+                    } catch (_) { }
+
+                    try {
+                        if (!window.__LUATOOLS_MANIFEST_AUTO__) {
+                            window.__LUATOOLS_MANIFEST_AUTO__ = true;
+                            var autoManifests = !(cfg && cfg.values && cfg.values.general
+                                && cfg.values.general.autoUpdateManifests === false);
+                            if (autoManifests) {
+                                function runManifestAutoUpdateWhenIdle() {
+                                    if (isRewiredSettingsOpen()) {
+                                        setTimeout(runManifestAutoUpdateWhenIdle, 5000);
+                                        return;
+                                    }
+                                    _ltHeavyRpc('RunManifestAutoUpdate', { contentScriptQuery: '' })
+                                        .then(function (p) {
+                                            if (p && p.success && !p.skipped && (p.downloaded || 0) > 0) {
+                                                showLuaToolsToast('📦 Updated ' + p.downloaded + ' depot manifest(s) automatically', 4500, 'info');
+                                            }
+                                        })
+                                        .catch(function () { });
+                                }
+                                setTimeout(runManifestAutoUpdateWhenIdle, 15000);
+                            }
+                        }
+                    } catch (_) { }
+                }).catch(function () {
+                    try { addLuaToolsButton(); } catch (_) { }
+                });
+            } catch (_) {
+                try { addLuaToolsButton(); } catch (_) { }
+            }
+
+            try {
                 setTimeout(function () {
                     try {
                         Millennium.callServerMethod('luatools', 'GetInitApisMessage', {
@@ -9583,7 +9573,6 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                 if (payload && payload.message) {
                                     const msg = String(payload.message);
                                     const isUpdateMsg = msg.toLowerCase().includes('update') || msg.toLowerCase().includes('restart');
-
                                     if (isUpdateMsg) {
                                         showLuaToolsConfirm('Rewired', msg, function () {
                                             try {
@@ -9599,8 +9588,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             } catch (_) { }
                         });
                     } catch (_) { }
-                }, 1200);
-                // Also show loaded apps list if present (only once per session, store page only)
+                }, 800);
+
                 try {
                     if (window.location.hostname === 'store.steampowered.com') {
                         if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
@@ -9619,12 +9608,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         } catch (_) { }
                                     });
                                 } catch (_) { }
-                            }, 2500);
+                            }, 2000);
                         }
                     }
                 } catch (_) { }
-            }
-        } catch (_) { }
+            } catch (_) { }
+        }
+
+        setTimeout(bootAfterQuiet, 2500);
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onFrontendReady);

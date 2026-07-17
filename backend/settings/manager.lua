@@ -333,16 +333,27 @@ end
 
 function manager.get_settings_payload()
     local values = manager._get_values_locked()
-    -- Hydrate secrets for the settings UI without requiring a separate Key Vault step.
+    -- Never ship raw secrets over Millennium IPC. Presence flags keep Settings honest;
+    -- backend still reads secrets.local.json for downloads.
     values.general = values.general or {}
+    local secrets_present = {}
     local mh = _read_local_secret("morrenusApiKey") or _read_local_secret("manifestHubApiKey")
-    if mh then values.general.morrenusApiKey = mh end
+    if (mh and mh ~= "") or (tostring(values.general.morrenusApiKey or "") ~= "") then
+        secrets_present.morrenusApiKey = true
+    end
     local ry = _read_local_secret("ryuuSession")
-    if ry then values.general.ryuuSession = ry end
+    if (ry and ry ~= "") or (tostring(values.general.ryuuSession or "") ~= "") then
+        secrets_present.ryuuSession = true
+    end
+    -- Strip every secret key from the IPC copy (settings.json may still hold legacy copies).
+    values.general.morrenusApiKey = ""
+    values.general.manifestHubApiKey = nil
+    values.general.ryuuSession = ""
+    values.general.depotboxSid = ""
+
     local schema = _inject_locale_choices(options.get_settings_schema())
     local avail_locales = manager.get_available_locales()
     local language = manager.get_current_language()
-    local translations = locales.get_locale_manager():get_locale_strings(language)
 
     return {
         version = SCHEMA_VERSION,
@@ -350,7 +361,27 @@ function manager.get_settings_payload()
         schema = schema,
         language = language,
         locales = avail_locales,
-        translations = translations
+        secretsPresent = secrets_present
+    }
+end
+
+--- Slim boot payload: values only (no schema / translations). beta.9 AV on large IPC returns.
+function manager.get_settings_values_payload()
+    local full = manager.get_settings_payload()
+    return {
+        version = full.version,
+        values = full.values,
+        language = full.language,
+        locales = full.locales,
+        secretsPresent = full.secretsPresent or {}
+    }
+end
+
+function manager.get_settings_schema_payload()
+    local schema = _inject_locale_choices(options.get_settings_schema())
+    return {
+        version = SCHEMA_VERSION,
+        schema = schema
     }
 end
 
