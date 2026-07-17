@@ -17,10 +17,13 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Import-RewiredInstallModule {
-    $local = Join-Path $PSScriptRoot 'lib\Rewired.Install.psm1'
-    if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
-        Import-Module $local -Force
-        return
+    # When this file is run from disk, prefer sibling module; irm|iex / empty root → CDN.
+    if ($PSScriptRoot) {
+        $local = Join-Path $PSScriptRoot 'lib\Rewired.Install.psm1'
+        if (Test-Path -LiteralPath $local) {
+            Import-Module $local -Force
+            return
+        }
     }
     $branch = 'main'
     $url = "https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@$branch/install/lib/Rewired.Install.psm1"

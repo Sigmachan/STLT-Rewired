@@ -10,10 +10,13 @@ param(
     [switch]$FromRepo
 )
 $ErrorActionPreference = 'Stop'
-$local = Join-Path $PSScriptRoot '..\install\Windows.ps1'
-if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
-    & $local @PSBoundParameters
-    return
+# irm|iex leaves $PSScriptRoot empty — never Join-Path until we know it is set.
+if ($PSScriptRoot) {
+    $local = Join-Path $PSScriptRoot '..\install\Windows.ps1'
+    if (Test-Path -LiteralPath $local) {
+        & $local @PSBoundParameters
+        return
+    }
 }
 $tmp = Join-Path $env:TEMP ('rewired-Windows-' + [guid]::NewGuid().ToString('N') + '.ps1')
 try {
