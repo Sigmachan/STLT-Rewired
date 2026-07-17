@@ -1,5 +1,9 @@
 # Quick install URLs and one-liners for STLT-Rewired (Rewired).
 
+Short entrypoints at repo root (`i` / `i.ps1` / `u` / `u.ps1` / `unlock`).  
+Full scripts live in **`install/`**. Dev/build helpers stay in `scripts/`.  
+See `install/README.md` for the file table.
+
 ## Windows (recommended)
 
 ### Plugin-first install (default)
@@ -7,7 +11,7 @@
 1. Install Millennium + plugin:
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/i.ps1 | iex
 ```
 
 2. Restart Steam fully (Exit, then relaunch).
@@ -16,7 +20,7 @@ irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Window
 ### Update
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/u.ps1 | iex
 ```
 
 ### Optional “10th line” (Rewired Manager)
