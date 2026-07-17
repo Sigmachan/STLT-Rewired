@@ -92,11 +92,8 @@ local function on_load()
     local res = api_manifest.init_apis()
     logger.log("InitApis (boot) result: " .. tostring(res.message or ""))
 
+    -- ready() must be last — do not poke millennium.* after this.
     millennium.ready()
-
-    local keys = {}
-    for k, v in pairs(millennium) do table.insert(keys, k .. ":" .. type(v)) end
-    logger.log("MILLENNIUM KEYS: " .. table.concat(keys, ", "))
 end
 
 local function on_unload()

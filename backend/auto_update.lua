@@ -128,59 +128,24 @@ function auto_update.check_for_updates_now()
         return { success = true, message = "Up-to-date (current " .. current_version .. ")", latest_version = info.latest_version }
     end
 
-    local plugin_dir = paths.get_plugin_dir()
-    local work_dir = fs.join(paths.backend_path("temp_dl"), "update-" .. tostring(os.time()))
-    if not fs.exists(work_dir) then fs.create_directories(work_dir) end
-
-    local zip_path = fs.join(work_dir, "release.zip")
-    local extract_dir = fs.join(work_dir, "extract")
-    if not fs.exists(extract_dir) then fs.create_directories(extract_dir) end
-
-    local preserved = _preserve_and_restore_data(plugin_dir, work_dir)
-
-    local is_windows = m_utils.getenv("OS") == "Windows_NT"
-    local dl_ok, dl_err = pcall(function()
-        if is_windows then
-            m_utils.exec(string.format('curl.exe -sL -A "Rewired-Updater" "%s" -o "%s"', info.zip_url, zip_path))
-            m_utils.exec(string.format('tar.exe -xf "%s" -C "%s"', zip_path, extract_dir))
-        else
-            m_utils.exec(string.format('curl -fsSL -A "Rewired-Updater" "%s" -o "%s"', info.zip_url, zip_path))
-            m_utils.exec(string.format('unzip -o -q "%s" -d "%s"', zip_path, extract_dir))
-        end
-    end)
-    if not dl_ok then
-        pcall(fs.remove_all, work_dir)
-        return { success = false, error = "Download/extract failed: " .. tostring(dl_err) }
-    end
-
-    -- Replace plugin runtime files (keep plugin_dir path)
-    local include = { "backend", "public", ".millennium", "plugin.json" }
-    for _, name in ipairs(include) do
-        local src = fs.join(extract_dir, name)
-        local dst = fs.join(plugin_dir, name)
-        if fs.exists(src) then
-            if fs.exists(dst) then
-                pcall(fs.remove_all, dst)
-            end
-            local cp_cmd
-            if is_windows then
-                if name == "plugin.json" then
-                    m_utils.exec(string.format('copy /Y "%s" "%s"', src, dst))
-                else
-                    m_utils.exec(string.format('xcopy "%s" "%s" /E /I /Y /Q', src, dst))
-                end
-            else
-                m_utils.exec(string.format('cp -a "%s" "%s"', src, dst))
-            end
-        end
-    end
-
-    _restore_data(plugin_dir, preserved)
-    pcall(fs.remove_all, work_dir)
-
-    local msg = "Rewired updated to " .. info.latest_version .. ". Please restart Steam."
+    -- Do not hot-swap the live plugin tree while Millennium has it loaded.
+    -- Point the user at the install one-liner / Manager instead.
+    local win = ((cfg.install or {}).windows_install) or "https://sigmachan.ru/install.ps1"
+    local linux = ((cfg.install or {}).linux_install) or "https://sigmachan.ru/install"
+    local msg = "Rewired " .. info.latest_version
+        .. " is available (current " .. current_version
+        .. "). Update with the install one-liner, then fully restart Steam. Windows: "
+        .. win .. " · Linux: " .. linux
     logger.log("auto_update: " .. msg)
-    return { success = true, message = msg, latest_version = info.latest_version }
+    return {
+        success = true,
+        update_available = true,
+        latest_version = info.latest_version,
+        current_version = current_version,
+        release_url = info.html_url,
+        message = msg,
+        applied = false,
+    }
 end
 
 function auto_update.maybe_check_on_boot()
@@ -205,9 +170,16 @@ function auto_update.maybe_check_on_boot()
         utils.write_json(stamp_file, { last_check = now })
     end)
 
-    local ok, res = pcall(auto_update.check_for_updates_now)
-    if ok and type(res) == "table" and res.success and res.message and res.message:find("updated", 1, true) then
-        require("api_manifest").store_last_message(res.message)
+    -- Never replace live plugin files during on_load — that races Millennium's
+    -- in-process Lua host and can ACCESS_VIOLATION. Status-only notify here;
+    -- explicit CheckForUpdatesNow / install one-liner applies updates safely.
+    local ok, res = pcall(auto_update.get_update_status)
+    if ok and type(res) == "table" and res.success and res.update_available then
+        local msg = "Rewired " .. tostring(res.latest_version)
+            .. " is available (current " .. tostring(res.current_version)
+            .. "). Re-run the install one-liner or CheckForUpdates from Settings, then restart Steam."
+        require("api_manifest").store_last_message(msg)
+        logger.log("auto_update: " .. msg)
     end
 end
 
