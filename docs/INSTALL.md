@@ -62,7 +62,7 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-Unlock Lua lands in `Steam/config/stplug-in/`. Tested layouts include **CachyOS**, **Bazzite** (Flatpak Steam), **Ximper/ALT**, Arch, Fedora, Debian/Ubuntu, Snap Steam. Skip pieces with env vars if needed:
+Unlock Lua lands in `Steam/config/stplug-in/`. Steam auto-detect covers **native**, **Flatpak**, and **Snap** roots — that already includes **CachyOS**, **Bazzite**, **ChimeraOS**, **Nobara**, **Ximper/ALT**, **Ubuntu**, **Fedora**, Arch, Debian, openSUSE, and similar. Skip pieces with env vars if needed:
 
 | Env | Effect |
 |-----|--------|
@@ -75,10 +75,10 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Tested layouts include **CachyOS*
 Examples when auto-detect fails:
 
 ```bash
-# CachyOS / Ximper / native Arch
+# Native Steam (CachyOS, Nobara, Ubuntu, Fedora, Ximper, ChimeraOS, …)
 STEAM_PATH="$HOME/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
 
-# Bazzite Flatpak Steam
+# Flatpak Steam (Bazzite and many desktops)
 STEAM_PATH="$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
 ```
 

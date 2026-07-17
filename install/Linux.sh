@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# install/Linux.sh — Rewired AIO for many Linux distros (CachyOS, Bazzite, Ximper, …).
+# install/Linux.sh — Rewired AIO for many Linux distros
+# (CachyOS, Bazzite, ChimeraOS, Nobara, Ximper, Ubuntu, Fedora, Arch, …).
 #   curl -fsSL https://sigmachan.ru/install | bash
 #
 # Env overrides:
@@ -56,23 +57,28 @@ detect_distro() {
     like="${ID_LIKE:-}"
     name="${NAME:-$id}"
   fi
-  # Normalize common gaming / regional distros first.
+  # Normalize common gaming / desktop distros (labels only — Steam paths are shared).
   case "${id,,}" in
     cachyos*) echo "CachyOS" ;;
     bazzite*) echo "Bazzite" ;;
+    chimeraos*|chameleon*) echo "ChimeraOS" ;;
     ximper*|altlinux*|altlinux) echo "Ximper/ALT" ;;
-    steamos*) echo "SteamOS" ;;
+    steamos*|holo*|holoiso*) echo "SteamOS" ;;
     nobara*) echo "Nobara" ;;
     garuda*) echo "Garuda" ;;
     endeavouros*) echo "EndeavourOS" ;;
-    arch*|manjaro*) echo "${name:-Arch}" ;;
-    fedora*|rhel*|centos*) echo "${name:-Fedora}" ;;
-    ubuntu*|debian*|linuxmint*|pop*) echo "${name:-Debian/Ubuntu}" ;;
+    arch*|manjaro*|artix*) echo "${name:-Arch}" ;;
+    fedora*|rhel*|centos*|rocky*|almalinux*|ol*) echo "${name:-Fedora}" ;;
+    ubuntu*|debian*|linuxmint*|pop*|elementary*|zorin*|kali*) echo "${name:-Debian/Ubuntu}" ;;
     opensuse*|suse*) echo "${name:-openSUSE}" ;;
+    void*) echo "Void" ;;
+    gentoo*|calculate*) echo "Gentoo" ;;
+    nixos*) echo "NixOS" ;;
+    solus*) echo "Solus" ;;
     *)
       if [[ "${like,,}" == *arch* ]]; then echo "${name:-Arch-like}"
       elif [[ "${like,,}" == *fedora* ]] || [[ "${like,,}" == *rhel* ]]; then echo "${name:-Fedora-like}"
-      elif [[ "${like,,}" == *debian* ]]; then echo "${name:-Debian-like}"
+      elif [[ "${like,,}" == *debian* ]] || [[ "${like,,}" == *ubuntu* ]]; then echo "${name:-Debian-like}"
       else echo "${name:-Linux}"
       fi
       ;;
