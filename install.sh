@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Linux install entrypoint (Millennium + plugin + ACCELA/SLSsteam).
 #   curl -fsSL https://sigmachan.ru/install | bash
+# Env overrides must be on the bash side of the pipe, e.g.:
+#   curl -fsSL https://sigmachan.ru/install | STEAM_PATH="$HOME/.local/share/Steam" bash
 set -euo pipefail
 URL="https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh"
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
@@ -9,4 +11,4 @@ if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
     exec bash "$HERE/install/Linux.sh" "$@"
   fi
 fi
-exec bash <(curl -fsSL "$URL") "$@"
+curl -fsSL "$URL" | bash -s -- "$@"

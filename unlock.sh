@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Linux unlock-only entrypoint (ACCELA + SLSsteam).
 #   curl -fsSL https://sigmachan.ru/unlock | bash
+#   curl -fsSL https://sigmachan.ru/unlock | FORCE=1 bash
 set -euo pipefail
 URL="https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh"
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
@@ -9,4 +10,4 @@ if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
     exec bash "$HERE/install/Linux-Unlock.sh" "$@"
   fi
 fi
-exec bash <(curl -fsSL "$URL") "$@"
+curl -fsSL "$URL" | bash -s -- "$@"

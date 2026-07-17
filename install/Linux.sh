@@ -3,7 +3,7 @@
 # (CachyOS, Bazzite, ChimeraOS, Nobara, Ximper, Ubuntu, Fedora, Arch, …).
 #   curl -fsSL https://sigmachan.ru/install | bash
 #
-# Env overrides:
+# Env overrides (must be on the bash side of `curl | bash`, not on curl):
 #   STEAM_PATH=...           Steam root (native or Flatpak data dir)
 #   SKIP_MILLENNIUM=1        do not install Millennium
 #   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
@@ -11,6 +11,8 @@
 #   FORCE=1                  re-run unlock installer even if ACCELA/SLS present
 #   MILLENNIUM_VERSION=...   pin Millennium tag (default v3.4.0-beta.9)
 #   GITHUB_TOKEN / GH_TOKEN  higher GitHub API rate limit
+# Example:
+#   curl -fsSL https://sigmachan.ru/install | STEAM_PATH="$HOME/.local/share/Steam" bash
 set -euo pipefail
 
 REWIRED_OWNER="${REWIRED_OWNER:-Sigmachan}"
@@ -102,8 +104,9 @@ is_steam_root() {
       return 1
       ;;
   esac
+  # Prefer a real client root (steam.sh) or library+config (not a bare steamapps folder).
   [[ -f "$p/steam.sh" ]] && return 0
-  [[ -d "$p/steamapps" ]] && return 0
+  [[ -d "$p/steamapps" && -d "$p/config" ]] && return 0
   [[ -d "$p/ubuntu12_32" ]] && return 0
   [[ -f "$p/steamclient.so" || -f "$p/linux64/steamclient.so" ]] && return 0
   return 1
@@ -265,13 +268,16 @@ print(tag[len(prefix):] if prefix and tag.startswith(prefix) else tag)
 }
 
 unlock_already_present() {
-  [[ -d "$HOME/.local/share/ACCELA" ]] || [[ -d "$HOME/.config/ACCELA" ]] || return 1
-  if [[ -d "$HOME/.local/share/SLSsteam" ]] \
-    || [[ -d "$HOME/.config/SLSsteam" ]] \
-    || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
-    return 0
-  fi
-  return 1
+  local has_accela=0 has_sls=0
+  [[ -d "$HOME/.local/share/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.config/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.config/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.local/share/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.config/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.config/SLSsteam" ]] && has_sls=1
+  (( has_accela && has_sls ))
 }
 
 install_unlock_stack() {

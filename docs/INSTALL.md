@@ -43,7 +43,8 @@ pwsh -NoProfile -File install/Windows.ps1 -SteamPath "D:\Steam"
 |--------|--------|
 | `-SkipMillennium` | Do not install Millennium runtime |
 | `-SkipOpenSteamTool` | Do not install OpenSteamTool (AIO includes it by default) |
-| `-SkipShortcut` | No desktop shortcut |
+
+`-SkipManager` / `-SkipShortcut` are accepted for older one-liners but currently have no effect (Manager is distributed separately).
 
 **GitHub API rate limit:** If install fails with `API rate limit exceeded`, either wait an hour or set a token first:
 
@@ -73,14 +74,17 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Steam auto-detect covers **native
 | `STEAM_PATH=...` | Override Steam root (native or Flatpak data dir) |
 | `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default `v3.4.0-beta.9`) |
 
-Examples when auto-detect fails:
+Examples when auto-detect fails (env must be on the **bash** side of the pipe — `VAR=x curl | bash` does **not** pass `VAR` into the installer):
 
 ```bash
 # Native Steam (CachyOS, Nobara, Ubuntu, Fedora, Ximper, ChimeraOS, …)
-STEAM_PATH="$HOME/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
+curl -fsSL https://sigmachan.ru/install | STEAM_PATH="$HOME/.local/share/Steam" bash
 
 # Flatpak Steam (Bazzite and many desktops)
-STEAM_PATH="$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
+curl -fsSL https://sigmachan.ru/install | STEAM_PATH="$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" bash
+
+# Force unlock reinstall
+curl -fsSL https://sigmachan.ru/install | FORCE=1 bash
 ```
 
 Re-run the **same** install command to refresh the plugin (unlock / Millennium are skipped if already present).

@@ -18,14 +18,17 @@ command -v curl >/dev/null 2>&1 || die "Missing required command: curl"
 command -v tar >/dev/null 2>&1 || die "Missing required command: tar"
 
 already_present() {
-  # Match install/Linux.sh unlock_already_present (native + config + Flatpak paths).
-  [[ -d "$HOME/.local/share/ACCELA" ]] || [[ -d "$HOME/.config/ACCELA" ]] || return 1
-  if [[ -d "$HOME/.local/share/SLSsteam" ]] \
-    || [[ -d "$HOME/.config/SLSsteam" ]] \
-    || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
-    return 0
-  fi
-  return 1
+  # Match install/Linux.sh unlock_already_present (native + config + Flatpak).
+  local has_accela=0 has_sls=0
+  [[ -d "$HOME/.local/share/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.config/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.config/ACCELA" ]] && has_accela=1
+  [[ -d "$HOME/.local/share/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.config/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]] && has_sls=1
+  [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.config/SLSsteam" ]] && has_sls=1
+  (( has_accela && has_sls ))
 }
 
 if [[ "$FORCE" != "1" ]] && already_present; then

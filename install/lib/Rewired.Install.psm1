@@ -14,7 +14,10 @@ function Get-RewiredConfigDir {
 
 function Get-SteamInstallPath {
     param([string]$Override = '')
-    if ($Override -and (Test-Path -LiteralPath $Override)) {
+    if ($Override) {
+        if (-not (Test-Path -LiteralPath $Override)) {
+            throw "Steam path not found: $Override"
+        }
         return (Resolve-Path -LiteralPath $Override).Path
     }
     foreach ($view in @([Microsoft.Win32.RegistryView]::Default, [Microsoft.Win32.RegistryView]::Registry32)) {
@@ -165,6 +168,7 @@ function Save-RewiredSharedConfig {
     )
     $dir = Get-RewiredConfigDir
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $path = Join-Path $dir 'rewired.json'
     $cfg = @{
         version            = 1
         steamPath          = $SteamPath
@@ -173,9 +177,65 @@ function Save-RewiredSharedConfig {
         pluginPath         = $PluginPath
         repoRoot           = ''
     }
-    $path = Join-Path $dir 'rewired.json'
+    # Merge so user/Manager prefs (unlockBackend, repoRoot, …) survive refresh.
+    if (Test-Path -LiteralPath $path) {
+        try {
+            $existing = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+            if ($null -ne $existing) {
+                foreach ($prop in $existing.PSObject.Properties) {
+                    if (-not $cfg.ContainsKey($prop.Name)) {
+                        $cfg[$prop.Name] = $prop.Value
+                    } elseif ($prop.Name -notin @('steamPath', 'pluginPath', 'version')) {
+                        # Keep prior unlockBackend / millenniumOptional / repoRoot unless blank.
+                        if ($null -ne $prop.Value -and "$($prop.Value)" -ne '') {
+                            $cfg[$prop.Name] = $prop.Value
+                        }
+                    }
+                }
+            }
+        } catch { }
+    }
+    # Always refresh install-owned paths.
+    $cfg.steamPath = $SteamPath
+    $cfg.pluginPath = $PluginPath
+    $cfg.version = 1
     $cfg | ConvertTo-Json -Depth 4 | Set-Content -Path $path -Encoding UTF8
     return $path
+}
+
+function Remove-RewiredDuplicatePlugins {
+    param(
+        [Parameter(Mandatory)][string]$SteamPath,
+        [Parameter(Mandatory)][string]$KeepPath
+    )
+    $pluginName = 'luatools'
+    $keepFull = [System.IO.Path]::GetFullPath($KeepPath)
+    $dupes = @()
+    foreach ($root in @(
+            (Join-Path $SteamPath 'millennium\plugins'),
+            (Join-Path $SteamPath 'plugins')
+        )) {
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        foreach ($d in (Get-ChildItem -LiteralPath $root -Directory -Force -ErrorAction SilentlyContinue)) {
+            $pj = Join-Path $d.FullName 'plugin.json'
+            if (-not (Test-Path -LiteralPath $pj)) { continue }
+            try {
+                $name = (Get-Content -Raw -LiteralPath $pj | ConvertFrom-Json).name
+                if ($name -eq $pluginName) { $dupes += $d.FullName }
+            } catch { }
+        }
+    }
+    $dupes = @($dupes | Select-Object -Unique)
+    if ($dupes.Count -le 1) { return }
+    Write-Host "Found $($dupes.Count) '$pluginName' plugin folders — removing duplicates..." -ForegroundColor Yellow
+    foreach ($d in $dupes) {
+        if ([System.IO.Path]::GetFullPath($d) -ieq $keepFull) { continue }
+        try {
+            Remove-Item -Recurse -Force -LiteralPath $d
+        } catch {
+            Write-Warning "Could not remove duplicate plugin folder: $d"
+        }
+    }
 }
 
 function Get-RewiredLocalRepoRoot {
@@ -224,6 +284,18 @@ function Install-RewiredPluginFromUrl {
         }
         Expand-Archive -Path $zipPath -DestinationPath $extract -Force
 
+        # Flat release zip or single top-level folder.
+        $src = $extract
+        if (-not (Test-Path -LiteralPath (Join-Path $extract 'backend'))) {
+            $child = Get-ChildItem -LiteralPath $extract -Directory | Select-Object -First 1
+            if ($child -and (Test-Path -LiteralPath (Join-Path $child.FullName 'backend'))) {
+                $src = $child.FullName
+            }
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $src 'backend'))) {
+            throw 'Plugin zip layout unrecognized (expected backend/).'
+        }
+
         $preservedData = $null
         if (Test-Path -LiteralPath $pluginRoot) {
             New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
@@ -238,7 +310,7 @@ function Install-RewiredPluginFromUrl {
         }
 
         New-Item -ItemType Directory -Force -Path (Split-Path $pluginRoot -Parent) | Out-Null
-        Copy-Item -Path (Join-Path $extract '*') -Destination $pluginRoot -Recurse -Force
+        Copy-Item -Path (Join-Path $src '*') -Destination $pluginRoot -Recurse -Force
 
         if ($preservedData -and (Test-Path -LiteralPath $preservedData)) {
             $newData = Join-Path $pluginRoot 'backend\data'
@@ -246,6 +318,7 @@ function Install-RewiredPluginFromUrl {
             Copy-Item -Path (Join-Path $preservedData '*') -Destination $newData -Recurse -Force
         }
 
+        Remove-RewiredDuplicatePlugins -SteamPath $SteamPath -KeepPath $pluginRoot
         return $pluginRoot
     }
     finally {
@@ -273,11 +346,17 @@ function Install-RewiredMillennium {
     try {
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
         Expand-Archive -Path $zipPath -DestinationPath $extract -Force
-        Copy-Item (Join-Path $extract 'wsock32.dll') (Join-Path $SteamPath 'wsock32.dll') -Force
+        $wsock = Join-Path $extract 'wsock32.dll'
+        $millBin = Join-Path $extract 'millennium\bin'
+        $millLib = Join-Path $extract 'millennium\lib'
+        if (-not ((Test-Path -LiteralPath $wsock) -and (Test-Path -LiteralPath $millBin) -and (Test-Path -LiteralPath $millLib))) {
+            throw "Millennium archive layout unrecognized (expected wsock32.dll, millennium/bin, millennium/lib)."
+        }
+        Copy-Item $wsock (Join-Path $SteamPath 'wsock32.dll') -Force
         $millRoot = Join-Path $SteamPath 'millennium'
         New-Item -ItemType Directory -Force -Path $millRoot | Out-Null
-        Copy-Item (Join-Path $extract 'millennium\bin') (Join-Path $millRoot 'bin') -Recurse -Force
-        Copy-Item (Join-Path $extract 'millennium\lib') (Join-Path $millRoot 'lib') -Recurse -Force
+        Copy-Item $millBin (Join-Path $millRoot 'bin') -Recurse -Force
+        Copy-Item $millLib (Join-Path $millRoot 'lib') -Recurse -Force
         return $true
     }
     finally {
@@ -353,7 +432,10 @@ function Invoke-RewiredInstall {
         $millBin = Join-Path $steam 'millennium\bin'
         if (-not ((Test-Path $loader) -and (Test-Path $millBin))) {
             Write-Host 'Installing Millennium runtime...' -ForegroundColor Cyan
-            Install-RewiredMillennium -SteamPath $steam | Out-Null
+            $ok = Install-RewiredMillennium -SteamPath $steam
+            if (-not $ok) {
+                throw 'Millennium install skipped or failed (quit Steam fully, then re-run).'
+            }
         } else {
             Write-Host 'Millennium already present.' -ForegroundColor DarkGray
         }
@@ -377,8 +459,8 @@ function Invoke-RewiredInstall {
         Write-Host 'OpenSteamTool already present.' -ForegroundColor DarkGray
     }
 
+    # Merge preserves prior unlockBackend / repoRoot; paths always refresh.
     Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'auto' | Out-Null
-
     Write-Host ''
     Write-Host 'Done (AIO). Re-run this same command anytime to refresh the plugin.' -ForegroundColor Green
     Write-Host '  1. Restart Steam fully (Exit, then relaunch).'

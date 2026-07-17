@@ -5573,7 +5573,8 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                         if (titleEl && !st.installed && !st.installStatus) titleEl.textContent = lt('Select Download Source');
                         if (statusEl) statusEl.textContent = '';
                         const available = st.sources.filter(function (s) { return s.canDownload && !s.downloading; });
-                        if (isFastDownloadEnabled() && available.length === 1 && !picking && !finished) {
+                        // Fast Download: take the first available source (priority: Ryuu Premium → Ryuu → … → ManifestHub).
+                        if (isFastDownloadEnabled() && available.length >= 1 && !picking && !finished) {
                             picking = true;
                             renderKey = '';
                             if (statusEl) statusEl.textContent = lt('Starting download…');

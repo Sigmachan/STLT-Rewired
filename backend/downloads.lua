@@ -387,6 +387,16 @@ local function _is_manifesthub_source(name)
     return n == "morrenus" or n == "manifesthub"
 end
 
+local function _fast_download_enabled()
+    local ok, values = pcall(function()
+        return settings_manager._get_values_locked()
+    end)
+    if not ok or type(values) ~= "table" then return true end
+    local general = values.general or {}
+    if general.fastDownload == false then return false end
+    return true
+end
+
 local function _manifesthub_stats_string(api_key)
     if not api_key or api_key == "" then return nil end
     local endpoint = "https://hubcapmanifest.com/api/v1/user/stats?api_key=" .. api_key
@@ -425,9 +435,12 @@ local function _build_picker_sources(appid, check_results, manifesthub_stats)
     return sources
 end
 
-function downloads.check_apis_for_app(appid)
+function downloads.check_apis_for_app(appid, stop_on_first)
     if type(appid) == "string" then appid = tonumber(appid) end
     if not appid then return { success = false, error = "Invalid appid" } end
+    if stop_on_first == nil then
+        stop_on_first = _fast_download_enabled()
+    end
 
     local apis = api_manifest.load_api_manifest()
     if not apis or #apis == 0 then
@@ -476,7 +489,7 @@ function downloads.check_apis_for_app(appid)
             local url = template:gsub("<appid>", tostring(appid))
             local available = false
 
-            if string.lower(name) == "morrenus" then
+            if _is_manifesthub_source(name) then
                 local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
                 local resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
                 if resp and resp.status == success_code then
@@ -511,6 +524,11 @@ function downloads.check_apis_for_app(appid)
                 canDownload = available,
                 url = available and url or nil,
             })
+
+            -- Priority order already applied; stop once the first source has the game.
+            if available and stop_on_first then
+                break
+            end
         end
     end
 

@@ -37,7 +37,7 @@ curl -fsSL https://sigmachan.ru/install | bash
 curl -fsSL https://sigmachan.ru/unlock | bash
 
 # Plugin/Millennium without reinstalling unlock
-SKIP_UNLOCK=1 curl -fsSL https://sigmachan.ru/install | bash
+curl -fsSL https://sigmachan.ru/install | SKIP_UNLOCK=1 bash
 ```
 
 We do **not** vendor ACCELA binaries in this repo — the installer downloads the current enter-the-wired / Headcrab releases at install time.

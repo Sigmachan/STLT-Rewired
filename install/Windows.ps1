@@ -22,20 +22,27 @@ function Import-RewiredInstallModule {
         $local = Join-Path $PSScriptRoot 'lib\Rewired.Install.psm1'
         if (Test-Path -LiteralPath $local) {
             Import-Module $local -Force
-            return
+            return $null
         }
     }
     $branch = 'main'
     $url = "https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@$branch/install/lib/Rewired.Install.psm1"
-    $cache = Join-Path $env:TEMP 'Rewired.Install.psm1'
+    $cache = Join-Path $env:TEMP ('Rewired.Install-' + [guid]::NewGuid().ToString('N') + '.psm1')
     Invoke-WebRequest -Uri $url -OutFile $cache -UseBasicParsing
     Import-Module $cache -Force
+    return $cache
 }
 
-Import-RewiredInstallModule
-# Strip legacy/no-op switches that Invoke-RewiredInstall does not declare.
-$installParams = @{}
-foreach ($key in @('SteamPath', 'SkipMillennium', 'SkipOpenSteamTool', 'InstallOpenSteamTool', 'SkipShortcut', 'FromRepo')) {
-    if ($PSBoundParameters.ContainsKey($key)) { $installParams[$key] = $PSBoundParameters[$key] }
+$script:RewiredInstallModuleCache = Import-RewiredInstallModule
+try {
+    # Strip legacy/no-op switches that Invoke-RewiredInstall does not declare.
+    $installParams = @{}
+    foreach ($key in @('SteamPath', 'SkipMillennium', 'SkipOpenSteamTool', 'InstallOpenSteamTool', 'SkipShortcut', 'FromRepo')) {
+        if ($PSBoundParameters.ContainsKey($key)) { $installParams[$key] = $PSBoundParameters[$key] }
+    }
+    Invoke-RewiredInstall @installParams
+} finally {
+    if ($script:RewiredInstallModuleCache) {
+        Remove-Item -LiteralPath $script:RewiredInstallModuleCache -Force -ErrorAction SilentlyContinue
+    }
 }
-Invoke-RewiredInstall @installParams

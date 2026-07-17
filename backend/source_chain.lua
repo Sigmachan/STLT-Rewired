@@ -11,17 +11,17 @@ local st      = require("st_util")
 
 local M = {}
 
--- Default chain (matches the original hardcoded order).
+-- Default chain: Ryuu Premium early; ManifestHub last among network sources.
 local DEFAULT_CHAIN = {
     { id = "local",           name = "Local Folder",       enabled = true, timeout = 10,  retries = 0 },
-    { id = "twentytwo",       name = "TwentyTwo Cloud",    enabled = true, timeout = 15,  retries = 1 },
     { id = "ryuu",            name = "Ryuu Premium",       enabled = true, timeout = 20,  retries = 1 },
+    { id = "twentytwo",       name = "TwentyTwo Cloud",    enabled = true, timeout = 15,  retries = 1 },
     { id = "depotbox",        name = "DepotBox Premium",   enabled = true, timeout = 120, retries = 0 },
-    { id = "manifesthub_api", name = "ManifestHub API",    enabled = true, timeout = 30,  retries = 1 },
     { id = "custom_apis",     name = "Custom APIs",        enabled = true, timeout = 20,  retries = 0 },
     { id = "free_apis",       name = "Free APIs",          enabled = true, timeout = 20,  retries = 0 },
     { id = "fallbacks",       name = "SLStools Fallbacks", enabled = true, timeout = 15,  retries = 1 },
     { id = "github_repos",    name = "GitHub Repos (SDO)", enabled = true, timeout = 30,  retries = 0 },
+    { id = "manifesthub_api", name = "ManifestHub API",    enabled = true, timeout = 30,  retries = 1 },
 }
 
 local function config_path() return st.data_path("source_chain.json") end

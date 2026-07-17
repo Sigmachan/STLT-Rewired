@@ -11,6 +11,40 @@ local api_manifest = {}
 local _APIS_INIT_DONE = false
 local _INIT_APIS_LAST_MESSAGE = ""
 
+-- Download priority: Ryuu Premium → Ryuu → everything else → ManifestHub last.
+local function _api_priority(api)
+    local name = string.lower(tostring(api and api.name or ""))
+    local url = string.lower(tostring(api and api.url or ""))
+    if url:find("generator.ryuu.lol", 1, true) or name == "ryuu premium" then
+        return 1
+    end
+    if name == "ryuu" or (name:find("ryuu", 1, true) and not name:find("premium", 1, true)) then
+        return 2
+    end
+    if name == "manifesthub" or name == "morrenus"
+        or url:find("hubcapmanifest", 1, true)
+        or url:find("manifesthub", 1, true) then
+        return 900
+    end
+    return 100
+end
+
+local function _sort_apis_by_priority(apis)
+    local indexed = {}
+    for i, api in ipairs(apis or {}) do
+        indexed[i] = { i = i, api = api, p = _api_priority(api) }
+    end
+    table.sort(indexed, function(a, b)
+        if a.p ~= b.p then return a.p < b.p end
+        return a.i < b.i
+    end)
+    local out = {}
+    for _, e in ipairs(indexed) do
+        table.insert(out, e.api)
+    end
+    return out
+end
+
 function api_manifest.init_apis()
     logger.log("InitApis: invoked")
     if _APIS_INIT_DONE then
@@ -138,9 +172,9 @@ function api_manifest.load_api_manifest()
         end
     end
 
-    -- Cookie-authed Ryuu Generator (generator.ryuu.lol). Registered in code — not api.json — so it
-    -- survives manifest refreshes and only appears when a Ryuu session is configured. The session
-    -- cookie is attached per-request by downloads._ryuu_cookie. Prepended so it is preferred.
+    -- Cookie-authed Ryuu Generator (generator.ryuu.lol). Registered in code — not only
+    -- api.json — so it survives manifest refreshes when a Ryuu session is configured.
+    -- Session cookie is attached per-request by downloads._ryuu_cookie.
     local has_ryuu_generator = false
     for _, api in ipairs(apis) do
         if tostring(api.url or ""):find("generator%.ryuu%.lol/api/download", 1, false) then
@@ -152,7 +186,7 @@ function api_manifest.load_api_manifest()
     local sess = ""
     pcall(function() sess = require("settings.manager").get_ryuu_session() or "" end)
     if sess ~= "" and not has_ryuu_generator then
-        table.insert(apis, 1, {
+        table.insert(apis, {
             name = "Ryuu Premium",
             url = "https://generator.ryuu.lol/api/download/<appid>",
             success_code = 200,
@@ -160,7 +194,9 @@ function api_manifest.load_api_manifest()
             enabled = true,
         })
     end
-    return apis
+
+    -- Always enforce: Ryuu Premium → Ryuu → others → ManifestHub last.
+    return _sort_apis_by_priority(apis)
 end
 
 function api_manifest.add_custom_api(payload)

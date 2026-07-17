@@ -34,7 +34,7 @@ options.SETTINGS_GROUPS = {
                 key = "fastDownload",
                 label = "Fast Download",
                 option_type = "toggle",
-                description = "Automatically choose the first available source when adding a game.",
+                description = "Use the first available source in priority order (Ryuu Premium → Ryuu → others → ManifestHub). Disable to pick manually among all sources.",
                 default = true,
                 metadata = {yesLabel = "Yes", noLabel = "No"}
             },
