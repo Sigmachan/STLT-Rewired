@@ -325,6 +325,7 @@ function Invoke-RewiredInstall {
         [string]$SteamPath = '',
         [switch]$SkipMillennium,
         [switch]$SkipOpenSteamTool,
+        [switch]$InstallOpenSteamTool,
         [switch]$SkipShortcut,
         [switch]$FromRepo
     )
@@ -366,12 +367,12 @@ function Invoke-RewiredInstall {
     }
     Write-Host "Plugin -> $pluginPath" -ForegroundColor Green
 
-    if (-not $SkipOpenSteamTool) {
+    if ($InstallOpenSteamTool) {
         Write-Host 'Installing OpenSteamTool...' -ForegroundColor Cyan
         Install-RewiredOpenSteamTool -SteamPath $steam | Out-Null
         Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'opensteamtool' | Out-Null
     } else {
-        Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath | Out-Null
+        Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'auto' | Out-Null
     }
 
     Write-Host ''

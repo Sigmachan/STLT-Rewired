@@ -232,6 +232,22 @@ local function _chk_network()
         "Could not reach github.com — manifest sources may be blocked.")
 end
 
+local function _non_comment_line_matches(text, pattern)
+    for line in (text or ""):gmatch("[^\r\n]+") do
+        local trimmed = line:match("^%s*(.-)%s*$") or line
+        if trimmed ~= "" and not trimmed:match("^%-%-") and trimmed:match(pattern) then
+            return true
+        end
+    end
+    return false
+end
+
+local function _hex64_key_pattern()
+    local parts = {}
+    for _ = 1, 64 do table.insert(parts, "[a-fA-F0-9]") end
+    return '"' .. table.concat(parts) .. '"'
+end
+
 local function _chk_app(appid)
     local out = {}
     local d = unlock_paths.lua_script_dir()
@@ -242,8 +258,9 @@ local function _chk_app(appid)
         return out
     end
     local text = m_utils.read_file(lua_path) or ""
-    local has_owner = text:match("%s*addappid%s*%(%s*" .. appid) or text:match("%s*addappid%s*%(%s*%d+")
-    local has_key = text:match('addappid%s*%(.-%d+%s*,.-%d+%s*,.-%s*"[a-fA-F0-9][a-fA-F0-9]+"')
+    local owner_pat = "%s*addappid%s*%(%s*" .. appid .. "%s*[,%)%)]"
+    local has_owner = _non_comment_line_matches(text, owner_pat)
+    local has_key = _non_comment_line_matches(text, '%s*addappid%s*%(.-%s*' .. _hex64_key_pattern())
     table.insert(out, _check("app_activated", "App " .. appid .. ": .lua installed", "ok", lua_path))
     if has_owner then
         table.insert(out, _check("app_ownership", "App " .. appid .. ": ownership grant", "ok", "Base addappid() present."))
