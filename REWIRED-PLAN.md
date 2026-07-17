@@ -1,7 +1,7 @@
 # STLT — Rewired
 
 LuaTools rebuilt on the **modern Millennium 3.x** plugin model, so it actually works
-on current Millennium (current target: 3.4.0-beta.8). Base is the maintained upstream
+on current Millennium (current target: 3.4.0-beta.9). Base is the maintained upstream
 **piqseu/ltsteamplugin** (Lua backend + native `callServerMethod` IPC); STLT's
 extra features get ported in on top.
 
@@ -32,7 +32,7 @@ Rewired adopts that model wholesale.
 ## Status
 
 ### ✅ Phase 0 — Foundation (done)
-Base = piqseu, rebranded. Already covers the LuaTools **core** and targets 3.4.0-beta.8:
+Base = piqseu, rebranded. Already covers the LuaTools **core** and targets 3.4.0-beta.9:
 activation (`StartAddViaLuaTools`), the download source chain, `check_apis_for_app`,
 fixes, settings, locales, API manifest, auto-update. **This is deployable now.**
 
@@ -40,7 +40,7 @@ fixes, settings, locales, API manifest, auto-update. **This is deployable now.**
 Deploy Rewired over the current `luatools` plugin dir, restart Steam, confirm:
 store loads, "Add via LuaTools" button appears, a test activation works. This
 confirms the base before investing in the feature port. `GetMillenniumHealth` should report
-Millennium `3.4.0-beta.8` or newer and all required Lua APIs available.
+Millennium `3.4.0-beta.9` or newer and all required Lua APIs available.
 
 ### Phase 2+ — Port STLT's SteamTools-Ultimate features to Lua
 Ported feature clusters now include backup/restore, cache manager, manifests/depot repair,
