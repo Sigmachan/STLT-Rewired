@@ -2,36 +2,36 @@
 
 One-shot setup scripts. Dev/build tools live under `scripts/` — not here.
 
+## Short one-liners (preferred)
+
+Short domain (`sigmachan.ru` → jsDelivr):
+
+| | Command |
+|--|---------|
+| **Windows install** | `irm https://sigmachan.ru/i.ps1 \| iex` |
+| **Windows update** | `irm https://sigmachan.ru/u.ps1 \| iex` |
+| **Linux install** | `curl -fsSL https://sigmachan.ru/i \| bash` |
+| **Linux update** | `curl -fsSL https://sigmachan.ru/u \| bash` |
+| **Linux unlock only** | `curl -fsSL https://sigmachan.ru/unlock \| bash` |
+
+Root files `i`, `i.ps1`, `u`, `u.ps1`, `unlock` are thin wrappers around the scripts below.
+
+## Scripts in this folder
+
 | Script | Platform | What it installs |
 |--------|----------|------------------|
-| `Windows.ps1` | Windows | Millennium (if needed) + Rewired plugin (+ OpenSteamTool only with `-InstallOpenSteamTool`) |
+| `Windows.ps1` | Windows | Millennium (if needed) + Rewired plugin (+ OpenSteamTool only with `-InstallOpenSteamTool` if enabled) |
 | `Windows-Update.ps1` | Windows | Plugin update from latest GitHub release |
 | `Linux.sh` | Linux | ACCELA + SLSsteam + Millennium (if needed) + Rewired plugin |
 | `Linux-Update.sh` | Linux | Plugin update (skips Millennium + unlock) |
 | `Linux-Unlock.sh` | Linux | ACCELA + SLSsteam only |
 | `lib/` | — | Shared helpers (`Rewired.Install.psm1`) |
 
-## One-liners
-
-**Windows**
-```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1 | iex
-```
-
-**Linux**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Update.sh | bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
-```
-
 ## Local checkout
+
 ```powershell
 pwsh -NoProfile -File install/Windows.ps1 -FromRepo
 ```
 ```bash
 bash install/Linux.sh
 ```
-
-Old `scripts/install.*` URLs still work — they forward here.

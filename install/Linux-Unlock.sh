@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install-linux-unlock.sh - Install ACCELA + SLSsteam (via enter-the-wired / Headcrab).
-#   curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
+#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh | bash
 #
 # This does NOT install Millennium or the Rewired plugin — use install/Linux.sh for the full stack.
 # Force reinstall even if present: FORCE=1 ...
@@ -28,7 +28,7 @@ already_present() {
 if [[ "$FORCE" != "1" ]] && already_present; then
   ok "ACCELA + SLSsteam already look installed."
   info "ACCELA:  $HOME/.local/share/ACCELA"
-  info "Force reinstall: FORCE=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash"
+  info "Force reinstall: FORCE=1 curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh | bash"
   exit 0
 fi
 

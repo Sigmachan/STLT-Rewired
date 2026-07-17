@@ -1,5 +1,13 @@
 # Quick install URLs and one-liners for STLT-Rewired (Rewired).
 
+Short entrypoints at repo root (`i` / `i.ps1` / `u` / `u.ps1` / `unlock`).  
+Full scripts live in **`install/`**. Dev/build helpers stay in `scripts/`.  
+See `install/README.md` for the file table.
+
+Preferred short URLs: **`https://sigmachan.ru/{i,u,unlock,i.ps1,u.ps1}`** (Cloudflare → jsDelivr).  
+Fallback CDN: `https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/...`  
+Optional Cloudflare Bulk Redirect CSV: `docs/sigmachan.ru-bulk-redirects.csv`.
+
 ## Windows (recommended)
 
 ### Plugin-first install (default)
@@ -7,7 +15,7 @@
 1. Install Millennium + plugin:
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
+irm https://sigmachan.ru/i.ps1 | iex
 ```
 
 2. Restart Steam fully (Exit, then relaunch).
@@ -16,7 +24,7 @@ irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Window
 ### Update
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1 | iex
+irm https://sigmachan.ru/u.ps1 | iex
 ```
 
 ### Optional “10th line” (Rewired Manager)
@@ -51,7 +59,7 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 **Full stack (recommended)** — Millennium + Rewired plugin + **ACCELA + SLSsteam**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
+curl -fsSL https://sigmachan.ru/i | bash
 ```
 
 This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) combo installer (ACCELA + Headcrab/SLSsteam), then installs Millennium (if missing) and the Rewired plugin. Unlock scripts land in `Steam/config/stplug-in/`.
@@ -67,14 +75,14 @@ This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-
 **Unlock only** (ACCELA + SLSsteam):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
-# FORCE=1 curl -fsSL .../install-linux-unlock.sh | bash   # reinstall
+curl -fsSL https://sigmachan.ru/unlock | bash
+# FORCE=1 curl -fsSL …/unlock | bash
 ```
 
 **Update plugin** (skips Millennium + unlock, preserves `backend/data`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Update.sh | bash
+curl -fsSL https://sigmachan.ru/u | bash
 ```
 
 Credits: [ciscosweater/enter-the-wired](https://github.com/ciscosweater/enter-the-wired), [AceSLS/SLSsteam](https://github.com/AceSLS/SLSsteam), Deadboy666 Headcrab.

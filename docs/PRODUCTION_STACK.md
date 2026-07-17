@@ -44,12 +44,12 @@ One-liner **install URLs** (also in `backend/update.json`):
 
 ```powershell
 # Windows full install
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
+irm https://sigmachan.ru/i.ps1 | iex
 ```
 
 ```bash
 # Linux plugin + Millennium
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
+curl -fsSL https://sigmachan.ru/i | bash
 ```
 
 Publish releases with plugin zip attached (`scripts/publish_release.ps1`) before one-liners work for end users.

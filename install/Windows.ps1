@@ -1,6 +1,6 @@
 # install.ps1 → install/Windows.ps1
 # Full Windows stack: Millennium (if needed) + Rewired plugin (+ optional OpenSteamTool).
-#   irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
+#   irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1 | iex
 #   pwsh -NoProfile -File install/Windows.ps1
 [CmdletBinding()]
 param(
@@ -21,7 +21,7 @@ function Import-RewiredInstallModule {
         return
     }
     $branch = 'main'
-    $url = "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/$branch/install/lib/Rewired.Install.psm1"
+    $url = "https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@$branch/install/lib/Rewired.Install.psm1"
     $cache = Join-Path $env:TEMP 'Rewired.Install.psm1'
     Invoke-WebRequest -Uri $url -OutFile $cache -UseBasicParsing
     Import-Module $cache -Force

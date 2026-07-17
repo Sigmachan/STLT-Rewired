@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh - Rewired plugin + Millennium + Linux unlock stack (ACCELA + SLSsteam).
-#   curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
+#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh | bash
 #
 # Env overrides:
 #   STEAM_PATH=...           Steam root

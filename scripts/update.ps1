@@ -10,5 +10,5 @@ if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
     & $local @PSBoundParameters
     return
 }
-$url = 'https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1'
+$url = 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows-Update.ps1'
 iex (Invoke-WebRequest -Uri $url -UseBasicParsing).Content

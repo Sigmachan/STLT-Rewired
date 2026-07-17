@@ -1,4 +1,5 @@
-# Compat shim — prefer: irm …/install/Windows.ps1 | iex
+# Short Windows install entrypoint.
+#   irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',
@@ -9,10 +10,9 @@ param(
     [switch]$FromRepo
 )
 $ErrorActionPreference = 'Stop'
-$local = Join-Path $PSScriptRoot '..\install\Windows.ps1'
+$local = Join-Path $PSScriptRoot 'install\Windows.ps1'
 if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
     & $local @PSBoundParameters
     return
 }
-$url = 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1'
-iex (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+iex (Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1' -UseBasicParsing).Content
