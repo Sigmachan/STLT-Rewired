@@ -28,7 +28,8 @@ irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
 ```
 
-Details: `docs/INSTALL.md`.
+Installs ACCELA + SLSsteam (enter-the-wired), Millennium if needed, and the Rewired plugin.
+Unlock-only: `scripts/install-linux-unlock.sh`. Details: `docs/INSTALL.md`.
 
 ## Project docs
 

@@ -22,35 +22,25 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ## Linux today
 
-Plugin + Millennium install works via `scripts/install.sh`. Unlock is still **external**
-(SLSsteam + ACCELA) — not bundled in this repo.
+`scripts/install.sh` installs the **full stack** by default:
 
-**Plugin path** (unlock stack already installed):
+1. **ACCELA + SLSsteam** via the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) installer (Headcrab for SLSsteam)
+2. Millennium (steambrew) if missing
+3. Rewired plugin into `$STEAM/millennium/plugins/luatools`
+4. Shared config → `~/.local/share/Rewired/rewired.json` (`unlockBackend: steamtools`)
 
 ```bash
+# Full stack
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+
+# Unlock only (ACCELA + SLSsteam)
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install-linux-unlock.sh | bash
+
+# Plugin/Millennium without reinstalling unlock
+SKIP_UNLOCK=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
 ```
 
-Shared config is written to `~/.local/share/Rewired/rewired.json` and the plugin reads it.
-Activations write to `config/stplug-in`. OpenSteamTool install is Windows-only and is
-gated off on Linux.
-
-**Full Linux stack (recommended)** — use [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/install.sh | bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/scripts/launch-steam.sh | bash
-```
-
-Manual unlock + plugin (two steps):
-
-```bash
-# 1. Unlock stack (ACCELA + SLSsteam)
-curl -fsSL https://raw.githubusercontent.com/ciscosweater/enter-the-wired/main/enter-the-wired | bash
-
-# 2. In-Steam UI (Millennium + plugin)
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
-```
+We do **not** vendor ACCELA binaries in this repo — the installer downloads the current enter-the-wired / Headcrab releases at install time.
 
 ## What we are not doing
 

@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# install.sh - Rewired plugin + Millennium on Linux (Steam native only).
+# install.sh - Rewired plugin + Millennium + Linux unlock stack (ACCELA + SLSsteam).
 #   curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+#
+# Env overrides:
+#   STEAM_PATH=...           Steam root
+#   SKIP_MILLENNIUM=1        do not install Millennium
+#   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
+#   SKIP_PLUGIN=1            do not install/update the Rewired plugin
+#   GITHUB_TOKEN / GH_TOKEN  higher GitHub API rate limit
 set -euo pipefail
 
 REWIRED_OWNER="${REWIRED_OWNER:-Sigmachan}"
@@ -8,7 +15,11 @@ REWIRED_REPO="${REWIRED_REPO:-STLT-Rewired}"
 PLUGIN_ASSET="${PLUGIN_ASSET:-STLT-Rewired.zip}"
 TAG_PREFIX="${TAG_PREFIX:-v}"
 SKIP_MILLENNIUM="${SKIP_MILLENNIUM:-0}"
-INSTALL_OST_HINT="${INSTALL_OST_HINT:-1}"
+SKIP_UNLOCK="${SKIP_UNLOCK:-0}"
+SKIP_PLUGIN="${SKIP_PLUGIN:-0}"
+
+# Community Linux unlock combo installer (ACCELA + Headcrab/SLSsteam).
+ENTER_THE_WIRED_URL="${ENTER_THE_WIRED_URL:-https://raw.githubusercontent.com/ciscosweater/enter-the-wired/main/enter-the-wired}"
 
 info() { printf '\033[36m%s\033[0m\n' "$*"; }
 ok() { printf '\033[32m%s\033[0m\n' "$*"; }
@@ -85,6 +96,45 @@ print(tag[len(prefix):] if prefix and tag.startswith(prefix) else tag)
   echo "latest"
 }
 
+unlock_already_present() {
+  [[ -d "$HOME/.local/share/ACCELA" ]] || return 1
+  if [[ -d "$HOME/.local/share/SLSsteam" ]] || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+install_unlock_stack() {
+  if [[ "$SKIP_UNLOCK" == "1" ]]; then
+    warn "Skipping ACCELA + SLSsteam install (SKIP_UNLOCK=1)."
+    return
+  fi
+
+  if unlock_already_present; then
+    ok "ACCELA + SLSsteam already present — skipping unlock installer."
+    info "Re-run unlock only: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/scripts/install-linux-unlock.sh | bash"
+    return
+  fi
+
+  need_cmd tar
+  info "Installing Linux unlock stack (ACCELA + SLSsteam via enter-the-wired)..."
+  info "Source: ${ENTER_THE_WIRED_URL}"
+  # Download to a temp file so the remote script can resolve its own path, then run.
+  local tmp
+  tmp="$(mktemp -t rewired-enter-the-wired.XXXX.sh)"
+  # shellcheck disable=SC2064
+  trap 'rm -f "'"$tmp"'"' RETURN
+  curl -fsSL --retry 3 --retry-delay 2 "$ENTER_THE_WIRED_URL" -o "$tmp"
+  chmod +x "$tmp"
+  if ! bash "$tmp"; then
+    warn "Unlock installer reported an error."
+    warn "You can retry with: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/scripts/install-linux-unlock.sh | bash"
+    warn "Or install manually: https://github.com/ciscosweater/enter-the-wired"
+    return 1
+  fi
+  ok "Unlock stack installer finished (ACCELA + SLSsteam)."
+}
+
 install_millennium_if_needed() {
   local steam="$1"
   if [[ "$SKIP_MILLENNIUM" == "1" ]]; then
@@ -105,7 +155,8 @@ install_plugin() {
   local work plugin_root preserved
   work="$(mktemp -d)"
   plugin_root="$steam/millennium/plugins/luatools"
-  trap 'rm -rf "$work"' EXIT
+  # shellcheck disable=SC2064
+  trap 'rm -rf "'"$work"'"' RETURN
 
   curl -fsSL "$url" -o "$work/plugin.zip"
   unzip -q "$work/plugin.zip" -d "$work/extract"
@@ -135,35 +186,49 @@ write_shared_config() {
 {
   "version": 1,
   "steamPath": "$steam",
-  "unlockBackend": "auto",
+  "unlockBackend": "steamtools",
   "millenniumOptional": false,
-  "pluginPath": "$steam/millennium/plugins/luatools"
+  "pluginPath": "$steam/millennium/plugins/luatools",
+  "linuxUnlock": "slssteam+accela"
 }
 EOF
   ok "Shared config -> $cfg_dir/rewired.json"
 }
 
+ensure_stplugin_dir() {
+  local steam="$1"
+  local dir="$steam/config/stplug-in"
+  mkdir -p "$dir"
+  ok "Unlock script dir -> $dir"
+}
+
 main() {
   local steam url ver
   steam="$(detect_steam)"
-  url="$(plugin_download_url)"
-  [[ -n "$url" ]] || die "No ${PLUGIN_ASSET} on latest GitHub release."
   ver="$(release_version)"
   info "Rewired ${ver} -> Steam at ${steam}"
 
-  install_millennium_if_needed "$steam"
-  install_plugin "$steam" "$url"
-  write_shared_config "$steam"
+  # Unlock first so Steam restarts pick up SLSsteam/ACCELA.
+  install_unlock_stack || warn "Continuing without a fresh unlock install."
 
-  if [[ "$INSTALL_OST_HINT" == "1" ]]; then
-    warn "Linux unlock stack is not bundled here."
-    warn "Install SLSsteam + ACCELA (see LuaToolsLinux / enter-the-wired), then restart Steam through that stack."
-    warn "  https://github.com/ciscosweater/enter-the-wired"
-    warn "  https://github.com/AceSLS/SLSsteam"
+  install_millennium_if_needed "$steam"
+
+  if [[ "$SKIP_PLUGIN" == "1" ]]; then
+    warn "Skipping Rewired plugin install (SKIP_PLUGIN=1)."
+  else
+    url="$(plugin_download_url)"
+    [[ -n "$url" ]] || die "No ${PLUGIN_ASSET} on latest GitHub release."
+    install_plugin "$steam" "$url"
   fi
 
-  ok "Done. Restart Steam. Enable luatools (Rewired) in Millennium -> Plugins."
-  info "Update later: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/scripts/update.sh | bash"
+  ensure_stplugin_dir "$steam"
+  write_shared_config "$steam"
+
+  ok "Done."
+  info "1. Fully quit Steam, then relaunch through your unlock stack (or normal Steam if SLSsteam already patched it)."
+  info "2. Enable luatools (Rewired) in Millennium -> Plugins."
+  info "Unlock-only reinstall: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/scripts/install-linux-unlock.sh | bash"
+  info "Plugin update later: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/scripts/update.sh | bash"
 }
 
 main "$@"

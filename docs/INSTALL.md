@@ -48,27 +48,36 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 
 ## Linux
 
-**Full stack (recommended)** — [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition) wraps enter-the-wired + plugin:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/install.sh | bash
-```
-
-**Plugin only** — Millennium (via steambrew if missing) + Rewired plugin:
+**Full stack (recommended)** — Millennium + Rewired plugin + **ACCELA + SLSsteam**:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
 ```
 
-**Update** (skips Millennium, re-installs plugin preserving `backend/data`):
+This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) combo installer (ACCELA + Headcrab/SLSsteam), then installs Millennium (if missing) and the Rewired plugin. Unlock scripts land in `Steam/config/stplug-in/`.
+
+| Env | Effect |
+|-----|--------|
+| `SKIP_UNLOCK=1` | Do not install ACCELA/SLSsteam |
+| `SKIP_MILLENNIUM=1` | Do not install Millennium |
+| `SKIP_PLUGIN=1` | Unlock/Millennium only |
+| `STEAM_PATH=...` | Override Steam root |
+| `FORCE=1` | With unlock-only script: reinstall even if present |
+
+**Unlock only** (ACCELA + SLSsteam):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install-linux-unlock.sh | bash
+# FORCE=1 curl -fsSL .../install-linux-unlock.sh | bash   # reinstall
+```
+
+**Update plugin** (skips Millennium + unlock, preserves `backend/data`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh | bash
 ```
 
-Linux unlock (SLSsteam / ACCELA) is **not** bundled in the main repo — Femboy Edition or [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) first. See [ACCELA_STYLE.md](ACCELA_STYLE.md).
-
-Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
+Credits: [ciscosweater/enter-the-wired](https://github.com/ciscosweater/enter-the-wired), [AceSLS/SLSsteam](https://github.com/AceSLS/SLSsteam), Deadboy666 Headcrab.
 
 ## Auto-update channels
 
