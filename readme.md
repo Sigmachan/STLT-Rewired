@@ -12,17 +12,17 @@ ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
 
 **Windows:**
 ```powershell
-irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i.ps1 | iex
+irm https://sigmachan.ru/i.ps1 | iex
 ```
 
 **Windows (update):**
 ```powershell
-irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/u.ps1 | iex
+irm https://sigmachan.ru/u.ps1 | iex
 ```
 
 **Linux:**
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i | bash
+curl -fsSL https://sigmachan.ru/i | bash
 ```
 
 Installs ACCELA + SLSsteam, Millennium if needed, and the Rewired plugin.  

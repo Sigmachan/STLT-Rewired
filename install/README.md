@@ -4,15 +4,15 @@ One-shot setup scripts. Dev/build tools live under `scripts/` — not here.
 
 ## Short one-liners (preferred)
 
-jsDelivr CDN (shorter than raw GitHub):
+Short domain (`sigmachan.ru` → jsDelivr):
 
 | | Command |
 |--|---------|
-| **Windows install** | `irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i.ps1 \| iex` |
-| **Windows update** | `irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/u.ps1 \| iex` |
-| **Linux install** | `curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i \| bash` |
-| **Linux update** | `curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/u \| bash` |
-| **Linux unlock only** | `curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/unlock \| bash` |
+| **Windows install** | `irm https://sigmachan.ru/i.ps1 \| iex` |
+| **Windows update** | `irm https://sigmachan.ru/u.ps1 \| iex` |
+| **Linux install** | `curl -fsSL https://sigmachan.ru/i \| bash` |
+| **Linux update** | `curl -fsSL https://sigmachan.ru/u \| bash` |
+| **Linux unlock only** | `curl -fsSL https://sigmachan.ru/unlock \| bash` |
 
 Root files `i`, `i.ps1`, `u`, `u.ps1`, `unlock` are thin wrappers around the scripts below.
 
