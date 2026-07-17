@@ -25,7 +25,7 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 `install/Linux.sh` installs the **full stack** by default:
 
 1. **ACCELA + SLSsteam** via the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) installer (Headcrab for SLSsteam)
-2. Millennium (steambrew) if missing
+2. Millennium from GitHub releases (`v3.4.0-beta.9` by default) if missing
 3. Rewired plugin into `$STEAM/millennium/plugins/luatools`
 4. Shared config → `~/.local/share/Rewired/rewired.json` (`unlockBackend: steamtools`)
 

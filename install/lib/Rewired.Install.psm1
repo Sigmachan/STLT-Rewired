@@ -256,7 +256,7 @@ function Install-RewiredPluginFromUrl {
 function Install-RewiredMillennium {
     param(
         [Parameter(Mandatory)][string]$SteamPath,
-        [string]$Version = 'v3.4.0-beta.8'
+        [string]$Version = 'v3.4.0-beta.9'
     )
     $running = Get-Process -Name 'steam', 'steamwebhelper' -ErrorAction SilentlyContinue
     if ($running) {

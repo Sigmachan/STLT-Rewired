@@ -34,7 +34,7 @@ Same command again later to refresh. Details: `docs/INSTALL.md`.
 ## Requirements
 
 - **Steam** (desktop client) on **Windows**.
-- **Millennium 3.x** installed and enabled (`v3.4.0-beta.8` is the current tested target).
+- **Millennium 3.x** installed and enabled (`v3.4.0-beta.9` is the current tested target).
 - The backend runs as Lua inside Millennium — no Python runtime is required or used.
 
 ## Install
@@ -114,7 +114,7 @@ This file is never committed (see `.gitignore`) and is carried across deploys by
 - Millennium IPC method names are **PascalCase**.
 - Backend logging via `print('[LuaTools] …')` (see `plugin_logger`), not a logging framework.
 - UI kept compact for 4K @ 175–200% scaling (modals ≤ 580px).
-- Compatibility target is Millennium `v3.4.0-beta.8`; `GetMillenniumHealth` reports the
+- Compatibility target is Millennium `v3.4.0-beta.9`; `GetMillenniumHealth` reports the
   loaded Millennium version plus required Lua API availability.
 - Run `python scripts/build_webkit_bundle.py` after editing `public/luatools.js`; `deploy.ps1`
   runs it automatically before copying the runtime surface.

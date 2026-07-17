@@ -11,7 +11,7 @@ local st          = require("st_util")
 
 local M = {}
 
-local TARGET_MILLENNIUM = "3.4.0-beta.8"
+local TARGET_MILLENNIUM = "3.4.0-beta.9"
 
 local CRASH_HINT = "If Steam crashed on launch, Millennium may be out of date " ..
     "for the current Steam build - update Millennium."

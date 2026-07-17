@@ -10,7 +10,7 @@
 param(
     [switch]$Restore,
     [switch]$InstallMillenniumBeta,
-    [string]$MillenniumVersion = "v3.4.0-beta.8",
+    [string]$MillenniumVersion = "v3.4.0-beta.9",
     [string]$SteamPath = "C:\Program Files (x86)\Steam"
 )
 

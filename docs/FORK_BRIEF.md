@@ -31,7 +31,7 @@ Local reference only (`E:\LuaTools-win-Portable` or similar). WPF/.NET app — *
 ### STLT-Rewired (this repo)
 
 - `plugin.json` name: `luatools`, common name: `Rewired`
-- Target: Millennium 3.x (`v3.4.0-beta.8` tested)
+- Target: Millennium 3.x (`v3.4.0-beta.9` tested)
 - No Python HTTP bridge; native `callServerMethod` only
 - Plugin: `backend/`, `public/`, `.millennium/`
 - Manager: optional “10th line” recovery tool (distributed separately / private)

@@ -7,6 +7,7 @@
 #   SKIP_MILLENNIUM=1        do not install Millennium
 #   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
 #   SKIP_PLUGIN=1            do not install/update the Rewired plugin
+#   MILLENNIUM_VERSION=...   pin Millennium tag (default v3.4.0-beta.9)
 #   GITHUB_TOKEN / GH_TOKEN  higher GitHub API rate limit
 set -euo pipefail
 
@@ -138,6 +139,8 @@ install_unlock_stack() {
 
 install_millennium_if_needed() {
   local steam="$1"
+  local ver="${MILLENNIUM_VERSION:-v3.4.0-beta.9}"
+  local url work
   if [[ "$SKIP_MILLENNIUM" == "1" ]]; then
     warn "Skipping Millennium install (SKIP_MILLENNIUM=1)."
     return
@@ -146,8 +149,29 @@ install_millennium_if_needed() {
     info "Millennium appears installed."
     return
   fi
-  info "Installing Millennium via steambrew.app installer..."
-  curl -fsSL "https://steambrew.app/install.sh" | bash
+  if [[ -f "$steam/millennium/libmillennium_x86.so" ]] || [[ -f "$steam/millennium/lib/libmillennium_x86.so" ]]; then
+    info "Millennium appears installed."
+    return
+  fi
+
+  need_cmd tar
+  info "Installing Millennium ${ver} from GitHub releases..."
+  url="https://github.com/SteamClientHomebrew/Millennium/releases/download/${ver}/millennium-${ver}-linux-x86_64.tar.gz"
+  work="$(mktemp -d)"
+  curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$work/millennium.tar.gz"
+  mkdir -p "$work/extract"
+  tar -xzf "$work/millennium.tar.gz" -C "$work/extract"
+  mkdir -p "$steam/millennium"
+  if [[ -d "$work/extract/usr/lib/millennium" ]]; then
+    cp -a "$work/extract/usr/lib/millennium/." "$steam/millennium/"
+  elif [[ -d "$work/extract/millennium" ]]; then
+    cp -a "$work/extract/millennium/." "$steam/millennium/"
+  else
+    rm -rf "$work"
+    die "Millennium archive layout unrecognized (expected usr/lib/millennium)."
+  fi
+  rm -rf "$work"
+  ok "Millennium ${ver} -> $steam/millennium"
 }
 
 install_plugin() {

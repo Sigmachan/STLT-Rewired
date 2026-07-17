@@ -70,6 +70,7 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Skip pieces with env vars if need
 | `SKIP_MILLENNIUM=1` | Do not install Millennium |
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
 | `STEAM_PATH=...` | Override Steam root |
+| `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default `v3.4.0-beta.9`) |
 
 Re-run the **same** install command to refresh the plugin (unlock / Millennium are skipped if already present).
 
