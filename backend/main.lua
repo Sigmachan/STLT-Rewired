@@ -1698,7 +1698,29 @@ end
 function LogFrontend(message)
     if type(message) == "table" then message = message.message end
     pcall(logger.log, "[frontend] " .. tostring(message or ""))
-    return json_ok({ success = true })
+    -- Static string: avoid cjson on the hottest multi-webview path (beta.9 AV).
+    return '{"success":true}'
+end
+
+--- Ultra-small boot probe. Avoids returning full settings values during multi-webview startup.
+function GetBootFlags()
+    pcall(logger.log, "GetBootFlags: start")
+    local auto = true
+    local lang = "en"
+    local ok, payload = pcall(settings_manager.get_settings_values_payload)
+    if ok and type(payload) == "table" then
+        if payload.language then lang = tostring(payload.language) end
+        local g = payload.values and payload.values.general
+        if type(g) == "table" and g.autoUpdateManifests == false then
+            auto = false
+        end
+    end
+    lang = lang:gsub("[^%w%-_]", ""):sub(1, 16)
+    if lang == "" then lang = "en" end
+    local encoded = '{"success":true,"autoUpdateManifests":' .. (auto and "true" or "false")
+        .. ',"language":"' .. lang .. '"}'
+    pcall(logger.log, "GetBootFlags: encoded " .. tostring(#encoded) .. " bytes")
+    return encoded
 end
 
 -- ── Platform: report real OS; gate Windows-only unlock installers ────────────
@@ -1826,6 +1848,45 @@ function SmartRestartSteam(clearBeta, contentScriptQuery)
 end
 
 -- ── Return lifecycle table ────────────────────────────────────────────────────
+
+-- Millennium beta.9: each Steam webview has its own JS RPC queue, but they share
+-- one luavm. Overlapping native calls → EXCEPTION_ACCESS_VIOLATION. Serialize
+-- every PascalCase global RPC at the Lua boundary and reject re-entrancy.
+do
+    local rpc_busy = false
+    local rpc_current = nil
+    local skip = {
+        -- nothing yet; lifecycle hooks are locals, not globals
+    }
+    local names = {}
+    for k, v in pairs(_G) do
+        if type(k) == "string" and type(v) == "function" and k:match("^%u[%w_]*$") and not skip[k] then
+            names[#names + 1] = k
+        end
+    end
+    table.sort(names)
+    for i = 1, #names do
+        local name = names[i]
+        local orig = _G[name]
+        _G[name] = function(...)
+            if rpc_busy then
+                pcall(logger.warn, "RPC busy: reject " .. name .. " (holding " .. tostring(rpc_current) .. ")")
+                return '{"success":false,"busy":true,"error":"backend busy"}'
+            end
+            rpc_busy = true
+            rpc_current = name
+            local ok, result = pcall(orig, ...)
+            rpc_busy = false
+            rpc_current = nil
+            if not ok then
+                pcall(logger.warn, "RPC " .. name .. " error: " .. tostring(result))
+                return json_err(result)
+            end
+            return result
+        end
+    end
+    pcall(logger.log, "RPC lock installed for " .. tostring(#names) .. " methods")
+end
 
 return {
     on_load            = on_load,

@@ -27,7 +27,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     }
 
     // Millennium beta.8/9: ACCESS_VIOLATION in luavm when luatools RPCs overlap.
-    // Serialize every luatools callServerMethod; never fire RPCs until the patch is live.
+    // Per-webview JS queues are not enough (shared luavm) — also retry backend busy.
     (function patchLuatoolsRpcQueue() {
         if (window.__LUATOOLS_RPC_PATCHED__) return;
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
@@ -37,18 +37,26 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         window.__LUATOOLS_RPC_PATCHED__ = true;
         var rpcChain = Promise.resolve();
         var orig = Millennium.callServerMethod.bind(Millennium);
+        function delay(ms) {
+            return new Promise(function (resolve) { setTimeout(resolve, ms); });
+        }
         Millennium.callServerMethod = function (plugin, method, args) {
-            var run = function () {
+            var run = function (attempt) {
+                attempt = attempt || 0;
                 return orig(plugin, method, args).then(function (res) {
-                    return plugin === 'luatools' ? _ltParsePayload(res) : res;
+                    var parsed = plugin === 'luatools' ? _ltParsePayload(res) : res;
+                    if (plugin === 'luatools' && parsed && parsed.busy === true && attempt < 8) {
+                        return delay(40 + attempt * 30).then(function () { return run(attempt + 1); });
+                    }
+                    return parsed;
                 });
             };
             if (plugin !== 'luatools') {
-                return run();
+                return run(0);
             }
             var call = rpcChain
                 .catch(function () { return null; })
-                .then(run);
+                .then(function () { return run(0); });
             rpcChain = call.catch(function () { return null; });
             return call;
         };
@@ -697,13 +705,16 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
     window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
 
     // Forward logs to Millennium backend so they appear in the dev console.
-    // Until the RPC queue patch is live, stay console-only (avoids unpatched races).
+    // Until the RPC queue patch is live — and for the first quiet window — stay
+    // console-only so multi-webview LogFrontend storms cannot AV luavm.
+    var _ltBackendLogQuietUntil = Date.now() + 20000;
     function backendLog(message) {
         try {
             if (typeof console !== 'undefined' && console.log) {
                 console.log('[LuaTools]', message);
             }
             if (!window.__LUATOOLS_RPC_READY__) return;
+            if (Date.now() < _ltBackendLogQuietUntil) return;
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
                 const p = Millennium.callServerMethod('luatools', 'LogFrontend', {
                     message: String(message)
@@ -717,11 +728,13 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         }
     }
 
-    // Defer Mode Detection backend log until RPC queue is ready (console already logged above path).
+    // Console-only Mode Detection (no early LogFrontend RPC).
     setTimeout(function () {
-        backendLog('LuaTools script loaded');
-        backendLog('Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
-    }, 500);
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('[LuaTools] script loaded');
+            console.log('[LuaTools] Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
+        }
+    }, 0);
     // anti-spam state
     const logState = {
         missingOnce: false,
@@ -6768,10 +6781,15 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
         setTimeout(poll, 500);
     }
 
-    function fetchSettingsConfig(forceRefresh) {
+    function fetchSettingsConfig(forceRefresh, opts) {
+        opts = opts || {};
+        var bootLite = !!opts.bootLite;
         try {
-            if (!forceRefresh && window.__LuaToolsSettings && Array.isArray(window.__LuaToolsSettings.schema)
+            if (!forceRefresh && !bootLite && window.__LuaToolsSettings && Array.isArray(window.__LuaToolsSettings.schema)
                 && window.__LuaToolsSettings.schema.length > 0) {
+                return Promise.resolve(window.__LuaToolsSettings);
+            }
+            if (!forceRefresh && bootLite && window.__LuaToolsSettings && window.__LuaToolsSettings.values) {
                 return Promise.resolve(window.__LuaToolsSettings);
             }
         } catch (_) { }
@@ -6780,7 +6798,37 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
             return Promise.reject(new Error(lt('LuaTools backend unavailable')));
         }
 
-        // Split across RPCs: beta.9 ACCESS_VIOLATION on combined values+schema+translations.
+        // Boot: tiny GetBootFlags only. Full schema/translations load when Settings opens
+        // (combined/large IPC returns AV luavm on Millennium beta.9).
+        if (bootLite) {
+            return Millennium.callServerMethod('luatools', 'GetBootFlags', {
+                contentScriptQuery: ''
+            }).then(function (res) {
+                const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                if (!payload || payload.success !== true) {
+                    throw new Error((payload && payload.error) ? String(payload.error) : 'boot flags failed');
+                }
+                const config = {
+                    schemaVersion: 0,
+                    schema: [],
+                    values: {
+                        general: {
+                            autoUpdateManifests: payload.autoUpdateManifests !== false,
+                            language: payload.language ? String(payload.language) : 'en'
+                        }
+                    },
+                    language: payload.language ? String(payload.language) : 'en',
+                    locales: [],
+                    translations: {},
+                    secretsPresent: {},
+                    bootLite: true,
+                    lastFetched: Date.now()
+                };
+                window.__LuaToolsSettings = config;
+                return config;
+            });
+        }
+
         return Millennium.callServerMethod('luatools', 'GetSettingsConfig', {
             contentScriptQuery: ''
         }).then(function (res) {
@@ -9484,8 +9532,26 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                 setTimeout(bootAfterQuiet, 100);
                 return;
             }
+
+            // Only one Steam webview should drive post-boot RPCs (shared luavm).
+            var bootOwner = false;
             try {
-                fetchSettingsConfig(false).then(function (cfg) {
+                var now = Date.now();
+                var prev = parseInt(localStorage.getItem('__lt_boot_rpc') || '0', 10);
+                if (!prev || (now - prev) > 45000) {
+                    localStorage.setItem('__lt_boot_rpc', String(now));
+                    bootOwner = true;
+                }
+            } catch (_) {
+                bootOwner = true;
+            }
+            if (!bootOwner) {
+                try { addLuaToolsButton(); } catch (_) { }
+                return;
+            }
+
+            try {
+                fetchSettingsConfig(false, { bootLite: true }).then(function (cfg) {
                     try { ensureLuaToolsStyles(); } catch (_) { }
 
                     try {
@@ -9528,7 +9594,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         })
                                         .catch(function () { });
                                 } catch (_) { }
-                            }, 4500);
+                            }, 8000);
                         }
                     } catch (_) { }
 
@@ -9551,7 +9617,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         })
                                         .catch(function () { });
                                 }
-                                setTimeout(runManifestAutoUpdateWhenIdle, 15000);
+                                setTimeout(runManifestAutoUpdateWhenIdle, 20000);
                             }
                         }
                     } catch (_) { }
@@ -9588,7 +9654,7 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                             } catch (_) { }
                         });
                     } catch (_) { }
-                }, 800);
+                }, 1500);
 
                 try {
                     if (window.location.hostname === 'store.steampowered.com') {
@@ -9608,14 +9674,14 @@ if (window.__LUATOOLS_ULTIMATE_LOADED__) {
                                         } catch (_) { }
                                     });
                                 } catch (_) { }
-                            }, 2000);
+                            }, 3500);
                         }
                     }
                 } catch (_) { }
             } catch (_) { }
         }
 
-        setTimeout(bootAfterQuiet, 2500);
+        setTimeout(bootAfterQuiet, 3500);
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onFrontendReady);
