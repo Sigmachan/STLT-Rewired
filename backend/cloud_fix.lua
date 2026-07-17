@@ -22,8 +22,17 @@ local STELLA_REMNANTS = { "stella_fallback.dll", "stella.cfg" }
 local STFIXER_URL = "https://github.com/Selectively11/STFixer"
 
 local function sha256(path)
-    local ok, out = pcall(m_utils.exec,
-        'powershell -NoProfile -Command "(Get-FileHash -LiteralPath \'' .. path .. '\' -Algorithm SHA256).Hash"')
+    local platform = require("platform")
+    if platform.is_windows() then
+        local ok, out = pcall(m_utils.exec,
+            'powershell -NoProfile -Command "(Get-FileHash -LiteralPath \'' .. path .. '\' -Algorithm SHA256).Hash"')
+        if ok and out then
+            local h = tostring(out):gsub("%s+", "")
+            if h:match("^%x+$") and #h >= 40 then return h:lower() end
+        end
+        return ""
+    end
+    local ok, out = pcall(m_utils.exec, "sha256sum " .. platform.shell_quote(path) .. " 2>/dev/null | awk '{print $1}'")
     if ok and out then
         local h = tostring(out):gsub("%s+", "")
         if h:match("^%x+$") and #h >= 40 then return h:lower() end
@@ -32,6 +41,17 @@ local function sha256(path)
 end
 
 function M.diagnose_cloud_fix()
+    local platform = require("platform")
+    if platform.is_linux() then
+        return {
+            success = true,
+            platform = "linux",
+            skipped = true,
+            message = "SteamTools cloud-hijack DLL checks are Windows-only. On Linux, cloud saves are handled by the unlock stack (SLSsteam/ACCELA).",
+            dlls = st.A({}),
+            stellaRemnants = st.A({}),
+        }
+    end
     local root = steam_utils.detect_steam_install_path()
     if not root or root == "" or not fs.is_directory(root) then
         return { success = false, error = "Steam installation not found" }

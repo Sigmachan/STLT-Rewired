@@ -186,7 +186,8 @@ function fixes.apply_game_fix(appid, download_url, install_path, fix_type, game_
     pcall(fs.remove, script_file)
     m_utils.write_file(state_file, '{"status": "downloading"}')
     
-    local is_windows = m_utils.getenv("OS") == "Windows_NT"
+    local platform = require("platform")
+    local is_windows = platform.is_windows()
     if is_windows then
         write_windows_fix_script(script_file, state_file, download_url, dest_zip, install_path, appid, fix_type, game_name)
         local cmd = string.format(
@@ -198,8 +199,12 @@ function fixes.apply_game_fix(appid, download_url, install_path, fix_type, game_
         local sh_path = fs.join(paths.get_plugin_dir(), "backend", "scripts", "downloader.sh")
         m_utils.exec('chmod +x "' .. sh_path .. '"')
         local cmd = string.format(
-            'nohup bash "%s" "%s" "%s" "%s" "%s" > /dev/null 2>&1 &',
-            sh_path, download_url, dest_zip, install_path, state_file
+            'nohup bash %s %s %s %s %s > /dev/null 2>&1 &',
+            platform.shell_quote(sh_path),
+            platform.shell_quote(download_url),
+            platform.shell_quote(dest_zip),
+            platform.shell_quote(install_path),
+            platform.shell_quote(state_file)
         )
         m_utils.exec(cmd)
     end

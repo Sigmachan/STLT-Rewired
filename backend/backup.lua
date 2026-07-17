@@ -12,6 +12,7 @@ local m_utils = require("utils")
 local fs      = require("fs")
 local logger  = require("plugin_logger")
 local st      = require("st_util")
+local zip_util = require("zip_util")
 
 local M = {}
 
@@ -21,17 +22,13 @@ local function backup_dir()
     return d
 end
 
-local function powershell(cmd)
-    return pcall(m_utils.exec, 'powershell -NoProfile -NonInteractive -Command "' .. cmd .. '"')
-end
-
 function M.create_backup(label)
     if type(label) == "table" then label = label.label end
     local base = st.steam_path()
     if base == "" then return { success = false, error = "Steam path not found" } end
-    local stplug = fs.join(base, "config", "stplug-in")
+    local stplug = st.lua_script_dir()
     local depot = fs.join(base, "depotcache")
-    if not fs.is_directory(stplug) and not fs.is_directory(depot) then
+    if (stplug == "" or not fs.is_directory(stplug)) and not fs.is_directory(depot) then
         return { success = false, error = "Nothing to backup" }
     end
 
@@ -40,16 +37,15 @@ function M.create_backup(label)
     local zp = fs.join(backup_dir(), fname)
 
     local paths, fc = {}, 0
-    if fs.is_directory(stplug) then table.insert(paths, stplug) end
+    if stplug ~= "" and fs.is_directory(stplug) then table.insert(paths, stplug) end
     if fs.is_directory(depot) then table.insert(paths, depot) end
-    local quoted = {}
     for _, p in ipairs(paths) do
-        table.insert(quoted, "'" .. p .. "'")
         for _, e in ipairs(fs.list_recursive(p) or {}) do if e.is_file then fc = fc + 1 end end
     end
 
-    powershell("Compress-Archive -Path " .. table.concat(quoted, ",") .. " -DestinationPath '" .. zp .. "' -Force")
-    if not fs.is_file(zp) then return { success = false, error = "Compress-Archive failed" } end
+    if not zip_util.compress(paths, zp) then
+        return { success = false, error = "zip compress failed" }
+    end
 
     local sz = fs.file_size(zp) or 0
     logger.log("backup: created " .. fname .. " (" .. fc .. " files)")
@@ -84,10 +80,14 @@ function M.restore_backup(filename)
 
     local tmp = fs.join(backup_dir(), ".restore_tmp_" .. math.floor(m_utils.time()))
     pcall(fs.remove_all, tmp)
-    powershell("Expand-Archive -LiteralPath '" .. zp .. "' -DestinationPath '" .. tmp .. "' -Force")
+    if not zip_util.extract(zp, tmp) then
+        pcall(fs.remove_all, tmp)
+        return { success = false, error = "zip extract failed" }
+    end
 
     local routes = {
         ["stplug-in"] = fs.join(base, "config", "stplug-in"),
+        ["lua"] = fs.join(base, "config", "lua"),
         ["depotcache"] = fs.join(base, "depotcache"),
     }
     local rc = 0

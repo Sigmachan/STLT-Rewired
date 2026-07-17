@@ -91,7 +91,7 @@ install_millennium_if_needed() {
     warn "Skipping Millennium install (SKIP_MILLENNIUM=1)."
     return
   fi
-  if [[ -d "$steam/millennium/bin" && -f "$steam/wsock32.dll" || -f "$steam/millennium/wsock32.dll" ]]; then
+  if [[ -d "$steam/millennium/bin" ]] && { [[ -f "$steam/wsock32.dll" ]] || [[ -f "$steam/millennium/wsock32.dll" ]] || [[ -f "$steam/millennium/libmillennium_x86.so" ]] || [[ -d "$steam/millennium/lib" ]]; }; then
     info "Millennium appears installed."
     return
   fi

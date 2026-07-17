@@ -141,7 +141,9 @@ local function _backend_label()
 end
 
 local function _chk_platform()
-    return _check("platform", "Platform", "info", "Windows · " .. _backend_label())
+    local platform = require("platform")
+    local label = platform.is_windows() and "Windows" or "Linux"
+    return _check("platform", "Platform", "info", label .. " · " .. _backend_label())
 end
 
 local function _chk_steam_root()
@@ -169,18 +171,27 @@ end
 
 local function _chk_unlock_stack()
     local backend = unlock_paths.resolve_backend()
+    local platform = require("platform")
     if backend ~= "none" then
         local status = unlock_paths.get_unlock_status()
         local detail = _backend_label()
         if status.openSteamTool then detail = detail .. " · OpenSteamTool.dll present" end
-        if status.steamTools then detail = detail .. " · SteamTools markers present" end
+        if status.steamTools then detail = detail .. " · SteamTools / stplug-in markers present" end
+        if status.slsSteam then detail = detail .. " · SLSsteam detected" end
         if status.lumaCore then detail = detail .. " · LumaCore.dll present" end
         return _check("unlock_stack", "Unlock backend", "ok", detail)
     end
+    if platform.is_linux() then
+        return _check(
+            "unlock_stack", "Unlock backend", "fail",
+            "No unlock backend detected. Install SLSsteam + ACCELA (enter-the-wired / Femboy Edition), then restart Steam through that stack.",
+            { label = "Create unlock script folder", ipc = "EnsureLuaScriptDir", args = {} }
+        )
+    end
     return _check(
         "unlock_stack", "Unlock backend", "fail",
-        "No OpenSteamTool, SteamTools, or LumaCore detected. Install OpenSteamTool or run Rewired Manager setup.",
-        { label = "Install OpenSteamTool", ipc = "InstallOpenSteamTool", args = {} }
+        "No unlock backend detected. Install SteamTools or OpenSteamTool, then set Unlock backend in Settings if needed.",
+        { label = "Create unlock script folder", ipc = "EnsureLuaScriptDir", args = {} }
     )
 end
 
@@ -309,7 +320,7 @@ function M.run_health_check(appid, quick)
 
     return {
         success = true,
-        platform = "windows",
+        platform = require("platform").name(),
         overall = worst,
         summary = summary,
         checks = checks,

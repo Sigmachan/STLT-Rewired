@@ -212,18 +212,20 @@ function auto_update.maybe_check_on_boot()
 end
 
 function auto_update.restart_steam()
-    local is_windows = m_utils.getenv("OS") == "Windows_NT"
-    if is_windows then
+    local platform = require("platform")
+    if platform.is_windows() then
         local script_path = paths.backend_path("restart_steam.cmd")
         if fs.exists(script_path) then
             m_utils.exec('start /b cmd /C "' .. script_path .. '"')
             return true
         end
-    else
-        m_utils.exec("killall steam && steam &")
-        return true
+        return false
     end
-    return false
+    platform.kill_steam()
+    pcall(function()
+        if type(m_utils.sleep) == "function" then m_utils.sleep(1000) end
+    end)
+    return platform.launch_steam()
 end
 
 function auto_update.apply_pending_update_if_any()

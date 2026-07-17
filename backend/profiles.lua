@@ -41,9 +41,9 @@ end
 -- ── lua + launch-options snapshots ───────────────────────────────────────────
 
 local function lua_path(appid)
-    local base = steam_utils.detect_steam_install_path()
-    if not base or base == "" then return "" end
-    return fs.join(base, "config", "stplug-in", appid .. ".lua")
+    local dir = st.lua_script_dir()
+    if dir == "" then return "" end
+    return fs.join(dir, tostring(appid) .. ".lua")
 end
 
 local function read_lua_snapshot(appid)

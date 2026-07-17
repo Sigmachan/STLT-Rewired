@@ -37,6 +37,13 @@ local function _pick_release_zip(body)
 end
 
 function M.install_latest(steam_path)
+    local platform = require("platform")
+    if platform.is_linux() then
+        return {
+            success = false,
+            error = "OpenSteamTool is Windows-only. On Linux use SLSsteam + ACCELA (enter-the-wired / Femboy Edition).",
+        }
+    end
     steam_path = tostring(steam_path or steam_utils.detect_steam_install_path() or ""):gsub("/", "\\")
     if steam_path == "" or not fs.is_directory(steam_path) then
         return { success = false, error = "Steam path does not exist." }

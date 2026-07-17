@@ -22,13 +22,18 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ## Linux today
 
-Rewired does **not** bundle ACCELA or SLSsteam inside the main plugin repo (dropped from the plugin; see `REWIRED-PLAN.md`).
+Plugin + Millennium install works via `scripts/install.sh`. Unlock is still **external**
+(SLSsteam + ACCELA) — not bundled in this repo.
 
-**Plugin-only path** (unlock stack already installed):
+**Plugin path** (unlock stack already installed):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
 ```
+
+Shared config is written to `~/.local/share/Rewired/rewired.json` and the plugin reads it.
+Activations write to `config/stplug-in`. OpenSteamTool install is Windows-only and is
+gated off on Linux.
 
 **Full Linux stack (recommended)** — use [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition):
 
