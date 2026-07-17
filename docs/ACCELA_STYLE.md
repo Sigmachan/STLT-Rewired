@@ -31,13 +31,13 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ```bash
 # Full stack
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/i | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i | bash
 
 # Unlock only (ACCELA + SLSsteam)
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/unlock | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/unlock | bash
 
 # Plugin/Millennium without reinstalling unlock
-SKIP_UNLOCK=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/i | bash
+SKIP_UNLOCK=1 curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i | bash
 ```
 
 We do **not** vendor ACCELA binaries in this repo — the installer downloads the current enter-the-wired / Headcrab releases at install time.
