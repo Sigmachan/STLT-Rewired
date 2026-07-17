@@ -3,7 +3,7 @@
     "name": "luatools",
     "common_name": "Rewired",
     "description": "STLT Rewired - LuaTools rebuilt on the modern Millennium 3.x Lua backend (piqseu base), with STLT's SteamTools-Ultimate features ported in. Native callServerMethod IPC, no Python HTTP bridge. Windows + Linux (Linux unlock via SLSsteam/ACCELA).",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "useBackend": true,
     "backendType": "lua",
     "include": [
