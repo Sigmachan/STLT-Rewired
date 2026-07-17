@@ -13,23 +13,23 @@ ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
 **Windows (full stack):**
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
 ```
 
 **Windows (update):**
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1 | iex
 ```
 
 **Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
 ```
 
 Installs ACCELA + SLSsteam (enter-the-wired), Millennium if needed, and the Rewired plugin.
-Unlock-only: `scripts/install-linux-unlock.sh`. Details: `docs/INSTALL.md`.
+Unlock-only: `install/Linux-Unlock.sh`. Details: `docs/INSTALL.md`.
 
 ## Project docs
 

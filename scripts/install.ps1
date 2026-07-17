@@ -1,6 +1,4 @@
-# install.ps1 - one-shot Rewired install (Windows).
-#   pwsh -NoProfile -ExecutionPolicy Bypass -File install.ps1
-#   irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+# Compat shim — prefer: irm …/install/Windows.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',
@@ -10,21 +8,11 @@ param(
     [switch]$SkipShortcut,
     [switch]$FromRepo
 )
-
 $ErrorActionPreference = 'Stop'
-
-function Import-RewiredInstallModule {
-    $local = Join-Path $PSScriptRoot 'lib\Rewired.Install.psm1'
-    if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
-        Import-Module $local -Force
-        return
-    }
-    $branch = 'main'
-    $url = "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/$branch/scripts/lib/Rewired.Install.psm1"
-    $cache = Join-Path $env:TEMP 'Rewired.Install.psm1'
-    Invoke-WebRequest -Uri $url -OutFile $cache -UseBasicParsing
-    Import-Module $cache -Force
+$local = Join-Path $PSScriptRoot '..\install\Windows.ps1'
+if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
+    & $local @PSBoundParameters
+    return
 }
-
-Import-RewiredInstallModule
-Invoke-RewiredInstall @PSBoundParameters
+$url = 'https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1'
+iex (Invoke-WebRequest -Uri $url -UseBasicParsing).Content

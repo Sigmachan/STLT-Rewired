@@ -7,9 +7,10 @@
     "tag_prefix": "v"
   },
   "install": {
-    "windows_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1",
-    "windows_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1",
-    "linux_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh",
-    "linux_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh"
+    "windows_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1",
+    "windows_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1",
+    "linux_install": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh",
+    "linux_update": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Update.sh",
+    "linux_unlock": "https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh"
   }
 }

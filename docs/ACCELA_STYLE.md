@@ -22,7 +22,7 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ## Linux today
 
-`scripts/install.sh` installs the **full stack** by default:
+`install/Linux.sh` installs the **full stack** by default:
 
 1. **ACCELA + SLSsteam** via the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) installer (Headcrab for SLSsteam)
 2. Millennium (steambrew) if missing
@@ -31,13 +31,13 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ```bash
 # Full stack
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
 
 # Unlock only (ACCELA + SLSsteam)
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install-linux-unlock.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
 
 # Plugin/Millennium without reinstalling unlock
-SKIP_UNLOCK=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+SKIP_UNLOCK=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
 ```
 
 We do **not** vendor ACCELA binaries in this repo — the installer downloads the current enter-the-wired / Headcrab releases at install time.
