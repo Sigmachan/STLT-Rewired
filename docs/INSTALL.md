@@ -1,11 +1,12 @@
 # Quick install URLs and one-liners for STLT-Rewired (Rewired).
 
-Short entrypoints at repo root (`install.sh` / `install.ps1` / `update.sh` / `update.ps1` / `unlock.sh`).  
+Short entrypoints at repo root (`install.sh` / `install.ps1`).  
 Full scripts live in **`install/`**. Dev/build helpers stay in `scripts/`.  
 See `install/README.md` for the file table.
 
-Preferred short URLs: **`https://sigmachan.ru/{install,update,unlock,install.ps1,update.ps1}`** (Cloudflare → jsDelivr).  
-Note: repo files are `install.sh` / `update.sh` / `unlock.sh` because an `install/` folder already exists — Cloudflare maps the pretty paths to those files.
+Preferred AIO URLs: **`https://sigmachan.ru/install.ps1`** (Windows) and **`https://sigmachan.ru/install`** (Linux).  
+(`update` / `unlock` aliases exist; normal users only need **install**.)
+
 
 ## Windows (recommended)
 
@@ -23,11 +24,7 @@ Then:
 1. Restart Steam fully (Exit, then relaunch).
 2. In Steam: open Rewired UI → run Health/Setup fixes when prompted.
 
-### Update
-
-```powershell
-irm https://sigmachan.ru/update.ps1 | iex
-```
+Re-run the **same** install command anytime to refresh the plugin (Millennium / OpenSteamTool are skipped if already present).
 
 ### Optional “10th line” (Rewired Manager)
 
@@ -39,7 +36,7 @@ Rewired Manager (`Rewired.exe`) is distributed **separately (private)** and is o
 pwsh -NoProfile -File install/Windows.ps1 -SkipMillennium
 pwsh -NoProfile -File install/Windows.ps1 -SkipOpenSteamTool   # plugin/Millennium only
 pwsh -NoProfile -File install/Windows.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
-pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
+pwsh -NoProfile -File install/Windows.ps1 -SteamPath "D:\Steam"
 ```
 
 | Switch | Effect |
@@ -74,11 +71,7 @@ Unlock Lua lands in `Steam/config/stplug-in/`. Skip pieces with env vars if need
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
 | `STEAM_PATH=...` | Override Steam root |
 
-**Update plugin** (skips Millennium + unlock, preserves `backend/data`):
-
-```bash
-curl -fsSL https://sigmachan.ru/update | bash
-```
+Re-run the **same** install command to refresh the plugin (unlock / Millennium are skipped if already present).
 
 Credits: [ciscosweater/enter-the-wired](https://github.com/ciscosweater/enter-the-wired), [AceSLS/SLSsteam](https://github.com/AceSLS/SLSsteam), Deadboy666 Headcrab.
 
@@ -87,7 +80,7 @@ Credits: [ciscosweater/enter-the-wired](https://github.com/ciscosweater/enter-th
 | Component | Mechanism |
 |-----------|-----------|
 | **Plugin (in Steam)** | `CheckForUpdatesNow` RPC + throttled boot check every 2h via `backend/update.json` → GitHub release `STLT-Rewired.zip` |
-| **Script** | Re-run `update.ps1` / `update.sh` one-liners above |
+| **Script** | Re-run the same `install` / `install.ps1` one-liner |
 
 Install URLs are also embedded in `backend/update.json` under `install.*` for in-plugin display via `GetUpdateStatus`.
 

@@ -1,25 +1,24 @@
-# Windows-Update.ps1 — update Rewired plugin from latest GitHub release.
-#   irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows-Update.ps1 | iex
-#   pwsh -NoProfile -File install/Windows-Update.ps1
+# Alias — prefer install/Windows.ps1 (AIO is idempotent; re-run to refresh).
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',
-    [switch]$SkipManager
+    [switch]$SkipManager,
+    [switch]$SkipMillennium,
+    [switch]$SkipOpenSteamTool,
+    [switch]$InstallOpenSteamTool,
+    [switch]$SkipShortcut,
+    [switch]$FromRepo
 )
-
 $ErrorActionPreference = 'Stop'
-
-function Import-RewiredInstallModule {
-    $local = Join-Path $PSScriptRoot 'lib\Rewired.Install.psm1'
-    if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
-        Import-Module $local -Force
-        return
-    }
-    $url = 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/lib/Rewired.Install.psm1'
-    $cache = Join-Path $env:TEMP 'Rewired.Install.psm1'
-    Invoke-WebRequest -Uri $url -OutFile $cache -UseBasicParsing
-    Import-Module $cache -Force
+$local = Join-Path $PSScriptRoot 'Windows.ps1'
+if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
+    & $local @PSBoundParameters
+    return
 }
-
-Import-RewiredInstallModule
-Invoke-RewiredUpdate @PSBoundParameters
+$tmp = Join-Path $env:TEMP ('rewired-Windows-' + [guid]::NewGuid().ToString('N') + '.ps1')
+try {
+    Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1' -OutFile $tmp -UseBasicParsing
+    & $tmp @PSBoundParameters
+} finally {
+    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+}

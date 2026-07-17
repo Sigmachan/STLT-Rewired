@@ -369,41 +369,39 @@ function Invoke-RewiredInstall {
 
     # AIO default: ship OpenSteamTool so unlock works out of the box.
     # unlockBackend stays 'auto' so SteamTools wins if the user already has it.
-    if ((-not $SkipOpenSteamTool) -or $InstallOpenSteamTool) {
+    $ostDll = Join-Path $steam 'OpenSteamTool.dll'
+    if (((-not $SkipOpenSteamTool) -or $InstallOpenSteamTool) -and -not (Test-Path -LiteralPath $ostDll)) {
         Write-Host 'Installing OpenSteamTool (unlock backend)...' -ForegroundColor Cyan
         Install-RewiredOpenSteamTool -SteamPath $steam | Out-Null
+    } elseif ((-not $SkipOpenSteamTool) -or $InstallOpenSteamTool) {
+        Write-Host 'OpenSteamTool already present.' -ForegroundColor DarkGray
     }
 
     Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'auto' | Out-Null
 
     Write-Host ''
-    Write-Host 'Install complete (AIO: Millennium + plugin + OpenSteamTool unless skipped).' -ForegroundColor Green
+    Write-Host 'Done (AIO). Re-run this same command anytime to refresh the plugin.' -ForegroundColor Green
     Write-Host '  1. Restart Steam fully (Exit, then relaunch).'
     Write-Host '  2. Enable luatools (Rewired) in Millennium -> Plugins if needed.'
     Write-Host '  3. If SteamTools is also installed, Rewired Auto prefers it over OpenSteamTool.'
-    Write-Host ''
-    Write-Host 'Update later: irm https://sigmachan.ru/update.ps1 | iex' -ForegroundColor DarkGray
 }
 
 function Invoke-RewiredUpdate {
-    param([string]$SteamPath = '', [switch]$SkipManager)
-    $steam = Get-SteamInstallPath -Override $SteamPath
-    $release = Get-RewiredLatestRelease
-    $pluginPath = Join-Path $steam 'millennium\plugins\luatools'
-    $current = '0.0.0'
-    $pj = Join-Path $pluginPath 'plugin.json'
-    if (Test-Path -LiteralPath $pj) {
-        try { $current = (Get-Content -Raw -LiteralPath $pj | ConvertFrom-Json).version } catch { }
+    # Kept for old /update URLs — same as AIO install (idempotent).
+    param(
+        [string]$SteamPath = '',
+        [switch]$SkipManager,
+        [switch]$SkipMillennium,
+        [switch]$SkipOpenSteamTool,
+        [switch]$InstallOpenSteamTool,
+        [switch]$SkipShortcut,
+        [switch]$FromRepo
+    )
+    $installParams = @{}
+    foreach ($key in @('SteamPath', 'SkipMillennium', 'SkipOpenSteamTool', 'InstallOpenSteamTool', 'SkipShortcut', 'FromRepo')) {
+        if ($PSBoundParameters.ContainsKey($key)) { $installParams[$key] = $PSBoundParameters[$key] }
     }
-    if ((Compare-RewiredVersion -Latest $release.Version -Current $current) -le 0) {
-        Write-Host "Already on $($release.Version) or newer (current $current)." -ForegroundColor Green
-    } else {
-        Write-Host "Updating plugin $current -> $($release.Version)..." -ForegroundColor Cyan
-        Install-RewiredPluginFromUrl -ZipUrl $release.PluginUrl -SteamPath $steam | Out-Null
-    }
-
-    Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath | Out-Null
-    Write-Host 'Update complete. Restart Steam to load the plugin.' -ForegroundColor Green
+    Invoke-RewiredInstall @installParams
 }
 
 Export-ModuleMember -Function *

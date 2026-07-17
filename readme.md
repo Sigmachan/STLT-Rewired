@@ -10,22 +10,17 @@ ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
 
 ## Quick install
 
-**Windows (AIO — Millennium + OpenSteamTool + plugin):**
+**Windows (AIO):**
 ```powershell
 irm https://sigmachan.ru/install.ps1 | iex
 ```
 
-**Windows (update):**
-```powershell
-irm https://sigmachan.ru/update.ps1 | iex
-```
-
-**Linux (AIO — ACCELA + SLSsteam + Millennium + plugin):**
+**Linux (AIO):**
 ```bash
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-One command each. Details: `docs/INSTALL.md`.
+Same command again later to refresh. Details: `docs/INSTALL.md`.
 
 ## Project docs
 

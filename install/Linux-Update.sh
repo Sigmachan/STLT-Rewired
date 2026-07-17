@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
-# update.sh - update Rewired plugin from latest GitHub release (Linux).
-#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Update.sh | bash
+# Alias of Linux.sh — re-run full AIO anytime (unlock/Millennium skip if present).
 set -euo pipefail
-
-export SKIP_MILLENNIUM=1
-export SKIP_UNLOCK=1
-
-SCRIPT_URL="${REWIRED_UPDATE_SCRIPT_URL:-https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh}"
-if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  exec bash "$SCRIPT_DIR/Linux.sh"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+if [[ -f "$HERE/Linux.sh" ]]; then
+  exec bash "$HERE/Linux.sh" "$@"
 fi
-exec bash <(curl -fsSL "$SCRIPT_URL")
+exec bash <(curl -fsSL "https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh") "$@"

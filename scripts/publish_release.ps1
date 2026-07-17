@@ -25,13 +25,10 @@ $draftFlag = if ($Draft) { "--draft" } else { "" }
 $notes = @"
 STLT-Rewired $Version
 
-Windows one-liner install:
+Windows AIO (install or refresh):
   irm https://sigmachan.ru/install.ps1 | iex
 
-Windows update:
-  irm https://sigmachan.ru/update.ps1 | iex
-
-Linux install:
+Linux AIO (install or refresh):
   curl -fsSL https://sigmachan.ru/install | bash
 "@
 
