@@ -1,5 +1,5 @@
-# Short Windows update entrypoint.
-#   irm https://sigmachan.ru/u.ps1 | iex
+# Windows plugin update entrypoint.
+#   irm https://sigmachan.ru/update.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',

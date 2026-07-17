@@ -8,13 +8,14 @@ Short domain (`sigmachan.ru` → jsDelivr):
 
 | | Command |
 |--|---------|
-| **Windows install** | `irm https://sigmachan.ru/i.ps1 \| iex` |
-| **Windows update** | `irm https://sigmachan.ru/u.ps1 \| iex` |
-| **Linux install** | `curl -fsSL https://sigmachan.ru/i \| bash` |
-| **Linux update** | `curl -fsSL https://sigmachan.ru/u \| bash` |
+| **Windows install** | `irm https://sigmachan.ru/install.ps1 \| iex` |
+| **Windows update** | `irm https://sigmachan.ru/update.ps1 \| iex` |
+| **Linux install** | `curl -fsSL https://sigmachan.ru/install \| bash` |
+| **Linux update** | `curl -fsSL https://sigmachan.ru/update \| bash` |
 | **Linux unlock only** | `curl -fsSL https://sigmachan.ru/unlock \| bash` |
 
-Root files `i`, `i.ps1`, `u`, `u.ps1`, `unlock` are thin wrappers around the scripts below.
+Root files `install.sh`, `install.ps1`, `update.sh`, `update.ps1`, `unlock.sh` are thin wrappers around the scripts below.
+(Cloudflare pretty paths `/install` `/update` `/unlock` redirect to the `.sh` files.)
 
 ## Scripts in this folder
 

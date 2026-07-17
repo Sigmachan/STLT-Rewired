@@ -1,4 +1,4 @@
-# Compat shim — prefer: irm https://sigmachan.ru/i.ps1 | iex
+# Compat shim — prefer: irm https://sigmachan.ru/install.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',

@@ -7,10 +7,10 @@
     "tag_prefix": "v"
   },
   "install": {
-    "windows_install": "https://sigmachan.ru/i.ps1",
-    "windows_update": "https://sigmachan.ru/u.ps1",
-    "linux_install": "https://sigmachan.ru/i",
-    "linux_update": "https://sigmachan.ru/u",
+    "windows_install": "https://sigmachan.ru/install.ps1",
+    "windows_update": "https://sigmachan.ru/update.ps1",
+    "linux_install": "https://sigmachan.ru/install",
+    "linux_update": "https://sigmachan.ru/update",
     "linux_unlock": "https://sigmachan.ru/unlock"
   }
 }

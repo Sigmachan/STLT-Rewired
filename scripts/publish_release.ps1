@@ -26,13 +26,13 @@ $notes = @"
 STLT-Rewired $Version
 
 Windows one-liner install:
-  irm https://sigmachan.ru/i.ps1 | iex
+  irm https://sigmachan.ru/install.ps1 | iex
 
 Windows update:
-  irm https://sigmachan.ru/u.ps1 | iex
+  irm https://sigmachan.ru/update.ps1 | iex
 
 Linux install:
-  curl -fsSL https://sigmachan.ru/i | bash
+  curl -fsSL https://sigmachan.ru/install | bash
 "@
 
 $bodyFile = Join-Path $env:TEMP ("rewired-release-notes-" + [guid]::NewGuid().ToString("N") + ".md")

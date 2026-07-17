@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Short Linux unlock-only entrypoint (ACCELA + SLSsteam).
+# Linux unlock-only entrypoint (ACCELA + SLSsteam).
 #   curl -fsSL https://sigmachan.ru/unlock | bash
 set -euo pipefail
 URL="https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh"

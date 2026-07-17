@@ -1,6 +1,6 @@
 # install.ps1 → install/Windows.ps1
 # Full Windows stack: Millennium (if needed) + Rewired plugin (+ optional OpenSteamTool).
-#   irm https://sigmachan.ru/i.ps1 | iex
+#   irm https://sigmachan.ru/install.ps1 | iex
 #   pwsh -NoProfile -File install/Windows.ps1
 [CmdletBinding()]
 param(

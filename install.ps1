@@ -1,5 +1,5 @@
-# Short Windows install entrypoint.
-#   irm https://sigmachan.ru/i.ps1 | iex
+# Windows install entrypoint.
+#   irm https://sigmachan.ru/install.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',

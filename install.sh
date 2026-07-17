@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Short Linux install entrypoint.
-#   curl -fsSL https://sigmachan.ru/i | bash
+# Linux install entrypoint (Millennium + plugin + ACCELA/SLSsteam).
+#   curl -fsSL https://sigmachan.ru/install | bash
 set -euo pipefail
 URL="https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh"
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then

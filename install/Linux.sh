@@ -229,7 +229,7 @@ main() {
   info "1. Fully quit Steam, then relaunch through your unlock stack (or normal Steam if SLSsteam already patched it)."
   info "2. Enable luatools (Rewired) in Millennium -> Plugins."
   info "Unlock-only reinstall: curl -fsSL https://sigmachan.ru/unlock | bash"
-  info "Plugin update later: curl -fsSL https://sigmachan.ru/u | bash"
+  info "Plugin update later: curl -fsSL https://sigmachan.ru/update | bash"
 }
 
 main "$@"
