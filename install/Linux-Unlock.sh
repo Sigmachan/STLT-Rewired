@@ -28,7 +28,7 @@ already_present() {
 if [[ "$FORCE" != "1" ]] && already_present; then
   ok "ACCELA + SLSsteam already look installed."
   info "ACCELA:  $HOME/.local/share/ACCELA"
-  info "Force reinstall: FORCE=1 curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Unlock.sh | bash"
+  info "Force reinstall: FORCE=1 curl -fsSL https://sigmachan.ru/unlock | bash"
   exit 0
 fi
 
@@ -36,7 +36,8 @@ info "Installing ACCELA + SLSsteam via enter-the-wired..."
 info "Upstream: https://github.com/ciscosweater/enter-the-wired"
 info "SLSsteam (Headcrab): https://github.com/Deadboy666/h3adcr-b · AceSLS/SLSsteam"
 
-tmp="$(mktemp -t rewired-enter-the-wired.XXXX.sh)"
+# Template must end in XXXXXX (GNU/BSD mktemp); do not put .sh after the X's.
+tmp="$(mktemp "${TMPDIR:-/tmp}/rewired-enter-the-wired.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 curl -fsSL --retry 3 --retry-delay 2 "$ENTER_THE_WIRED_URL" -o "$tmp"
 chmod +x "$tmp"

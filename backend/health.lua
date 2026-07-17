@@ -243,9 +243,7 @@ local function _non_comment_line_matches(text, pattern)
 end
 
 local function _hex64_key_pattern()
-    local parts = {}
-    for _ = 1, 64 do table.insert(parts, "[a-fA-F0-9]") end
-    return '"' .. table.concat(parts) .. '"'
+    return '"' .. string.rep("[a-fA-F0-9]", 64) .. '"'
 end
 
 local function _chk_app(appid)
@@ -258,9 +256,10 @@ local function _chk_app(appid)
         return out
     end
     local text = m_utils.read_file(lua_path) or ""
-    local owner_pat = "%s*addappid%s*%(%s*" .. appid .. "%s*[,%)%)]"
+    -- Match addappid(<appid>) or addappid(<appid>, ...)
+    local owner_pat = "%s*addappid%s*%(%s*" .. tostring(appid) .. "%s*[,%)]"
     local has_owner = _non_comment_line_matches(text, owner_pat)
-    local has_key = _non_comment_line_matches(text, '%s*addappid%s*%(.-%s*' .. _hex64_key_pattern())
+    local has_key = _non_comment_line_matches(text, "%s*addappid%s*%(.-%s*" .. _hex64_key_pattern())
     table.insert(out, _check("app_activated", "App " .. appid .. ": .lua installed", "ok", lua_path))
     if has_owner then
         table.insert(out, _check("app_ownership", "App " .. appid .. ": ownership grant", "ok", "Base addappid() present."))

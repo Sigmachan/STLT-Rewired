@@ -1,5 +1,5 @@
 # Short Windows install entrypoint.
-#   irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/i.ps1 | iex
+#   irm https://sigmachan.ru/i.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',
@@ -16,4 +16,11 @@ if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
     & $local @PSBoundParameters
     return
 }
-iex (Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1' -UseBasicParsing).Content
+# irm|iex has no PSScriptRoot — download then invoke so switches survive.
+$tmp = Join-Path $env:TEMP ('rewired-Windows-' + [guid]::NewGuid().ToString('N') + '.ps1')
+try {
+    Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1' -OutFile $tmp -UseBasicParsing
+    & $tmp @PSBoundParameters
+} finally {
+    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+}

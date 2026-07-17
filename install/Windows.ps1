@@ -1,6 +1,6 @@
 # install.ps1 → install/Windows.ps1
 # Full Windows stack: Millennium (if needed) + Rewired plugin (+ optional OpenSteamTool).
-#   irm https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1 | iex
+#   irm https://sigmachan.ru/i.ps1 | iex
 #   pwsh -NoProfile -File install/Windows.ps1
 [CmdletBinding()]
 param(
@@ -29,4 +29,9 @@ function Import-RewiredInstallModule {
 }
 
 Import-RewiredInstallModule
-Invoke-RewiredInstall @PSBoundParameters
+# Strip legacy/no-op switches that Invoke-RewiredInstall does not declare.
+$installParams = @{}
+foreach ($key in @('SteamPath', 'SkipMillennium', 'SkipOpenSteamTool', 'InstallOpenSteamTool', 'SkipShortcut', 'FromRepo')) {
+    if ($PSBoundParameters.ContainsKey($key)) { $installParams[$key] = $PSBoundParameters[$key] }
+}
+Invoke-RewiredInstall @installParams

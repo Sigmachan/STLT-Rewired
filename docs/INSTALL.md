@@ -34,7 +34,8 @@ Rewired Manager (`Rewired.exe`) is distributed **separately (private)** and is o
 ### Options (local script)
 
 ```powershell
-pwsh -NoProfile -File install/Windows.ps1 -SkipMillennium -SkipOpenSteamTool
+pwsh -NoProfile -File install/Windows.ps1 -SkipMillennium
+pwsh -NoProfile -File install/Windows.ps1 -InstallOpenSteamTool   # opt-in OpenSteamTool
 pwsh -NoProfile -File install/Windows.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
 pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
 ```
@@ -42,7 +43,7 @@ pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
 | Switch | Effect |
 |--------|--------|
 | `-SkipMillennium` | Do not install Millennium runtime |
-| `-SkipOpenSteamTool` | Do not install OpenSteamTool DLLs |
+| `-InstallOpenSteamTool` | Also install OpenSteamTool (off by default; Auto unlock prefers SteamTools) |
 | `-SkipShortcut` | No desktop shortcut |
 
 **GitHub API rate limit:** If install fails with `API rate limit exceeded`, either wait an hour or set a token first:

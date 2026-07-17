@@ -1,4 +1,4 @@
-# Compat shim — prefer: irm …/install/Windows.ps1 | iex
+# Compat shim — prefer: irm https://sigmachan.ru/i.ps1 | iex
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',
@@ -15,5 +15,10 @@ if ($PSScriptRoot -and (Test-Path -LiteralPath $local)) {
     & $local @PSBoundParameters
     return
 }
-$url = 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1'
-iex (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+$tmp = Join-Path $env:TEMP ('rewired-Windows-' + [guid]::NewGuid().ToString('N') + '.ps1')
+try {
+    Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Windows.ps1' -OutFile $tmp -UseBasicParsing
+    & $tmp @PSBoundParameters
+} finally {
+    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+}

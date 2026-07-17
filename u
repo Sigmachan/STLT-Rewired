@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Short Linux update entrypoint.
-#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/u | bash
+#   curl -fsSL https://sigmachan.ru/u | bash
 set -euo pipefail
 URL="https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux-Update.sh"
 if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then

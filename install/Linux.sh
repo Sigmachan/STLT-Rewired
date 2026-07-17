@@ -112,7 +112,7 @@ install_unlock_stack() {
 
   if unlock_already_present; then
     ok "ACCELA + SLSsteam already present — skipping unlock installer."
-    info "Re-run unlock only: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/install/Linux-Unlock.sh | bash"
+    info "Re-run unlock only: curl -fsSL https://sigmachan.ru/unlock | bash"
     return
   fi
 
@@ -121,14 +121,15 @@ install_unlock_stack() {
   info "Source: ${ENTER_THE_WIRED_URL}"
   # Download to a temp file so the remote script can resolve its own path, then run.
   local tmp
-  tmp="$(mktemp -t rewired-enter-the-wired.XXXX.sh)"
+  # Template must end in XXXXXX (GNU/BSD mktemp); do not put .sh after the X's.
+  tmp="$(mktemp "${TMPDIR:-/tmp}/rewired-enter-the-wired.XXXXXX")"
   # shellcheck disable=SC2064
   trap 'rm -f "'"$tmp"'"' RETURN
   curl -fsSL --retry 3 --retry-delay 2 "$ENTER_THE_WIRED_URL" -o "$tmp"
   chmod +x "$tmp"
   if ! bash "$tmp"; then
     warn "Unlock installer reported an error."
-    warn "You can retry with: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/install/Linux-Unlock.sh | bash"
+    warn "You can retry with: curl -fsSL https://sigmachan.ru/unlock | bash"
     warn "Or install manually: https://github.com/ciscosweater/enter-the-wired"
     return 1
   fi
@@ -227,8 +228,8 @@ main() {
   ok "Done."
   info "1. Fully quit Steam, then relaunch through your unlock stack (or normal Steam if SLSsteam already patched it)."
   info "2. Enable luatools (Rewired) in Millennium -> Plugins."
-  info "Unlock-only reinstall: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/install/Linux-Unlock.sh | bash"
-  info "Plugin update later: curl -fsSL https://raw.githubusercontent.com/${REWIRED_OWNER}/${REWIRED_REPO}/main/install/Linux-Update.sh | bash"
+  info "Unlock-only reinstall: curl -fsSL https://sigmachan.ru/unlock | bash"
+  info "Plugin update later: curl -fsSL https://sigmachan.ru/u | bash"
 }
 
 main "$@"
