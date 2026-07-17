@@ -10,7 +10,7 @@ ported in. Native `callServerMethod` IPC — no Python HTTP bridge.
 
 ## Quick install
 
-**Windows:**
+**Windows (AIO — Millennium + OpenSteamTool + plugin):**
 ```powershell
 irm https://sigmachan.ru/install.ps1 | iex
 ```
@@ -20,13 +20,12 @@ irm https://sigmachan.ru/install.ps1 | iex
 irm https://sigmachan.ru/update.ps1 | iex
 ```
 
-**Linux:**
+**Linux (AIO — ACCELA + SLSsteam + Millennium + plugin):**
 ```bash
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-Installs **ACCELA + SLSsteam** (unlock), Millennium if needed, and the Rewired plugin in one step.  
-Update later: `…/update | bash`. Details: `docs/INSTALL.md`.
+One command each. Details: `docs/INSTALL.md`.
 
 ## Project docs
 

@@ -1,7 +1,8 @@
 # install.ps1 → install/Windows.ps1
-# Full Windows stack: Millennium (if needed) + Rewired plugin (+ optional OpenSteamTool).
+# Full Windows AIO: Millennium (if needed) + OpenSteamTool + Rewired plugin.
 #   irm https://sigmachan.ru/install.ps1 | iex
 #   pwsh -NoProfile -File install/Windows.ps1
+#   pwsh -NoProfile -File install/Windows.ps1 -SkipOpenSteamTool
 [CmdletBinding()]
 param(
     [string]$SteamPath = '',

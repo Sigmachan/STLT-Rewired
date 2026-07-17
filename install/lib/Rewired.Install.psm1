@@ -367,18 +367,20 @@ function Invoke-RewiredInstall {
     }
     Write-Host "Plugin -> $pluginPath" -ForegroundColor Green
 
-    if ($InstallOpenSteamTool) {
-        Write-Host 'Installing OpenSteamTool...' -ForegroundColor Cyan
+    # AIO default: ship OpenSteamTool so unlock works out of the box.
+    # unlockBackend stays 'auto' so SteamTools wins if the user already has it.
+    if ((-not $SkipOpenSteamTool) -or $InstallOpenSteamTool) {
+        Write-Host 'Installing OpenSteamTool (unlock backend)...' -ForegroundColor Cyan
         Install-RewiredOpenSteamTool -SteamPath $steam | Out-Null
-        Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'opensteamtool' | Out-Null
-    } else {
-        Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'auto' | Out-Null
     }
 
+    Save-RewiredSharedConfig -SteamPath $steam -PluginPath $pluginPath -UnlockBackend 'auto' | Out-Null
+
     Write-Host ''
-    Write-Host 'Install complete.' -ForegroundColor Green
+    Write-Host 'Install complete (AIO: Millennium + plugin + OpenSteamTool unless skipped).' -ForegroundColor Green
     Write-Host '  1. Restart Steam fully (Exit, then relaunch).'
     Write-Host '  2. Enable luatools (Rewired) in Millennium -> Plugins if needed.'
+    Write-Host '  3. If SteamTools is also installed, Rewired Auto prefers it over OpenSteamTool.'
     Write-Host ''
     Write-Host 'Update later: irm https://sigmachan.ru/update.ps1 | iex' -ForegroundColor DarkGray
 }

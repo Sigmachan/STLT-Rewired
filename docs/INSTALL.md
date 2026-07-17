@@ -9,16 +9,19 @@ Note: repo files are `install.sh` / `update.sh` / `unlock.sh` because an `instal
 
 ## Windows (recommended)
 
-### Plugin-first install (default)
+### AIO install (default)
 
-1. Install Millennium + plugin:
+Millennium + OpenSteamTool unlock + Rewired plugin:
 
 ```powershell
 irm https://sigmachan.ru/install.ps1 | iex
 ```
 
-2. Restart Steam fully (Exit, then relaunch).
-3. In Steam: open Rewired UI → run Health/Setup fixes when prompted.
+`unlockBackend` is saved as **auto** — if SteamTools is already installed, Rewired prefers it over OpenSteamTool.
+
+Then:
+1. Restart Steam fully (Exit, then relaunch).
+2. In Steam: open Rewired UI → run Health/Setup fixes when prompted.
 
 ### Update
 
@@ -34,7 +37,7 @@ Rewired Manager (`Rewired.exe`) is distributed **separately (private)** and is o
 
 ```powershell
 pwsh -NoProfile -File install/Windows.ps1 -SkipMillennium
-pwsh -NoProfile -File install/Windows.ps1 -InstallOpenSteamTool   # opt-in OpenSteamTool
+pwsh -NoProfile -File install/Windows.ps1 -SkipOpenSteamTool   # plugin/Millennium only
 pwsh -NoProfile -File install/Windows.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
 pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
 ```
@@ -42,7 +45,7 @@ pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
 | Switch | Effect |
 |--------|--------|
 | `-SkipMillennium` | Do not install Millennium runtime |
-| `-InstallOpenSteamTool` | Also install OpenSteamTool (off by default; Auto unlock prefers SteamTools) |
+| `-SkipOpenSteamTool` | Do not install OpenSteamTool (AIO includes it by default) |
 | `-SkipShortcut` | No desktop shortcut |
 
 **GitHub API rate limit:** If install fails with `API rate limit exceeded`, either wait an hour or set a token first:
