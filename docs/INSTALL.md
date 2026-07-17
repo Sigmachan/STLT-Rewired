@@ -1,5 +1,8 @@
 # Quick install URLs and one-liners for STLT-Rewired (Rewired).
 
+User-facing installers live in **`install/`** (clear names). Dev/build helpers stay in `scripts/`.
+See `install/README.md` for the full table.
+
 ## Windows (recommended)
 
 ### Plugin-first install (default)

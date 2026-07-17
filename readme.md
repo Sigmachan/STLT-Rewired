@@ -34,6 +34,7 @@ Unlock-only: `install/Linux-Unlock.sh`. Details: `docs/INSTALL.md`.
 ## Project docs
 
 - `docs/INSTALL.md` — one-liner URLs, install/update scripts, auto-update channels.
+- `install/README.md` — installer names (Windows / Linux / Unlock).
 - `docs/ARCHITECTURE.md` — runtime shape, backend modules, RPC surface, safety model.
 - `docs/GEN1_GEN2_COMPARISON.md` — notes from the Gen 1 plugin archive and Gen 2 portable app.
 - `docs/COMPETITIVE_BASELINE.md` — official LuaTools/Gen2 baseline and Rewired differentiators.
