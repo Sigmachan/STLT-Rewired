@@ -62,15 +62,25 @@ The installer falls back to direct `/releases/latest/download/` URLs when the AP
 curl -fsSL https://sigmachan.ru/install | bash
 ```
 
-Unlock Lua lands in `Steam/config/stplug-in/`. Skip pieces with env vars if needed:
+Unlock Lua lands in `Steam/config/stplug-in/`. Tested layouts include **CachyOS**, **Bazzite** (Flatpak Steam), **Ximper/ALT**, Arch, Fedora, Debian/Ubuntu, Snap Steam. Skip pieces with env vars if needed:
 
 | Env | Effect |
 |-----|--------|
 | `SKIP_UNLOCK=1` | Do not install ACCELA/SLSsteam |
 | `SKIP_MILLENNIUM=1` | Do not install Millennium |
 | `SKIP_PLUGIN=1` | Unlock/Millennium only |
-| `STEAM_PATH=...` | Override Steam root |
+| `STEAM_PATH=...` | Override Steam root (native or Flatpak data dir) |
 | `MILLENNIUM_VERSION=...` | Pin Millennium GitHub tag (default `v3.4.0-beta.9`) |
+
+Examples when auto-detect fails:
+
+```bash
+# CachyOS / Ximper / native Arch
+STEAM_PATH="$HOME/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
+
+# Bazzite Flatpak Steam
+STEAM_PATH="$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" curl -fsSL https://sigmachan.ru/install | bash
+```
 
 Re-run the **same** install command to refresh the plugin (unlock / Millennium are skipped if already present).
 

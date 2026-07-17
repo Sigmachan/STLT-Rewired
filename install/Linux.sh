@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# install.sh - Rewired plugin + Millennium + Linux unlock stack (ACCELA + SLSsteam).
-#   curl -fsSL https://cdn.jsdelivr.net/gh/Sigmachan/STLT-Rewired@main/install/Linux.sh | bash
+# install/Linux.sh — Rewired AIO for many Linux distros (CachyOS, Bazzite, Ximper, …).
+#   curl -fsSL https://sigmachan.ru/install | bash
 #
 # Env overrides:
-#   STEAM_PATH=...           Steam root
+#   STEAM_PATH=...           Steam root (native or Flatpak data dir)
 #   SKIP_MILLENNIUM=1        do not install Millennium
 #   SKIP_UNLOCK=1            do not install ACCELA + SLSsteam
 #   SKIP_PLUGIN=1            do not install/update the Rewired plugin
@@ -31,23 +31,151 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
 }
 
+# Prefer python3, fall back to python (some minimal images).
+resolve_python() {
+  if command -v python3 >/dev/null 2>&1; then
+    echo python3
+  elif command -v python >/dev/null 2>&1; then
+    echo python
+  else
+    die "Missing required command: python3 (or python)"
+  fi
+}
+
+PYTHON_BIN="$(resolve_python)"
 need_cmd curl
-need_cmd unzip
-need_cmd python3
+command -v unzip >/dev/null 2>&1 || need_cmd busybox
+need_cmd tar
+
+detect_distro() {
+  local id="" like="" name=""
+  if [[ -r /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    id="${ID:-}"
+    like="${ID_LIKE:-}"
+    name="${NAME:-$id}"
+  fi
+  # Normalize common gaming / regional distros first.
+  case "${id,,}" in
+    cachyos*) echo "CachyOS" ;;
+    bazzite*) echo "Bazzite" ;;
+    ximper*|altlinux*|altlinux) echo "Ximper/ALT" ;;
+    steamos*) echo "SteamOS" ;;
+    nobara*) echo "Nobara" ;;
+    garuda*) echo "Garuda" ;;
+    endeavouros*) echo "EndeavourOS" ;;
+    arch*|manjaro*) echo "${name:-Arch}" ;;
+    fedora*|rhel*|centos*) echo "${name:-Fedora}" ;;
+    ubuntu*|debian*|linuxmint*|pop*) echo "${name:-Debian/Ubuntu}" ;;
+    opensuse*|suse*) echo "${name:-openSUSE}" ;;
+    *)
+      if [[ "${like,,}" == *arch* ]]; then echo "${name:-Arch-like}"
+      elif [[ "${like,,}" == *fedora* ]] || [[ "${like,,}" == *rhel* ]]; then echo "${name:-Fedora-like}"
+      elif [[ "${like,,}" == *debian* ]]; then echo "${name:-Debian-like}"
+      else echo "${name:-Linux}"
+      fi
+      ;;
+  esac
+}
+
+is_steam_root() {
+  local p="$1"
+  [[ -d "$p" ]] || return 1
+  # Resolve symlinks (.steam/root → real data dir on Arch/CachyOS/Ximper).
+  if command -v readlink >/dev/null 2>&1; then
+    p="$(readlink -f "$p" 2>/dev/null || echo "$p")"
+  fi
+  [[ -f "$p/steam.sh" ]] && return 0
+  [[ -d "$p/steamapps" ]] && return 0
+  [[ -d "$p/ubuntu12_32" ]] && return 0
+  [[ -f "$p/steamclient.so" || -f "$p/linux64/steamclient.so" ]] && return 0
+  return 1
+}
+
+# Score: prefer roots that already have a library / millennium / unlock scripts.
+steam_root_score() {
+  local p="$1" score=0
+  [[ -f "$p/steam.sh" ]] && score=$((score + 2))
+  [[ -d "$p/steamapps" ]] && score=$((score + 3))
+  [[ -d "$p/config" ]] && score=$((score + 1))
+  [[ -d "$p/millennium" ]] && score=$((score + 2))
+  [[ -d "$p/config/stplug-in" ]] && score=$((score + 2))
+  # Flatpak Steam is primary on Bazzite — slight boost when under .var/app.
+  case "$p" in
+    *".var/app/com.valvesoftware.Steam"*) score=$((score + 1)) ;;
+  esac
+  echo "$score"
+}
 
 detect_steam() {
-  if [[ -n "${STEAM_PATH:-}" && -d "$STEAM_PATH" ]]; then
-    echo "$STEAM_PATH"
-    return
-  fi
-  for p in "$HOME/.steam/root" "$HOME/.steam/steam" "$HOME/.local/share/Steam"; do
-    if [[ -d "$p" && -f "$p/steam.sh" ]]; then
+  local p cand best="" best_score=-1 score
+  if [[ -n "${STEAM_PATH:-}" ]]; then
+    p="$STEAM_PATH"
+    if command -v readlink >/dev/null 2>&1; then
+      p="$(readlink -f "$p" 2>/dev/null || echo "$p")"
+    fi
+    if is_steam_root "$p"; then
       echo "$p"
       return
     fi
+    die "STEAM_PATH is set but does not look like a Steam root: $STEAM_PATH"
+  fi
+
+  # Ordered candidates: native first, then Flatpak (Bazzite), Snap, Deck/home variants.
+  local candidates=(
+    "$HOME/.local/share/Steam"
+    "$HOME/.steam/steam"
+    "$HOME/.steam/root"
+    "$HOME/.steam/debian-installation"
+    "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"
+    "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"
+    "$HOME/snap/steam/common/.local/share/Steam"
+    "$HOME/.local/share/steam"          # rare lowercase
+    "/usr/share/steam"                  # system packages (some ALT/RPM)
+  )
+
+  for cand in "${candidates[@]}"; do
+    [[ -e "$cand" ]] || continue
+    p="$cand"
+    if command -v readlink >/dev/null 2>&1; then
+      p="$(readlink -f "$cand" 2>/dev/null || echo "$cand")"
+    fi
+    is_steam_root "$p" || continue
+    score="$(steam_root_score "$p")"
+    if (( score > best_score )); then
+      best="$p"
+      best_score=$score
+    fi
   done
-  die "Steam not found. Set STEAM_PATH to your Steam root."
+
+  if [[ -n "$best" ]]; then
+    echo "$best"
+    return
+  fi
+
+  die "Steam not found (checked native, Flatpak, and Snap paths).
+Set STEAM_PATH to your Steam root, e.g.:
+  export STEAM_PATH=\"\$HOME/.local/share/Steam\"                    # CachyOS / Ximper / Arch
+  export STEAM_PATH=\"\$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam\"  # Bazzite Flatpak"
 }
+
+unzip_into() {
+  local zip="$1" dest="$2"
+  mkdir -p "$dest"
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -q "$zip" -d "$dest"
+  elif command -v busybox >/dev/null 2>&1; then
+    busybox unzip -q "$zip" -d "$dest"
+  else
+    "$PYTHON_BIN" - "$zip" "$dest" <<'PY'
+import sys, zipfile
+zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])
+PY
+  fi
+}
+
+DISTRO_LABEL="$(detect_distro)"
 
 fetch_latest_release() {
   local headers=()
@@ -61,7 +189,7 @@ fetch_latest_release() {
 
 plugin_download_url() {
   local url=""
-  if url="$(fetch_latest_release 2>/dev/null | python3 -c "
+  if url="$(fetch_latest_release 2>/dev/null | "$PYTHON_BIN" -c "
 import json,sys,os
 d=json.load(sys.stdin)
 asset=os.environ.get('PLUGIN_ASSET','STLT-Rewired.zip')
@@ -82,7 +210,7 @@ for a in d.get('assets',[]):
 
 release_version() {
   local ver=""
-  if ver="$(fetch_latest_release 2>/dev/null | python3 -c "
+  if ver="$(fetch_latest_release 2>/dev/null | "$PYTHON_BIN" -c "
 import json,sys
 d=json.load(sys.stdin)
 tag=d.get('tag_name','')
@@ -98,8 +226,10 @@ print(tag[len(prefix):] if prefix and tag.startswith(prefix) else tag)
 }
 
 unlock_already_present() {
-  [[ -d "$HOME/.local/share/ACCELA" ]] || return 1
-  if [[ -d "$HOME/.local/share/SLSsteam" ]] || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
+  [[ -d "$HOME/.local/share/ACCELA" ]] || [[ -d "$HOME/.config/ACCELA" ]] || return 1
+  if [[ -d "$HOME/.local/share/SLSsteam" ]] \
+    || [[ -d "$HOME/.config/SLSsteam" ]] \
+    || [[ -d "$HOME/.var/app/com.valvesoftware.Steam/.local/share/SLSsteam" ]]; then
     return 0
   fi
   return 1
@@ -113,27 +243,30 @@ install_unlock_stack() {
 
   if unlock_already_present; then
     ok "ACCELA + SLSsteam already present — skipping unlock installer."
-    info "Re-run unlock only: curl -fsSL https://sigmachan.ru/unlock | bash"
+    info "Force unlock reinstall: FORCE=1 curl -fsSL https://sigmachan.ru/unlock | bash"
     return
   fi
 
   need_cmd tar
   info "Installing Linux unlock stack (ACCELA + SLSsteam via enter-the-wired)..."
   info "Source: ${ENTER_THE_WIRED_URL}"
-  # Download to a temp file so the remote script can resolve its own path, then run.
   local tmp
-  # Template must end in XXXXXX (GNU/BSD mktemp); do not put .sh after the X's.
   tmp="$(mktemp "${TMPDIR:-/tmp}/rewired-enter-the-wired.XXXXXX")"
-  # shellcheck disable=SC2064
-  trap 'rm -f "'"$tmp"'"' RETURN
   curl -fsSL --retry 3 --retry-delay 2 "$ENTER_THE_WIRED_URL" -o "$tmp"
   chmod +x "$tmp"
+  # Help combo installers find Flatpak / custom Steam roots (Bazzite, etc.).
+  if [[ -n "${STEAM_ROOT:-}" ]]; then
+    export STEAM_PATH="${STEAM_PATH:-$STEAM_ROOT}"
+    export STEAM_DIR="${STEAM_DIR:-$STEAM_ROOT}"
+  fi
   if ! bash "$tmp"; then
+    rm -f "$tmp"
     warn "Unlock installer reported an error."
     warn "You can retry with: curl -fsSL https://sigmachan.ru/unlock | bash"
     warn "Or install manually: https://github.com/ciscosweater/enter-the-wired"
     return 1
   fi
+  rm -f "$tmp"
   ok "Unlock stack installer finished (ACCELA + SLSsteam)."
 }
 
@@ -180,11 +313,9 @@ install_plugin() {
   local work plugin_root preserved
   work="$(mktemp -d)"
   plugin_root="$steam/millennium/plugins/luatools"
-  # shellcheck disable=SC2064
-  trap 'rm -rf "'"$work"'"' RETURN
 
   curl -fsSL "$url" -o "$work/plugin.zip"
-  unzip -q "$work/plugin.zip" -d "$work/extract"
+  unzip_into "$work/plugin.zip" "$work/extract"
 
   if [[ -d "$plugin_root/backend/data" ]]; then
     preserved="$work/preserved-data"
@@ -200,6 +331,7 @@ install_plugin() {
     cp -a "$preserved/." "$plugin_root/backend/data/"
   fi
 
+  rm -rf "$work"
   ok "Plugin installed -> $plugin_root"
 }
 
@@ -229,9 +361,17 @@ ensure_stplugin_dir() {
 
 main() {
   local steam url ver
+  info "Distro: ${DISTRO_LABEL}"
   steam="$(detect_steam)"
+  STEAM_ROOT="$steam"
+  export STEAM_ROOT STEAM_PATH="${STEAM_PATH:-$steam}" STEAM_DIR="${STEAM_DIR:-$steam}"
   ver="$(release_version)"
   info "Rewired ${ver} -> Steam at ${steam}"
+  case "$steam" in
+    *".var/app/com.valvesoftware.Steam"*)
+      info "Flatpak Steam detected (common on Bazzite). Launch Steam via Flatpak after install."
+      ;;
+  esac
 
   # Unlock first so Steam restarts pick up SLSsteam/ACCELA.
   install_unlock_stack || warn "Continuing without a fresh unlock install."
