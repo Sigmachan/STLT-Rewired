@@ -73,7 +73,7 @@ options.SETTINGS_GROUPS = {
                 key = "backend",
                 label = "Backend preference",
                 option_type = "select",
-                description = "auto detects OpenSteamTool, LumaCore, or SteamTools. opensteamtool uses config/lua.",
+                description = "auto prefers SteamTools/SLSsteam (stplug-in), then LumaCore, then OpenSteamTool (Windows config/lua).",
                 default = "auto",
                 choices = {
                     {value = "auto", label = "Auto-detect"},

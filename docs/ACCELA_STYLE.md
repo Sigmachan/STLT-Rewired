@@ -22,30 +22,25 @@ OpenSteamTool loads when its DLLs present in Steam root. If unlock missing, re-r
 
 ## Linux today
 
-Rewired does **not** bundle ACCELA or SLSsteam inside the main plugin repo (dropped from the plugin; see `REWIRED-PLAN.md`).
+`install/Linux.sh` installs the **full stack** by default:
 
-**Plugin-only path** (unlock stack already installed):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
-```
-
-**Full Linux stack (recommended)** — use [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition):
+1. **ACCELA + SLSsteam** via the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) installer (Headcrab for SLSsteam)
+2. Millennium (steambrew) if missing
+3. Rewired plugin into `$STEAM/millennium/plugins/luatools`
+4. Shared config → `~/.local/share/Rewired/rewired.json` (`unlockBackend: steamtools`)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/install.sh | bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/scripts/launch-steam.sh | bash
+# Full stack
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
+
+# Unlock only (ACCELA + SLSsteam)
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
+
+# Plugin/Millennium without reinstalling unlock
+SKIP_UNLOCK=1 curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
 ```
 
-Manual unlock + plugin (two steps):
-
-```bash
-# 1. Unlock stack (ACCELA + SLSsteam)
-curl -fsSL https://raw.githubusercontent.com/ciscosweater/enter-the-wired/main/enter-the-wired | bash
-
-# 2. In-Steam UI (Millennium + plugin)
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
-```
+We do **not** vendor ACCELA binaries in this repo — the installer downloads the current enter-the-wired / Headcrab releases at install time.
 
 ## What we are not doing
 

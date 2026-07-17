@@ -12,7 +12,8 @@ local MARKER = ".setup_seen"
 local SAFE_FIX_IPCS = {
     EnsureStpluginDir = true,
     EnsureLuaScriptDir = true,
-    InstallOpenSteamTool = true,
+    -- InstallOpenSteamTool is Windows-only; never auto-run it on Linux.
+    InstallOpenSteamTool = require("platform").is_windows(),
 }
 
 local function marker_path()
@@ -112,14 +113,15 @@ end
 
 function M.self_heal()
     local healed = {}
+    local platform = require("platform")
     if not M.has_seen_setup() then
-        return { success = true, ran = false, healed = healed, platform = "windows" }
+        return { success = true, ran = false, healed = healed, platform = platform.name() }
     end
     local ok, res = pcall(unlock_paths.ensure_lua_script_dir)
     if ok and res then
         table.insert(healed, "Ensured unlock script directory")
     end
-    return { success = true, ran = true, healed = healed, platform = "windows" }
+    return { success = true, ran = true, healed = healed, platform = platform.name() }
 end
 
 return M

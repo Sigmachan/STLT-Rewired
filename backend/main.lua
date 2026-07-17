@@ -482,8 +482,10 @@ end
 
 function DeleteLuaToolsForApp(appid)
     if type(appid) == "table" then appid = appid.appid end
-    local base = steam_utils.detect_steam_install_path()
-    local target_dir = fs.join(base, "config", "stplug-in")
+    local target_dir = unlock_paths.lua_script_dir()
+    if not target_dir or target_dir == "" then
+        return json_ok({ success = true, deleted = {}, count = 0 })
+    end
     local candidates = {
         fs.join(target_dir, tostring(appid) .. ".lua"),
         fs.join(target_dir, tostring(appid) .. ".lua.disabled"),
@@ -678,12 +680,8 @@ function OpenExternalUrl(url)
     if not (url:sub(1, 7) == "http://" or url:sub(1, 8) == "https://") then
         return json_err("Invalid URL")
     end
-    local is_win = (m_utils.getenv("OS") or ""):find("Windows") ~= nil
-    if is_win then
-        pcall(m_utils.exec, 'start "" "' .. url .. '"')
-    else
-        pcall(m_utils.exec, 'xdg-open "' .. url .. '"')
-    end
+    local platform = require("platform")
+    platform.open_url(url)
     return json_ok({ success = true })
 end
 
@@ -1684,17 +1682,24 @@ function LogFrontend(message)
     return json_ok({ success = true })
 end
 
--- ── Windows platform: compat tools / Linux preflight are not applicable ──────
--- STLT's frontend gates these behind a platform check; we report "windows" so
--- the Linux Proton / SLSsteam paths stay hidden, and give honest errors if hit.
+-- ── Platform: report real OS; gate Windows-only unlock installers ────────────
 
 function GetCompatToolStatus()
-    return json_ok({ success = true, platform = "windows" })
+    local platform = require("platform")
+    return json_ok({ success = true, platform = platform.name() })
 end
 
 function FixCompatToolsForActivated(contentScriptQuery, force, tool)
-    return json_ok({ success = false, platform = "windows",
-        error = "Proton compat tools are Linux-only; Windows uses native Steam." })
+    local platform = require("platform")
+    if platform.is_windows() then
+        return json_ok({ success = false, platform = "windows",
+            error = "Proton compat tools are Linux-only; Windows uses native Steam." })
+    end
+    return json_ok({
+        success = false,
+        platform = "linux",
+        error = "Compat-tool auto-fix is not implemented yet. Set Proton manually in Steam properties, or use ACCELA/enter-the-wired.",
+    })
 end
 
 function GetLinuxHealthReport(appid, contentScriptQuery)
@@ -1717,6 +1722,13 @@ function EnsureLuaScriptDir()
 end
 
 function InstallOpenSteamTool()
+    local platform = require("platform")
+    if platform.is_linux() then
+        return json_ok({
+            success = false,
+            error = "OpenSteamTool is Windows-only. On Linux install SLSsteam + ACCELA (enter-the-wired / Femboy Edition), then use Unlock backend Auto/SteamTools (stplug-in).",
+        })
+    end
     local ok, ost = pcall(require, "opensteamtool_install")
     if not ok or not ost then return json_err(ost) end
     local ok2, res = pcall(ost.install_latest)
@@ -1756,15 +1768,14 @@ function SelfHeal()
     return json_ok(res)
 end
 
--- ── Live activation flow (Windows: hand steam://install to the OS) ───────────
+-- ── Live activation flow (steam://install on the running client) ─────────────
 
 function AutoFinalizeActivation(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     appid = tonumber(appid)
     if not appid then return json_err("Invalid appid") end
-    -- Match upstream ltsteamplugin behavior: after the .lua is written, kick off
-    -- steam://install on the running client so the user does not need a full restart.
-    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
+    local platform = require("platform")
+    local ok = platform.trigger_steam_install(appid)
     return json_ok({
         success = ok == true,
         appid = appid,
@@ -1780,7 +1791,8 @@ function StartDownloadNoRestart(appid, contentScriptQuery)
     if type(appid) == "table" then appid = appid.appid end
     appid = tonumber(appid)
     if not appid then return json_err("Invalid appid") end
-    local ok = pcall(m_utils.exec, 'start "" "steam://install/' .. appid .. '"')
+    local platform = require("platform")
+    local ok = platform.trigger_steam_install(appid)
     return json_ok({ success = ok == true, appid = appid,
         message = ok and ("Triggered download for " .. appid .. " on the running Steam.")
                      or "Failed to trigger steam://install." })

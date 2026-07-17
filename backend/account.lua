@@ -249,8 +249,9 @@ function M.switch_to_account(account_name)
     if not target then return { success = false, error = "Account '" .. account_name .. "' not found in loginusers.vdf" } end
 
     -- kill Steam if running
+    local platform = require("platform")
     if st.steam_is_running() then
-        pcall(m_utils.exec, "taskkill /F /IM steam.exe >nul 2>&1")
+        platform.kill_steam()
         m_utils.sleep(1500)
     end
 
@@ -260,7 +261,7 @@ function M.switch_to_account(account_name)
     if not ok then return { success = false, error = "Failed to update loginusers.vdf" } end
     if m_utils.write_file(login_vdf, new_text) == false then return { success = false, error = "Failed to write loginusers.vdf" } end
 
-    pcall(m_utils.exec, 'start "" steam://0')
+    platform.launch_steam()
     logger.log("account: switched to '" .. account_name .. "' and relaunched Steam")
     return { success = true, accountName = account_name, steamId64 = target.steamId64,
              message = "Switched MostRecent and relaunched Steam." }

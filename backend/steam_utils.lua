@@ -99,13 +99,8 @@ function steam_utils.get_game_install_path_response(appid)
 end
 
 function steam_utils.open_game_folder(path)
-    if not path or path == "" or not fs.exists(path) then return false end
-    
-    -- In Windows, explorer accepts backslashes
-    path = path:gsub("/", "\\")
-    local cmd = 'explorer "' .. path .. '"'
-    m_utils.exec(cmd)
-    return true
+    local platform = require("platform")
+    return platform.open_path(path)
 end
 
 return steam_utils

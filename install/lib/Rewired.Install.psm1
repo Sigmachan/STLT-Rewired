@@ -379,7 +379,7 @@ function Invoke-RewiredInstall {
     Write-Host '  1. Restart Steam fully (Exit, then relaunch).'
     Write-Host '  2. Enable luatools (Rewired) in Millennium -> Plugins if needed.'
     Write-Host ''
-    Write-Host "Update later: irm https://raw.githubusercontent.com/$($script:RewiredGitHubOwner)/$($script:RewiredGitHubRepo)/main/scripts/update.ps1 | iex" -ForegroundColor DarkGray
+    Write-Host "Update later: irm https://raw.githubusercontent.com/$($script:RewiredGitHubOwner)/$($script:RewiredGitHubRepo)/main/install/Windows-Update.ps1 | iex" -ForegroundColor DarkGray
 }
 
 function Invoke-RewiredUpdate {

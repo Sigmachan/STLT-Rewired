@@ -247,10 +247,11 @@ function M.install_mod_from_url(url)
         if not f then fs.remove_all(tmp); return { success = false, error = "write failed" } end
         f:write(resp.body); f:close()
 
-        local ps = string.format(
-            'powershell -NoProfile -NonInteractive -Command "Expand-Archive -LiteralPath \'%s\' -DestinationPath \'%s\' -Force"',
-            zip_path, extract_dir)
-        m_utils.exec(ps)
+        local zip_util = require("zip_util")
+        if not zip_util.extract(zip_path, extract_dir) then
+            fs.remove_all(tmp)
+            return { success = false, error = "Archive extract failed" }
+        end
 
         local manifest, manifest_dir = nil, nil
         for _, e in ipairs(fs.list_recursive(extract_dir) or {}) do

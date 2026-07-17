@@ -229,14 +229,14 @@ local function _write_windows_download_script(script_path, state_file, url, dest
 end
 
 local function _launch_async_download(appid, url, dest_path, extract_dir, cookie)
-    local is_windows = m_utils.getenv("OS") == "Windows_NT"
+    local platform = require("platform")
     local dest_root = utils.ensure_temp_download_dir()
     local state_file = fs.join(dest_root, tostring(appid) .. "_state.json")
 
     m_utils.write_file(state_file, '{"status": "downloading"}')
     if not fs.exists(extract_dir) then fs.create_directories(extract_dir) end
 
-    if is_windows then
+    if platform.is_windows() then
         local script_file = fs.join(dest_root, tostring(appid) .. "_download.ps1")
         pcall(fs.remove, script_file)
         _write_windows_download_script(script_file, state_file, url, dest_path, extract_dir, cookie)
@@ -248,9 +248,15 @@ local function _launch_async_download(appid, url, dest_path, extract_dir, cookie
     else
         local sh_path = fs.join(paths.get_plugin_dir(), "backend", "scripts", "downloader.sh")
         m_utils.exec('chmod +x "' .. sh_path .. '"')
+        local cookie_arg = cookie and cookie ~= "" and cookie or ""
         local cmd = string.format(
-            'nohup bash "%s" "%s" "%s" "%s" "%s" > /dev/null 2>&1 &',
-            sh_path, url, dest_path, extract_dir, state_file
+            'nohup bash %s %s %s %s %s %s > /dev/null 2>&1 &',
+            platform.shell_quote(sh_path),
+            platform.shell_quote(url),
+            platform.shell_quote(dest_path),
+            platform.shell_quote(extract_dir),
+            platform.shell_quote(state_file),
+            platform.shell_quote(cookie_arg)
         )
         m_utils.exec(cmd)
     end

@@ -7,7 +7,7 @@
 1. Install Millennium + plugin:
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows.ps1 | iex
 ```
 
 2. Restart Steam fully (Exit, then relaunch).
@@ -16,7 +16,7 @@ irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/instal
 ### Update
 
 ```powershell
-irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.ps1 | iex
+irm https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Windows-Update.ps1 | iex
 ```
 
 ### Optional “10th line” (Rewired Manager)
@@ -26,9 +26,9 @@ Rewired Manager (`Rewired.exe`) is distributed **separately (private)** and is o
 ### Options (local script)
 
 ```powershell
-pwsh -NoProfile -File scripts/install.ps1 -SkipMillennium -SkipOpenSteamTool
-pwsh -NoProfile -File scripts/install.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
-pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
+pwsh -NoProfile -File install/Windows.ps1 -SkipMillennium -SkipOpenSteamTool
+pwsh -NoProfile -File install/Windows.ps1 -FromRepo   # deploy from git checkout (no GitHub release needed)
+pwsh -NoProfile -File install/Windows-Update.ps1 -SteamPath "D:\Steam"
 ```
 
 | Switch | Effect |
@@ -41,34 +41,43 @@ pwsh -NoProfile -File scripts/update.ps1 -SteamPath "D:\Steam"
 
 ```powershell
 $env:GITHUB_TOKEN = 'ghp_...'   # or GH_TOKEN
-pwsh -NoProfile -File scripts/install.ps1
+pwsh -NoProfile -File install/Windows.ps1
 ```
 
 The installer falls back to direct `/releases/latest/download/` URLs when the API is exhausted (no token required).
 
 ## Linux
 
-**Full stack (recommended)** — [STLT-Rewired-Femboy-Edition](https://github.com/Sigmachan/STLT-Rewired-Femboy-Edition) wraps enter-the-wired + plugin:
+**Full stack (recommended)** — Millennium + Rewired plugin + **ACCELA + SLSsteam**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired-Femboy-Edition/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux.sh | bash
 ```
 
-**Plugin only** — Millennium (via steambrew if missing) + Rewired plugin:
+This runs the community [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) combo installer (ACCELA + Headcrab/SLSsteam), then installs Millennium (if missing) and the Rewired plugin. Unlock scripts land in `Steam/config/stplug-in/`.
+
+| Env | Effect |
+|-----|--------|
+| `SKIP_UNLOCK=1` | Do not install ACCELA/SLSsteam |
+| `SKIP_MILLENNIUM=1` | Do not install Millennium |
+| `SKIP_PLUGIN=1` | Unlock/Millennium only |
+| `STEAM_PATH=...` | Override Steam root |
+| `FORCE=1` | With unlock-only script: reinstall even if present |
+
+**Unlock only** (ACCELA + SLSsteam):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Unlock.sh | bash
+# FORCE=1 curl -fsSL .../install-linux-unlock.sh | bash   # reinstall
 ```
 
-**Update** (skips Millennium, re-installs plugin preserving `backend/data`):
+**Update plugin** (skips Millennium + unlock, preserves `backend/data`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/scripts/update.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sigmachan/STLT-Rewired/main/install/Linux-Update.sh | bash
 ```
 
-Linux unlock (SLSsteam / ACCELA) is **not** bundled in the main repo — Femboy Edition or [enter-the-wired](https://github.com/ciscosweater/enter-the-wired) first. See [ACCELA_STYLE.md](ACCELA_STYLE.md).
-
-Environment overrides: `STEAM_PATH`, `SKIP_MILLENNIUM=1`.
+Credits: [ciscosweater/enter-the-wired](https://github.com/ciscosweater/enter-the-wired), [AceSLS/SLSsteam](https://github.com/AceSLS/SLSsteam), Deadboy666 Headcrab.
 
 ## Auto-update channels
 

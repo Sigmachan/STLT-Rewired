@@ -155,8 +155,7 @@ function M.scan_all_games()
     local games = all_installed_games()
     if #games == 0 then return { success = false, error = "No installed games found" } end
 
-    local base = steam_utils.detect_steam_install_path()
-    local stplug = base and base ~= "" and fs.join(base, "config", "stplug-in") or ""
+    local stplug = st.lua_script_dir()
     local lua_appids = {}
     if stplug ~= "" and fs.is_directory(stplug) then
         for _, e in ipairs(fs.list(stplug) or {}) do

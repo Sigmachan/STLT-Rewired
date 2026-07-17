@@ -148,11 +148,8 @@ local function download_to_workshop_dir(appid, workshop_id, file_url, file_name)
     pcall(fs.create_directories, item_dir)
     local extracted = false
     if resp.body:sub(1, 4) == "PK\3\4" then
-        local ps = string.format(
-            'powershell -NoProfile -NonInteractive -Command "Expand-Archive -LiteralPath \'%s\' -DestinationPath \'%s\' -Force"',
-            tmp_path, item_dir)
-        local ok_ex = pcall(m_utils.exec, ps)
-        if ok_ex then extracted = true end
+        local zip_util = require("zip_util")
+        if zip_util.extract(tmp_path, item_dir) then extracted = true end
     end
     if not extracted then
         local dest = fs.join(item_dir, file_name ~= "" and file_name or "workshop_item")

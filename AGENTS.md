@@ -11,8 +11,12 @@ embedded into `.millennium/Dist/webkit.js`. See `readme.md`, `REWIRED-PLAN.md`, 
 ### What can and cannot run here
 - The **live plugin cannot run in a cloud/headless Linux VM**. It only runs inside a real
   Steam desktop client with Millennium 3.x (Windows, or Linux via SLSsteam/ACCELA). Do
-  **not** try to launch Steam, `deploy.ps1`, `scripts/install.ps1`, or `scripts/install.sh`
+  **not** try to launch Steam, `deploy.ps1`, `install/Windows.ps1`, or `install/Linux.sh`
   here — they are Windows-PowerShell / live-Steam only.
+- On a real Linux Steam desktop the plugin is supported. `install/Linux.sh` installs
+  ACCELA + SLSsteam via enter-the-wired, then Millennium + plugin. Unlock-only:
+  `install/Linux-Unlock.sh`. Shared config: `~/.local/share/Rewired/rewired.json`.
+  OpenSteamTool is Windows-only.
 - The runnable dev surface in cloud is: the Python build/validate/test scripts (`scripts/`,
   stdlib only — no pip deps, no `requirements.txt`/`package.json`), a Node syntax check of
   the frontend bundle, and Lua 5.4 static + logic checks of `backend/`.
