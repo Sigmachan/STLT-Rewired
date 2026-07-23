@@ -248,6 +248,9 @@ local function _launch_async_download(appid, url, dest_path, extract_dir, cookie
     else
         local sh_path = fs.join(paths.get_plugin_dir(), "backend", "scripts", "downloader.sh")
         m_utils.exec('chmod +x "' .. sh_path .. '"')
+        -- Pass the Ryuu session cookie as the 5th arg so premium downloads
+        -- work on Linux too (downloader.sh already supports it). Without this,
+        -- generator.ryuu.lol requests 401/403.
         local cookie_arg = cookie and cookie ~= "" and cookie or ""
         local cmd = string.format(
             'nohup bash %s %s %s %s %s %s > /dev/null 2>&1 &',

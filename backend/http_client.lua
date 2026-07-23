@@ -1,5 +1,6 @@
 local m_http = require("http")
 local config = require("config")
+local logger = require("plugin_logger")
 
 local http_client = {}
 
@@ -12,13 +13,14 @@ end
 function http_client.head(url, options)
     options = options or {}
     options.timeout = options.timeout or config.HTTP_TIMEOUT_SECONDS
-    -- If Millennium m_http supports method override, we could use m_http.request, but let's assume m_http.head exists or use get with method = HEAD
-    if type(m_http.head) == "function" then
-        return m_http.head(url, options)
+    -- Millennium's http module exposes http.request(url, { method = "HEAD" })
+    -- and has NO http.head helper. Never fall back to GET — a HEAD→GET probe
+    -- on large archive URLs trips Millennium's AV (see commits 617d9d4/0acb1f6).
+    if type(m_http.request) == "function" then
+        return m_http.request(url, options)
     end
-    -- Fallback to standard request if head doesn't exist
-    options.method = "HEAD"
-    return m_http.get(url, options)
+    logger.warn("http_client.head: m_http.request unavailable; refusing HEAD→GET fallback")
+    return nil
 end
 
 function http_client.post(url, options)
