@@ -298,8 +298,20 @@ function downloads.start_add_via_luatools(appid)
     logger.log("LuaTools: StartAddViaLuaTools appid=" .. tostring(appid))
     _set_download_state(appid, { status = "queued", bytesRead = 0, totalBytes = 0 })
 
-    local apis = api_manifest.load_api_manifest()
-    if not apis or #apis == 0 then
+    -- Local-only: CheckApisForApp now returns sources without HTTP probes
+    -- (HEAD/GET AV Millennium on Add). Pick the first canDownload source.
+    local check = downloads.check_apis_for_app(appid, false)
+    local target_url, target_name = nil, nil
+    if check and check.success and type(check.results) == "table" then
+        for _, r in ipairs(check.results) do
+            if r.canDownload and r.url then
+                target_url = r.url
+                target_name = r.name
+                break
+            end
+        end
+    end
+    if not target_url then
         _set_download_state(appid, { status = "failed", error = "No APIs available" })
         _history_fail(appid, "No APIs available")
         return { success = true }
@@ -308,70 +320,13 @@ function downloads.start_add_via_luatools(appid)
     local dest_root = utils.ensure_temp_download_dir()
     local dest_path = fs.join(dest_root, tostring(appid) .. ".zip")
     local extract_dir = fs.join(dest_root, "extracted_" .. tostring(appid))
-    local morrenus_api_key = settings_manager.get_morrenus_api_key()
 
     local ok, res = pcall(function()
-        -- Note: For auto-add we only try the FIRST valid URL without verifying it via a synchronous HTTP request,
-        -- because verifying it synchronously would defeat the purpose of async downloads.
-        -- We assume CheckApisForApp already verified availability before user clicked this!
-        local target_url = nil
-        local target_name = nil
-        for _, api in ipairs(apis) do
-            local name = api.name or "Unknown"
-            local template = api.url or ""
-            local success_code = tonumber(api.success_code) or 200
-            local usable = true
-
-            if string.find(template, "<moapikey>") then
-                if not morrenus_api_key or morrenus_api_key == "" then
-                    usable = false
-                else
-                    template = template:gsub("<moapikey>", morrenus_api_key)
-                end
-            end
-            if usable and string.find(template, "<apikey>") then
-                if not api.api_key or api.api_key == "" then
-                    usable = false
-                else
-                    template = template:gsub("<apikey>", api.api_key)
-                end
-            end
-
-            if usable then
-                local url = template:gsub("<appid>", tostring(appid))
-
-                local success = false
-                if _is_manifesthub_source(name) then
-                    local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
-                    local s_resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
-                    if s_resp and s_resp.status == success_code then
-                        success = true
-                    end
-                else
-                    local headers = { ["User-Agent"] = config.USER_AGENT }
-                    local ck = _ryuu_cookie(url, name)
-                    if ck then headers["Cookie"] = ck end
-                    local resp = http_client.head(url, { headers = headers, timeout = 5 })
-                    if resp and resp.status == success_code then
-                        success = true
-                    else
-                        local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
-                        if get_resp and get_resp.status == success_code then
-                            success = true
-                        end
-                    end
-                end
-
-                if success then
-                    target_url = url
-                    target_name = name
-                    break
-                end
-            end
-        end
-        if not target_url then error("Not available on any API") end
-        
-        _set_download_state(appid, { status = "downloading", currentApi = target_name, historyId = _history_start(appid, target_name) })
+        _set_download_state(appid, {
+            status = "downloading",
+            currentApi = target_name,
+            historyId = _history_start(appid, target_name),
+        })
         _launch_async_download(appid, target_url, dest_path, extract_dir, _ryuu_cookie(target_url, target_name))
     end)
 
@@ -441,28 +396,46 @@ end
 function downloads.check_apis_for_app(appid, stop_on_first)
     if type(appid) == "string" then appid = tonumber(appid) end
     if not appid then return { success = false, error = "Invalid appid" } end
-    if stop_on_first == nil then
-        stop_on_first = _fast_download_enabled()
-    end
+    -- Local-only: no http_client.head/get — those AV Millennium luavm on Add.
+    -- (commits 617d9d4/0acb1f6/24bbd6f: HEAD probes trip AV and hang the UI.)
+    stop_on_first = false
 
-    local apis = api_manifest.load_api_manifest()
-    if not apis or #apis == 0 then
-        return { success = true, results = {} }
+    local path = paths.backend_path(config.API_JSON_FILE)
+    local data = utils.read_json(path)
+    local apis = {}
+    if data and type(data.api_list) == "table" then
+        for _, api in ipairs(data.api_list) do
+            if api and api.enabled ~= false then
+                local name = tostring(api.name or "Unknown")
+                if string.lower(name) == "ryuu premium" then
+                    table.insert(apis, api)
+                end
+            end
+        end
+    end
+    if #apis == 0 then
+        table.insert(apis, {
+            name = "Ryuu Premium",
+            url = "https://generator.ryuu.lol/api/download/<appid>",
+            success_code = 200,
+            unavailable_code = 404,
+            enabled = true,
+        })
     end
 
     local results = {}
-    local morrenus_api_key = settings_manager.get_morrenus_api_key()
+    local morrenus_api_key = ""
+    pcall(function() morrenus_api_key = settings_manager.get_morrenus_api_key() or "" end)
 
     for _, api in ipairs(apis) do
         local name = api.name or "Unknown"
         local template = api.url or ""
-        local success_code = tonumber(api.success_code) or 200
         local needs_mo_key = string.find(template, "<moapikey>") ~= nil
         local needs_api_key = string.find(template, "<apikey>") ~= nil
         local usable = true
 
         if needs_mo_key then
-            if not morrenus_api_key or morrenus_api_key == "" then
+            if morrenus_api_key == "" then
                 usable = false
             else
                 template = template:gsub("<moapikey>", morrenus_api_key)
@@ -490,48 +463,15 @@ function downloads.check_apis_for_app(appid, stop_on_first)
             end
         else
             local url = template:gsub("<appid>", tostring(appid))
-            local available = false
-
-            if _is_manifesthub_source(name) then
-                local status_url = "https://hubcapmanifest.com/api/v1/status/" .. tostring(appid) .. "?api_key=" .. tostring(morrenus_api_key)
-                local resp = http_client.get(status_url, { headers = { ["User-Agent"] = config.USER_AGENT }, timeout = 5 })
-                if resp and resp.status == success_code then
-                    available = true
-                end
-            else
-                local success = false
-                local headers = { ["User-Agent"] = config.USER_AGENT }
-                local ck = _ryuu_cookie(url, name)
-                if ck then headers["Cookie"] = ck end
-                local resp = http_client.head(url, { headers = headers, timeout = 5 })
-                if resp and resp.status == success_code then
-                    success = true
-                else
-                    local get_resp = http_client.get(url, { headers = headers, timeout = 5 })
-                    if get_resp and get_resp.status == success_code then
-                        success = true
-                    end
-                end
-
-                if success then
-                    available = true
-                end
-            end
-
             table.insert(results, {
                 name = name,
                 displayName = name,
-                available = available,
+                available = true,
                 needsKey = false,
                 locked = false,
-                canDownload = available,
-                url = available and url or nil,
+                canDownload = true,
+                url = url,
             })
-
-            -- Priority order already applied; stop once the first source has the game.
-            if available and stop_on_first then
-                break
-            end
         end
     end
 
