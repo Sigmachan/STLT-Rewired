@@ -44,7 +44,13 @@ function utils.encode_json(data)
             table.insert(lines, '            "success_code": ' .. tostring(api.success_code or 200) .. ',')
             table.insert(lines, '            "unavailable_code": ' .. tostring(api.unavailable_code or 404) .. ',')
             table.insert(lines, '            "enabled": ' .. tostring(api.enabled ~= false))
-            
+
+            -- Preserve per-API api_key if set; the old serializer dropped it,
+            -- so toggle/reorder/rename/remove silently wiped credentials.
+            if api.api_key and api.api_key ~= "" then
+                table.insert(lines, '            , "api_key": ' .. cjson.encode(api.api_key))
+            end
+
             if i == #data.api_list then
                 table.insert(lines, '        }')
             else

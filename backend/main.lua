@@ -781,7 +781,8 @@ function ApplySettingsChanges(changes)
         return json_err("Invalid payload format")
     end
 
-    logger.log("ApplySettingsChanges payload: " .. (pcall(cjson.encode, payload) and cjson.encode(payload) or "?"))
+    local enc_ok, enc_s = pcall(cjson.encode, payload)
+    logger.log("ApplySettingsChanges payload: " .. (enc_ok and enc_s or "?"))
 
     local ok, res = pcall(settings_manager.apply_settings_changes, payload)
     if not ok then

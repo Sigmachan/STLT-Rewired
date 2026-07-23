@@ -19,7 +19,7 @@
             "url": "https://api.twentytwocloud.com/download?appid=<appid>",
             "success_code": 200,
             "unavailable_code": 404,
-            "enabled": true
+            "enabled": false
         },
         {
             "name": "Sushi",

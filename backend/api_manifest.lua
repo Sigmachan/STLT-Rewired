@@ -166,7 +166,7 @@ function api_manifest.load_api_manifest()
     local apis = {}
     if data and type(data.api_list) == "table" then
         for _, api in ipairs(data.api_list) do
-            if api.enabled then
+            if api.enabled ~= false then  -- default true; match get_all_apis/check_apis_for_app
                 table.insert(apis, api)
             end
         end
